@@ -13,11 +13,20 @@ public:
     // treat all nodes as dofs in this example
     // we could eliminate the first and last nodes since they are Dirichlet
     // BCs, but this will require a sophisticated dof numbering scheme etc
-    DiffusionProblem1D(unsigned n_node) :
-        Problem(n_node), n_node_(n_node), dx_(1.0/(n_node-1))
+    DiffusionProblem1D(const unsigned n_node, const double dt) :
+        Problem(n_node, dt),
+        n_node_(n_node),
+        dx_(1.0/(n_node-1))
     {
         std::cout << "n_node = " << n_node_ << '\n';
         std::cout << "dx = " << dx_ << '\n';
+        std::cout << "dt = " << dt_ << '\n';
+
+        // set zero initial conditions
+        for(unsigned i = 0; i < n_node_; ++i)
+        {
+            u_[i] = 0.0;
+        }
     }
 
     ~DiffusionProblem1D()
@@ -53,11 +62,23 @@ private:
         // not neccessary here since all entries are set explicitly
         //residual_.setZero();
 
-        residual_(0) = (u_(0) - 1.0)*dx_*dx_;
+        residual_(0) = u_(0)*dx_*dx_;
 
         for(unsigned i = 1; i < n_node_-1; ++i)
         {
-            residual_(i) = (u_(i-1) - 2*u_(i) + u_(i+1));
+            // time derivative
+            residual_(i) = -(u_(i) - u_old_(i))*dx_*dx_/dt_;
+
+            // diffusion (u_ and u_old_ because of Crank-Nicolson)
+            residual_(i) += 0.5*(u_(i-1) - 2*u_(i) + u_(i+1));
+            residual_(i) += 0.5*(u_old_(i-1) - 2*u_old_(i) + u_old_(i+1));
+
+            // advection (u_ and u_old_ because of Crank-Nicolson)
+            residual_(i) -= 0.5*(6.0*(-0.5*u_(i-1) + 0.5*u_(i+1)))*dx_;
+            residual_(i) -= 0.5*(6.0*(-0.5*u_old_(i-1) + 0.5*u_old_(i+1)))*dx_;
+
+            // forcing
+            residual_(i) += time_*8.0*dx_*dx_;
         }
 
         residual_(n_node_-1) = u_(n_node_-1)*dx_*dx_;
@@ -75,9 +96,9 @@ private:
 
         for(unsigned i = 1; i < n_node_-1; ++i)
         {
-            triplet_list.push_back( T(i, i-1,  1.0) );
-            triplet_list.push_back( T(i, i,   -2.0) );
-            triplet_list.push_back( T(i, i+1,  1.0) );
+            triplet_list.push_back( T(i, i-1,  0.5 + 0.5*6.0*0.5*dx_) );
+            triplet_list.push_back( T(i, i,   -1.0 - dx_*dx_/dt_) );
+            triplet_list.push_back( T(i, i+1,  0.5 - 0.5*6.0*0.5*dx_) );
         }
 
         triplet_list.push_back( T(n_node_-1, n_node_-1, 1.0*dx_*dx_) );
@@ -90,33 +111,38 @@ private:
 int main()
 {
     const unsigned n_node = 1001;
+    const double dt = 0.001;
 
-    DiffusionProblem1D problem(n_node);
+    DiffusionProblem1D problem(n_node, dt);
     DiffusionProblem1D::Max_residual = 1e-14;
 
-    problem.solve();
+    char filename[200];
+    std::ofstream outfile;
 
-    std::ofstream outfile("output.dat");
-    outfile.precision(std::numeric_limits<double>::max_digits10);
-
+    // output initial conditions
+    std::sprintf(filename, "output_%i.dat", 0);
+    outfile.open(filename);
     problem.output(outfile);
     outfile.close();
 
-    outfile.open("output_exact.dat");
-    problem.output_exact(outfile);
-    outfile.close();
+    unsigned i = 1;
 
-    //// set up mesh with 101 nodes between 0 and 1
-    //Mesh1D mesh(0.0, 1.0, n_node);
+    while(problem.time() < 1.0)
+    {
+        std::cout << "\nSolving at time = " << problem.time()+dt << "\n\n";
 
-    //for(i = 1; i < n_node-1; ++i)
-    //{
-        //mesh.add_equation()
-    //}
+        // solve for current timestep
+        problem.unsteady_solve();
 
-    //Problem problem;
-    //problem.add_mesh(mesh);
-    //problem.solve();
-    
-    //return test();
+        if(i % 10 == 0)
+        {
+            // output current solution
+            std::sprintf(filename, "output_%i.dat", i/10);
+            outfile.open(filename);
+            problem.output(outfile);
+            outfile.close();
+        }
+
+        ++i;
+    }
 }

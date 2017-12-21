@@ -4,11 +4,14 @@
 
 namespace mjrfd
 {
-    Problem::Problem(unsigned n_dof) :
+    Problem::Problem(const unsigned n_dof, const double dt) :
         u_(n_dof),
+        u_old_(n_dof),
+        du_(n_dof),
         residual_(n_dof),
         jacobian_(n_dof, n_dof),
-        du_(n_dof)
+        time_(0.0),
+        dt_(dt)
     {
         u_.setZero();
         du_.setZero();
@@ -20,10 +23,13 @@ namespace mjrfd
 
     void Problem::solve()
     {
+        // backup the current solution before solving
+        u_old_ = u_;
+
         // the Newton iteration will continue until stop == true
         bool stop = false;
 
-        // counter for the number of newton iterations
+        // counter for the number of Newton iterations
         unsigned count = 0;
 
         // Newton method
@@ -44,7 +50,7 @@ namespace mjrfd
                 ++count; 
 
                 std::cout << "Exceeds " << Max_residual
-                          << ": performing Newton iteration\n\n";
+                          << ": performing Newton iteration\n";
 
                 // solve the linear system jacobian_*du_ = -residual_ for du_
                 linear_solve();
@@ -61,6 +67,17 @@ namespace mjrfd
             }
         }
 
+    }
+
+    void Problem::unsteady_solve()
+    {
+        time_ += dt_;
+        Problem::solve();
+    }
+
+    const double Problem::time() const
+    {
+        return time_;
     }
 
     void Problem::linear_solve()
