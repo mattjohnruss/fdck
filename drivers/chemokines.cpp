@@ -34,9 +34,9 @@ public:
         dx_(1.0/(n_node-1))
     {
         std::cout << "n_node = " << n_node_ << '\n';
-        std::cout << "n_dof= " << n_dof_ << '\n';
-        std::cout << "dx = " << dx_ << '\n';
-        std::cout << "dt = " << dt_ << '\n';
+        std::cout << "n_dof  = " << n_dof_ << '\n';
+        std::cout << "dx     = " << dx_ << '\n';
+        std::cout << "dt     = " << dt_ << '\n';
 
         // set zero initial conditions
         // TODO implement actual ICs
@@ -312,9 +312,23 @@ private:
 
 int main(int argc, char **argv)
 {
+    if(argc != 4 && argc != 5)
+    {
+        std::cerr << "Usage: " << argv[0]
+                  << " n_node dt t_max [ output_interval ]\n";
+        std::exit(1);
+    }
+
     const unsigned n_node = std::atoi(argv[1]);
     const double dt = std::atof(argv[2]);
-    double t_max = std::atof(argv[3]);
+    const double t_max = std::atof(argv[3]);
+
+    unsigned output_interval = 1;
+
+    if(argc == 5)
+    {
+        output_interval = std::atoi(argv[4]);
+    }
 
     ChemokinesProblem1D problem(n_node, dt);
     ChemokinesProblem1D::Max_residual = 1e-8;
@@ -332,13 +346,13 @@ int main(int argc, char **argv)
 
     // checking
     problem.p.p_u     = 1.0;
-    problem.p.alpha   = 0.0;
-    problem.p.beta    = 0.0;
-    problem.p.gamma_u = 0.0;
-    problem.p.gamma_b = 0.0;
+    problem.p.alpha   = 2.0;
+    problem.p.beta    = 1.0;
+    problem.p.gamma_u = 1.0;
+    problem.p.gamma_b = 1.0;
     problem.p.D_su    = 0.01;
     problem.p.D_ju    = 1.0;
-    problem.p.nu      = 0.0;
+    problem.p.nu      = 1.0;
     problem.p.lambda  = 1.0;
 
     char filename[200];
@@ -351,9 +365,8 @@ int main(int argc, char **argv)
     outfile.close();
 
     unsigned i = 1;
-    unsigned output_interval = 1;
 
-    while(problem.time() < t_max)
+    while(problem.time() <= t_max)
     {
         // solve for current timestep
         bool dump = false;
@@ -362,6 +375,7 @@ int main(int argc, char **argv)
 
         if(i % output_interval == 0)
         {
+            std::cout << "Outputting solution at time = " << problem.time() << '\n';
             // output current solution
             std::sprintf(filename, "output_%i.dat", i/output_interval);
             outfile.open(filename);
