@@ -17,6 +17,7 @@ namespace mjrfd
         virtual ~Problem();
 
         static double Max_residual;
+        static unsigned Max_newton_iterations;
 
         void solve(bool dump = false);
         void unsteady_solve(bool dump = false);
@@ -35,9 +36,6 @@ namespace mjrfd
 
     protected:
         std::vector<Eigen::VectorXd> u_;
-
-        // FIXME temporary hack for timestepping
-        //Eigen::VectorXd u_old_;
 
     private:
         Eigen::VectorXd du_;

@@ -98,11 +98,23 @@ namespace mjrfd
             {
                 // the max residual is less than the threshold so stop
                 stop = true;
-                std::cout << "Newton method converged in " << count << " "
+                std::cout << "Newton method converged (with maximum residual "
+                          << max_residual << ")"
+                          << " in " << count << " "
                           << ((count == 1) ? "iteration" : "iterations") << '\n';
             }
-        }
 
+            if(count >= Max_newton_iterations)
+            {
+                // the maximum number of newton steps has been exceeded so stop
+                stop = true;
+                std::cout << "The maximum number of Newton iterations ("
+                          << Max_newton_iterations << ") "
+                          << "has been exceeded\nExiting\n";
+
+                std::exit(1);
+            }
+        }
     }
 
     void Problem::unsteady_solve(bool dump)
@@ -176,4 +188,5 @@ namespace mjrfd
     }
 
     double Problem::Max_residual = 1.0e-8;
+    unsigned Problem::Max_newton_iterations = 20;
 }
