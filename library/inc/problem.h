@@ -16,20 +16,28 @@ namespace mjrfd
         Problem(const unsigned n_dof, const double dt = 0.0);
         virtual ~Problem();
 
-        void solve();
-        void unsteady_solve();
+        static double Max_residual;
+
+        void solve(bool dump = false);
+        void unsteady_solve(bool dump = false);
 
         const double time() const;
 
         virtual void output(std::ostream &out) const = 0;
 
-        static double Max_residual;
+        void dump_res_and_jac(std::ostream &res_stream, std::ostream &jac_stream) const;
+
+        const double u(unsigned i) const;
+        const double u(unsigned t, unsigned i) const;
+
+        double& u(unsigned i);
+        double& u(unsigned t, unsigned i);
 
     protected:
-        Eigen::VectorXd u_;
+        std::vector<Eigen::VectorXd> u_;
 
         // FIXME temporary hack for timestepping
-        Eigen::VectorXd u_old_;
+        //Eigen::VectorXd u_old_;
 
     private:
         Eigen::VectorXd du_;
@@ -41,6 +49,8 @@ namespace mjrfd
         double time_;
         double dt_;
 
+        unsigned n_dof_;
+
         virtual void calculate_residual() = 0;
         virtual void calculate_jacobian() = 0;
 
@@ -48,8 +58,6 @@ namespace mjrfd
         void linear_solve();
 
         Eigen::SparseLU<Eigen::SparseMatrix<double> > linear_solver_;
-
-        //unsigned n_dof_;
 
         //std::vector<Residual*> m_residuals;
     };

@@ -25,7 +25,7 @@ public:
         // set zero initial conditions
         for(unsigned i = 0; i < n_node_; ++i)
         {
-            u_[i] = 0.0;
+            u(i) = 0.0;
         }
     }
 
@@ -38,7 +38,7 @@ public:
         for(unsigned i = 0; i < n_node_; ++i)
         {
             out << static_cast<double>(i)/static_cast<double>(n_node_-1) << ' '
-                << u_(i) << '\n';
+                << u(i) << '\n';
         }
     }
 
@@ -62,26 +62,26 @@ private:
         // not neccessary here since all entries are set explicitly
         //residual_.setZero();
 
-        residual_(0) = u_(0)*dx_*dx_;
+        residual_(0) = u(0)*dx_*dx_;
 
         for(unsigned i = 1; i < n_node_-1; ++i)
         {
             // time derivative
-            residual_(i) = -(u_(i) - u_old_(i))*dx_*dx_/dt_;
+            residual_(i) = -(u(i) - u(1,i))*dx_*dx_/dt_;
 
             // diffusion (u_ and u_old_ because of Crank-Nicolson)
-            residual_(i) += 0.5*(u_(i-1) - 2*u_(i) + u_(i+1));
-            residual_(i) += 0.5*(u_old_(i-1) - 2*u_old_(i) + u_old_(i+1));
+            residual_(i) += 0.5*(u(i-1) - 2*u(i) + u(i+1));
+            residual_(i) += 0.5*(u(1,i-1) - 2*u(1,i) + u(1,i+1));
 
             // advection (u_ and u_old_ because of Crank-Nicolson)
-            residual_(i) -= 0.5*(6.0*(-0.5*u_(i-1) + 0.5*u_(i+1)))*dx_;
-            residual_(i) -= 0.5*(6.0*(-0.5*u_old_(i-1) + 0.5*u_old_(i+1)))*dx_;
+            residual_(i) -= 0.5*(6.0*(-0.5*u(i-1) + 0.5*u(i+1)))*dx_;
+            residual_(i) -= 0.5*(6.0*(-0.5*u(1,i-1) + 0.5*u(1,i+1)))*dx_;
 
             // forcing
             residual_(i) += time_*8.0*dx_*dx_;
         }
 
-        residual_(n_node_-1) = u_(n_node_-1)*dx_*dx_;
+        residual_(n_node_-1) = u(n_node_-1)*dx_*dx_;
     }
 
     void calculate_jacobian()
@@ -129,8 +129,6 @@ int main()
 
     while(problem.time() < 1.0)
     {
-        std::cout << "\nSolving at time = " << problem.time()+dt << "\n\n";
-
         // solve for current timestep
         problem.unsteady_solve();
 
