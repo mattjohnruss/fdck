@@ -310,10 +310,11 @@ private:
     }
 };
 
-int main()
+int main(int argc, char **argv)
 {
-    const unsigned n_node = 1001;
-    const double dt = 0.001;
+    const unsigned n_node = std::atoi(argv[1]);
+    const double dt = std::atof(argv[2]);
+    double t_max = std::atof(argv[3]);
 
     ChemokinesProblem1D problem(n_node, dt);
     ChemokinesProblem1D::Max_residual = 1e-8;
@@ -352,7 +353,7 @@ int main()
     unsigned i = 1;
     unsigned output_interval = 1;
 
-    while(problem.time() < 1.0)
+    while(problem.time() < t_max)
     {
         // solve for current timestep
         bool dump = false;
