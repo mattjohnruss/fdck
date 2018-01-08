@@ -5,7 +5,7 @@ set output "animate.gif"
 
 set key top right
 
-set yrange [0:1]
+set yrange [0:2]
 
 frames=system("ls -1 output*.dat | wc -l") - 1
 
