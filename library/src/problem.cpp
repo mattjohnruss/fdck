@@ -143,6 +143,13 @@ namespace mjrfd
             }
         }
 
+        // if there isn't an entry in the bottom right-hand corner, output a zero
+        if(jacobian_.rows() != n_dof_ || jacobian_.cols() != n_dof_)
+        {
+            std::cout << "Problem::dump_res_and_jac - outputting zero\n";
+            jac_stream << n_dof_-1 << " " << n_dof_-1 << " 0.0\n";
+        }
+
         //jac_stream << Eigen::MatrixXd(jacobian_).format(plain_fmt);
     }
 
