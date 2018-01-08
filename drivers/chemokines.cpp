@@ -31,7 +31,8 @@ public:
     ChemokinesProblem1D(const unsigned n_node, const double dt) :
         Problem(4*n_node, dt),
         n_node_(n_node),
-        dx_(1.0/(n_node-1))
+        dx_(1.0/(n_node-1)),
+        cn_factor_(0.5)
     {
         std::cout << "n_node = " << n_node_ << '\n';
         std::cout << "n_dof  = " << n_dof_ << '\n';
@@ -90,6 +91,7 @@ public:
 private:
     unsigned n_node_;
     double dx_;
+    double cn_factor_;
 
     void calculate_residual()
     {
@@ -106,16 +108,16 @@ private:
             residual_(i) += -(c_u(0,i) - c_u(1,i))*dx_*dx_/dt_;
 
             // diffusion (Crank-Nicolson)
-            residual_(i) += 0.5*(c_u(0,i-1) - 2.0*c_u(0,i) + c_u(0,i+1));
-            residual_(i) += 0.5*(c_u(1,i-1) - 2.0*c_u(1,i) + c_u(1,i+1));
+            residual_(i) += (1.0-cn_factor_)*(c_u(0,i-1) - 2.0*c_u(0,i) + c_u(0,i+1));
+            residual_(i) += cn_factor_*(c_u(1,i-1) - 2.0*c_u(1,i) + c_u(1,i+1));
 
             // advection (Crank-Nicolson)
-            residual_(i) += -0.5*p.p_u*(-0.5*c_u(0,i-1) + 0.5*c_u(0,i+1))*dx_;
-            residual_(i) += -0.5*p.p_u*(-0.5*c_u(1,i-1) + 0.5*c_u(1,i+1))*dx_;
+            residual_(i) += -(1.0-cn_factor_)*p.p_u*(-0.5*c_u(0,i-1) + 0.5*c_u(0,i+1))*dx_;
+            residual_(i) += -cn_factor_*p.p_u*(-0.5*c_u(1,i-1) + 0.5*c_u(1,i+1))*dx_;
 
             // binding/unbinding (Crank-Nicolson)
-            residual_(i) += 0.5*(-p.alpha*c_u(0,i) + p.beta*c_b(0,i) - p.gamma_u*c_u(0,i)*phi(0,i))*dx_*dx_;
-            residual_(i) += 0.5*(-p.alpha*c_u(1,i) + p.beta*c_b(1,i) - p.gamma_u*c_u(1,i)*phi(1,i))*dx_*dx_;
+            residual_(i) += (1.0-cn_factor_)*(-p.alpha*c_u(0,i) + p.beta*c_b(0,i) - p.gamma_u*c_u(0,i)*phi(0,i))*dx_*dx_;
+            residual_(i) += cn_factor_*(-p.alpha*c_u(1,i) + p.beta*c_b(1,i) - p.gamma_u*c_u(1,i)*phi(1,i))*dx_*dx_;
         }
 
         residual_(n_node_-1) += (c_u(0,n_node_-1) - 0.0)*dx_*dx_;
@@ -127,8 +129,8 @@ private:
             residual_(n_node_ + i) += -(c_b(0,i) - c_b(1,i))*dx_*dx_/dt_;
 
             // binding/unbinding (Crank-Nicolson)
-            residual_(n_node_ + i) += 0.5*(p.alpha*c_u(0,i) - p.beta*c_b(0,i) - p.gamma_b*c_b(0,i)*phi(0,i))*dx_*dx_;
-            residual_(n_node_ + i) += 0.5*(p.alpha*c_u(1,i) - p.beta*c_b(1,i) - p.gamma_b*c_b(1,i)*phi(1,i))*dx_*dx_;
+            residual_(n_node_ + i) += (1.0-cn_factor_)*(p.alpha*c_u(0,i) - p.beta*c_b(0,i) - p.gamma_b*c_b(0,i)*phi(0,i))*dx_*dx_;
+            residual_(n_node_ + i) += cn_factor_*(p.alpha*c_u(1,i) - p.beta*c_b(1,i) - p.gamma_b*c_b(1,i)*phi(1,i))*dx_*dx_;
         }
 
         // C_s
@@ -140,16 +142,16 @@ private:
             residual_(2*n_node_ + i) += -(c_s(0,i) - c_s(1,i))*dx_*dx_/dt_;
 
             // diffusion (Crank-Nicolson)
-            residual_(2*n_node_ + i) += 0.5*p.D_su*(c_s(0,i-1) - 2.0*c_s(0,i) + c_s(0,i+1));
-            residual_(2*n_node_ + i) += 0.5*p.D_su*(c_s(1,i-1) - 2.0*c_s(1,i) + c_s(1,i+1));
+            residual_(2*n_node_ + i) += (1.0-cn_factor_)*p.D_su*(c_s(0,i-1) - 2.0*c_s(0,i) + c_s(0,i+1));
+            residual_(2*n_node_ + i) += cn_factor_*p.D_su*(c_s(1,i-1) - 2.0*c_s(1,i) + c_s(1,i+1));
 
             // advection (Crank-Nicolson)
-            residual_(2*n_node_ + i) += -0.5*p.p_u*(-0.5*c_s(0,i-1) + 0.5*c_s(0,i+1))*dx_;
-            residual_(2*n_node_ + i) += -0.5*p.p_u*(-0.5*c_s(1,i-1) + 0.5*c_s(1,i+1))*dx_;
+            residual_(2*n_node_ + i) += -(1.0-cn_factor_)*p.p_u*(-0.5*c_s(0,i-1) + 0.5*c_s(0,i+1))*dx_;
+            residual_(2*n_node_ + i) += -cn_factor_*p.p_u*(-0.5*c_s(1,i-1) + 0.5*c_s(1,i+1))*dx_;
 
             // binding/unbinding (Crank-Nicolson)
-            residual_(2*n_node_ + i) += 0.5*(p.gamma_u*c_u(0,i)*phi(0,i) + p.gamma_b*c_b(0,i)*phi(0,i))*dx_*dx_;
-            residual_(2*n_node_ + i) += 0.5*(p.gamma_u*c_u(1,i)*phi(1,i) + p.gamma_b*c_b(1,i)*phi(1,i))*dx_*dx_;
+            residual_(2*n_node_ + i) += (1.0-cn_factor_)*(p.gamma_u*c_u(0,i)*phi(0,i) + p.gamma_b*c_b(0,i)*phi(0,i))*dx_*dx_;
+            residual_(2*n_node_ + i) += cn_factor_*(p.gamma_u*c_u(1,i)*phi(1,i) + p.gamma_b*c_b(1,i)*phi(1,i))*dx_*dx_;
         }
 
         residual_(3*n_node_ - 1) += (0.5*c_s(0,n_node_-3) - 2.0*c_s(0,n_node_-2) + 1.5*c_s(0,n_node_-1))*dx_ - p.p_u*c_s(0,n_node_-1)*dx_*dx_;
@@ -163,15 +165,15 @@ private:
             residual_(3*n_node_ + i) += -(phi(0,i) - phi(1,i))*dx_*dx_/dt_;
 
             // diffusion (Crank-Nicolson)
-            residual_(3*n_node_ + i) += 0.5*p.D_ju*(phi(0,i-1) - 2.0*phi(0,i) + phi(0,i+1));
-            residual_(3*n_node_ + i) += 0.5*p.D_ju*(phi(1,i-1) - 2.0*phi(1,i) + phi(1,i+1));
+            residual_(3*n_node_ + i) += (1.0-cn_factor_)*p.D_ju*(phi(0,i-1) - 2.0*phi(0,i) + phi(0,i+1));
+            residual_(3*n_node_ + i) += cn_factor_*p.D_ju*(phi(1,i-1) - 2.0*phi(1,i) + phi(1,i+1));
 
             // advection (Chemotaxis?) (Crank-Nicolson)
-            residual_(3*n_node_ + i) += -0.5*p.nu*(-0.5*phi(0,i-1) + 0.5*phi(0,i+1))*(-0.5*c_b(0,i-1) + 0.5*c_b(0,i+1));
-            residual_(3*n_node_ + i) += -0.5*p.nu*(-0.5*phi(1,i-1) + 0.5*phi(1,i+1))*(-0.5*c_b(1,i-1) + 0.5*c_b(1,i+1));
+            residual_(3*n_node_ + i) += -(1.0-cn_factor_)*p.nu*(-0.5*phi(0,i-1) + 0.5*phi(0,i+1))*(-0.5*c_b(0,i-1) + 0.5*c_b(0,i+1));
+            residual_(3*n_node_ + i) += -cn_factor_*p.nu*(-0.5*phi(1,i-1) + 0.5*phi(1,i+1))*(-0.5*c_b(1,i-1) + 0.5*c_b(1,i+1));
 
-            residual_(3*n_node_ + i) += -0.5*p.nu*phi(0,i)*(c_b(0,i-1) - 2.0*c_b(0,i) + c_b(0,i+1));
-            residual_(3*n_node_ + i) += -0.5*p.nu*phi(1,i)*(c_b(1,i-1) - 2.0*c_b(1,i) + c_b(1,i+1));
+            residual_(3*n_node_ + i) += -(1.0-cn_factor_)*p.nu*phi(0,i)*(c_b(0,i-1) - 2.0*c_b(0,i) + c_b(0,i+1));
+            residual_(3*n_node_ + i) += -cn_factor_*p.nu*phi(1,i)*(c_b(1,i-1) - 2.0*c_b(1,i) + c_b(1,i+1));
         }
 
         residual_(4*n_node_ - 1) += (phi(0,n_node_-1) - 1.0)*dx_*dx_;
