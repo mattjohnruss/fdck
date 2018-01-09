@@ -34,6 +34,9 @@ namespace mjrfd
         double& u(unsigned i);
         double& u(unsigned t, unsigned i);
 
+        void enable_terse_logging();
+        void disable_terse_logging();
+
     protected:
         std::vector<Eigen::VectorXd> u_;
 
@@ -56,6 +59,8 @@ namespace mjrfd
         void linear_solve();
 
         Eigen::SparseLU<Eigen::SparseMatrix<double> > linear_solver_;
+
+        bool terse_logging_;
 
         //std::vector<Residual*> m_residuals;
     };

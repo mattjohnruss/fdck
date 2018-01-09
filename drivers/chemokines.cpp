@@ -368,6 +368,8 @@ int main(int argc, char **argv)
 
     unsigned i = 1;
 
+    problem.enable_terse_logging();
+
     while(problem.time() <= t_max)
     {
         // solve for current timestep
@@ -377,8 +379,9 @@ int main(int argc, char **argv)
 
         if(i % output_interval == 0)
         {
-            std::cout << "Outputting solution at time = " << problem.time() << '\n';
             // output current solution
+            //std::cout << "Outputting solution at time = " << problem.time() << '\n';
+            std::cout << ";\tOutputting";
             std::sprintf(filename, "output_%i.dat", i/output_interval);
             outfile.open(filename);
             problem.output(outfile);

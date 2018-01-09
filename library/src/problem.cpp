@@ -14,7 +14,8 @@ namespace mjrfd
         jacobian_(n_dof, n_dof),
         time_(0.0),
         dt_(dt),
-        n_dof_(n_dof)
+        n_dof_(n_dof),
+        terse_logging_(false)
     {
         for(unsigned i = 0; i < 2; ++i)
         {
@@ -77,16 +78,31 @@ namespace mjrfd
                 }
             }
 
-            std::cout << "Maximum residual (" << max_residual_index << "): "
-                      << max_residual << '\n';
+            if(terse_logging_ == true && count == 0)
+            {
+                std::cout << "Max res = " << max_residual << ";\t[";
+            }
+
+            if(terse_logging_ == false)
+            {
+                std::cout << "Maximum residual (" << max_residual_index << "): "
+                          << max_residual << '\n';
+            }
 
             // test if the current max residual is greater than the threshold
             if(max_residual > Max_residual)
             {
                 ++count; 
 
-                std::cout << "Exceeds " << Max_residual
-                          << ": performing Newton iteration\n";
+                if(terse_logging_ == true)
+                {
+                    std::cout << "x";
+                }
+                else
+                {
+                    std::cout << "Exceeds " << Max_residual
+                              << ": performing Newton iteration\n";
+                }
 
                 // solve the linear system jacobian_*du_ = -residual_ for du_
                 linear_solve();
@@ -98,17 +114,25 @@ namespace mjrfd
             {
                 // the max residual is less than the threshold so stop
                 stop = true;
-                std::cout << "Newton method converged (with maximum residual "
-                          << max_residual << ")"
-                          << " in " << count << " "
-                          << ((count == 1) ? "iteration" : "iterations") << '\n';
+
+                if(terse_logging_ == true)
+                {
+                    std::cout << "];\tMax res = " << max_residual;
+                }
+                else
+                {
+                    std::cout << "Newton method converged (with maximum residual "
+                              << max_residual << ")"
+                              << " in " << count << " "
+                              << ((count == 1) ? "iteration" : "iterations") << '\n';
+                }
             }
 
             if(count >= Max_newton_iterations)
             {
                 // the maximum number of newton steps has been exceeded so stop
                 stop = true;
-                std::cout << "The maximum number of Newton iterations ("
+                std::cout << "\nThe maximum number of Newton iterations ("
                           << Max_newton_iterations << ") "
                           << "has been exceeded\nExiting\n";
 
@@ -120,7 +144,16 @@ namespace mjrfd
     void Problem::unsteady_solve(bool dump)
     {
         time_ += dt_;
-        std::cout << "\nSolving at time = " << time_ << "\n\n";
+
+        if(terse_logging_ == true)
+        {
+            std::cout << "\nTime = " << time_ << ";\t";
+        }
+        else
+        {
+            std::cout << "\nSolving at time = " << time_ << "\n\n";
+        }
+
         Problem::solve(dump);
     }
 
@@ -192,6 +225,16 @@ namespace mjrfd
         }
 
         du_ = linear_solver_.solve(-residual_);
+    }
+
+    void Problem::enable_terse_logging()
+    {
+        terse_logging_ = true;
+    }
+
+    void Problem::disable_terse_logging()
+    {
+        terse_logging_ = false;
     }
 
     double Problem::Max_residual = 1.0e-8;
