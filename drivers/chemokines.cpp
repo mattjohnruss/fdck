@@ -229,8 +229,7 @@ private:
         //jacobian_.setZero();
 
         std::vector<T> triplet_list;
-        // TODO reserve correct amount
-        triplet_list.reserve(5*n_node_);
+        triplet_list.reserve(10 + 20*(n_node_-2) + 8);
 
         // LHS boundary conditions/equations
         // --------------------------------------------------------------------
