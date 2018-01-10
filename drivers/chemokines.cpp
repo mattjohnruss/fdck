@@ -32,15 +32,22 @@ public:
         Problem(4*n_node, dt),
         n_node_(n_node),
         dx_(1.0/(n_node-1)),
-        cn_theta_(1.0)
+        cn_theta_(1.0),
+        time_factor_(1.0)
     {
         std::cout << "n_node = " << n_node_ << '\n';
         std::cout << "n_dof  = " << n_dof_ << '\n';
         std::cout << "dx     = " << dx_ << '\n';
-        std::cout << "dt     = " << dt_ << '\n';
+        std::cout << "dt     = " << dt_ << "\n\n";
+    }
 
+    ~ChemokinesProblem1D()
+    {
+    }
+
+    void set_initial_conditions()
+    {
         // set zero initial conditions
-        // TODO implement actual ICs
         for(unsigned i = 0; i < 4*n_node_; ++i)
         {
             u(i) = 0.0;
@@ -48,10 +55,6 @@ public:
 
         u(0) = 1.0;
         u(4*n_node_-1) = 1.0;
-    }
-
-    ~ChemokinesProblem1D()
-    {
     }
 
     ChemokinesParams p;
@@ -76,7 +79,24 @@ public:
         return u(t, i + 3*n_node_);
     }
 
-    void output(std::ostream &out) const
+    void make_steady() override
+    {
+        std::cout << "ChemokinesProblem1D::make_steady\n";
+        Problem::make_steady();
+        time_factor_ = 0.0;
+        old_cn_theta_ = cn_theta_;
+        cn_theta_ = 1.0;
+    }
+
+    void make_unsteady() override
+    {
+        std::cout << "ChemokinesProblem1D::make_unsteady\n";
+        Problem::make_unsteady();
+        time_factor_ = 1.0;
+        cn_theta_ = old_cn_theta_;
+    }
+
+    void output(std::ostream &out) const override
     {
         for(unsigned i = 0; i < n_node_; ++i)
         {
@@ -92,6 +112,8 @@ private:
     unsigned n_node_;
     double dx_;
     double cn_theta_;
+    double time_factor_;
+    double old_cn_theta_;
 
     void calculate_residual()
     {
@@ -105,7 +127,7 @@ private:
         for(unsigned i = 1; i < n_node_-1; ++i)
         {
             // time derivative
-            residual_(i) += -(c_u(0,i) - c_u(1,i))*dx_*dx_/dt_;
+            residual_(i) += -time_factor_*(c_u(0,i) - c_u(1,i))*dx_*dx_/dt_;
 
             // diffusion (Crank-Nicolson)
             residual_(i) += cn_theta_*(c_u(0,i-1) - 2.0*c_u(0,i) + c_u(0,i+1));
@@ -126,7 +148,7 @@ private:
         for(unsigned i = 0; i < n_node_; ++i)
         {
             // time derivative
-            residual_(n_node_ + i) += -(c_b(0,i) - c_b(1,i))*dx_*dx_/dt_;
+            residual_(n_node_ + i) += -time_factor_*(c_b(0,i) - c_b(1,i))*dx_*dx_/dt_;
 
             // binding/unbinding (Crank-Nicolson)
             residual_(n_node_ + i) += cn_theta_*(p.alpha*c_u(0,i) - p.beta*c_b(0,i) - p.gamma_b*c_b(0,i)*phi(0,i))*dx_*dx_;
@@ -139,7 +161,7 @@ private:
         for(unsigned i = 1; i < n_node_-1; ++i)
         {
             // time derivative
-            residual_(2*n_node_ + i) += -(c_s(0,i) - c_s(1,i))*dx_*dx_/dt_;
+            residual_(2*n_node_ + i) += -time_factor_*(c_s(0,i) - c_s(1,i))*dx_*dx_/dt_;
 
             // diffusion (Crank-Nicolson)
             residual_(2*n_node_ + i) += cn_theta_*p.D_su*(c_s(0,i-1) - 2.0*c_s(0,i) + c_s(0,i+1));
@@ -162,7 +184,7 @@ private:
         for(unsigned i = 1; i < n_node_-1; ++i)
         {
             // time derivative
-            residual_(3*n_node_ + i) += -(phi(0,i) - phi(1,i))*dx_*dx_/dt_;
+            residual_(3*n_node_ + i) += -time_factor_*(phi(0,i) - phi(1,i))*dx_*dx_/dt_;
 
             // diffusion (Crank-Nicolson)
             residual_(3*n_node_ + i) += cn_theta_*p.D_ju*(phi(0,i-1) - 2.0*phi(0,i) + phi(0,i+1));
@@ -196,7 +218,7 @@ private:
         for(unsigned i = 1; i < n_node_-1; ++i)
         {
             triplet_list.push_back( T(i, i-1,  cn_theta_*(1.0 + p.p_u*0.5*dx_)) );
-            triplet_list.push_back( T(i, i,   -dx_*dx_/dt_ - cn_theta_*(2.0 - (p.alpha + p.gamma_u*phi(0,i))*dx_*dx_)) );
+            triplet_list.push_back( T(i, i,   -time_factor_*dx_*dx_/dt_ - cn_theta_*(2.0 - (p.alpha + p.gamma_u*phi(0,i))*dx_*dx_)) );
             triplet_list.push_back( T(i, i+1,  cn_theta_*(1.0 - p.p_u*0.5*dx_)) );
         }
 
@@ -228,7 +250,7 @@ private:
         // C_b / C_b
         for(unsigned i = 0; i < n_node_; ++i)
         {
-            triplet_list.push_back( T(n_node_ + i, n_node_ + i, -dx_*dx_/dt_ - cn_theta_*(p.beta + p.gamma_b*phi(0,i))*dx_*dx_) );
+            triplet_list.push_back( T(n_node_ + i, n_node_ + i, -time_factor_*dx_*dx_/dt_ - cn_theta_*(p.beta + p.gamma_b*phi(0,i))*dx_*dx_) );
         }
 
         // C_b / C_s
@@ -262,7 +284,7 @@ private:
         for(unsigned i = 1; i < n_node_-1; ++i)
         {
             triplet_list.push_back( T(2*n_node_ + i, 2*n_node_ + i-1, cn_theta_*(p.D_su + p.p_u*0.5*dx_)) );
-            triplet_list.push_back( T(2*n_node_ + i, 2*n_node_ + i,   -dx_*dx_/dt_ - cn_theta_*2.0*p.D_su) );
+            triplet_list.push_back( T(2*n_node_ + i, 2*n_node_ + i,   -time_factor_*dx_*dx_/dt_ - cn_theta_*2.0*p.D_su) );
             triplet_list.push_back( T(2*n_node_ + i, 2*n_node_ + i+1, cn_theta_*(p.D_su - p.p_u*0.5*dx_)) );
         }
 
@@ -300,7 +322,7 @@ private:
         for(unsigned i = 1; i < n_node_-1; ++i)
         {
             triplet_list.push_back( T(3*n_node_ + i, 3*n_node_ + i-1, cn_theta_*(p.D_ju + p.nu*0.5*(-0.5*c_b(0,i-1) + 0.5*c_b(0,i+1)))) );
-            triplet_list.push_back( T(3*n_node_ + i, 3*n_node_ + i,   -dx_*dx_/dt_ + cn_theta_*(-2.0*p.D_ju - p.nu*(c_b(0,i-1) - 2.0*c_b(0,i) + c_b(0,i+1)))) );
+            triplet_list.push_back( T(3*n_node_ + i, 3*n_node_ + i,   -time_factor_*dx_*dx_/dt_ + cn_theta_*(-2.0*p.D_ju - p.nu*(c_b(0,i-1) - 2.0*c_b(0,i) + c_b(0,i+1)))) );
             triplet_list.push_back( T(3*n_node_ + i, 3*n_node_ + i+1, cn_theta_*(p.D_ju - p.nu*0.5*(-0.5*c_b(0,i-1) + 0.5*c_b(0,i+1)))) );
         }
 
@@ -333,20 +355,9 @@ int main(int argc, char **argv)
     }
 
     ChemokinesProblem1D problem(n_node, dt);
-    ChemokinesProblem1D::Max_residual = 1e-8;
+    ChemokinesProblem1D::Max_residual = 1e-14;
 
     // Holly Jackson's params
-    //problem.p.p_u     = 1.0;
-    //problem.p.alpha   = 2.0;
-    //problem.p.beta    = 1.0;
-    //problem.p.gamma_u = 1.0;
-    //problem.p.gamma_b = 1.0;
-    //problem.p.D_su    = 0.01;
-    //problem.p.D_ju    = 1.0;
-    //problem.p.nu      = 1.0;
-    //problem.p.lambda  = 1.0;
-
-    // checking
     problem.p.p_u     = 1.0;
     problem.p.alpha   = 2.0;
     problem.p.beta    = 1.0;
@@ -357,24 +368,49 @@ int main(int argc, char **argv)
     problem.p.nu      = 1.0;
     problem.p.lambda  = 1.0;
 
+    // checking
+    //problem.p.p_u     = 1.0;
+    //problem.p.alpha   = 2.0;
+    //problem.p.beta    = 1.0;
+    //problem.p.gamma_u = 1.0;
+    //problem.p.gamma_b = 1.0;
+    //problem.p.D_su    = 0.01;
+    //problem.p.D_ju    = 1.0;
+    //problem.p.nu      = 1.0;
+    //problem.p.lambda  = 1.0;
+
+    problem.enable_terse_logging();
+
     char filename[200];
     std::ofstream outfile;
 
+    bool dump = false;
+    //bool dump = true;
+
+    problem.Max_newton_iterations = 100;
+
+    // perform a steady solve and output it
+    problem.steady_solve(dump);
+    std::sprintf(filename, "output_steady.csv");
+    outfile.open(filename);
+    problem.output(outfile);
+    outfile.close();
+
+    // set initial conditions
+    problem.set_initial_conditions();
+
     // output initial conditions
-    std::sprintf(filename, "output_%i.dat", 0);
+    std::sprintf(filename, "output_%05i.csv", 0);
     outfile.open(filename);
     problem.output(outfile);
     outfile.close();
 
     unsigned i = 1;
 
-    problem.enable_terse_logging();
-
+    // timestepping loop
     while(problem.time() <= t_max)
     {
         // solve for current timestep
-        bool dump = false;
-        //bool dump = true;
         problem.unsteady_solve(dump);
 
         if(i % output_interval == 0)
@@ -382,7 +418,7 @@ int main(int argc, char **argv)
             // output current solution
             //std::cout << "Outputting solution at time = " << problem.time() << '\n';
             std::cout << ";\tOutputting";
-            std::sprintf(filename, "output_%i.dat", i/output_interval);
+            std::sprintf(filename, "output_%05i.csv", i/output_interval);
             outfile.open(filename);
             problem.output(outfile);
             outfile.close();

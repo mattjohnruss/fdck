@@ -20,7 +20,12 @@ namespace mjrfd
         static unsigned Max_newton_iterations;
 
         void solve(bool dump = false);
+        void steady_solve(bool dump = false);
         void unsteady_solve(bool dump = false);
+
+        const bool is_steady() const;
+        virtual void make_steady();
+        virtual void make_unsteady();
 
         const double time() const;
 
@@ -51,6 +56,7 @@ namespace mjrfd
         double dt_;
 
         unsigned n_dof_;
+        bool steady_;
 
         virtual void calculate_residual() = 0;
         virtual void calculate_jacobian() = 0;

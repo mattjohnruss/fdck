@@ -8,13 +8,13 @@ namespace mjrfd
 {
     Problem::Problem(const unsigned n_dof, const double dt) :
         u_(2, Eigen::VectorXd(n_dof)),
-        //u_old_(n_dof),
         du_(n_dof),
         residual_(n_dof),
         jacobian_(n_dof, n_dof),
         time_(0.0),
         dt_(dt),
         n_dof_(n_dof),
+        steady_(false),
         terse_logging_(false)
     {
         for(unsigned i = 0; i < 2; ++i)
@@ -31,9 +31,11 @@ namespace mjrfd
 
     void Problem::solve(bool dump)
     {
-        // backup the current solution before solving
-        //u_old_ = u_;
-        u_[1] = u_[0];
+        // backup the current solution before solving, unless the problem is steady
+        if(steady_ == false)
+        {
+            u_[1] = u_[0];
+        }
 
         // the Newton iteration will continue until stop == true
         bool stop = false;
@@ -141,6 +143,27 @@ namespace mjrfd
         }
     }
 
+    void Problem::steady_solve(bool dump)
+    {
+        // check if time derivatives enabled
+        bool steady = is_steady();
+
+        // disable time derivatives if they are enabled
+        if(steady == false)
+        {
+            make_steady();
+        }
+
+        // solve the steady problem
+        solve(dump);
+
+        // re-enable time derivatives if they were enabled before
+        if(steady == false)
+        {
+            make_unsteady();
+        }
+    }
+
     void Problem::unsteady_solve(bool dump)
     {
         time_ += dt_;
@@ -155,6 +178,23 @@ namespace mjrfd
         }
 
         Problem::solve(dump);
+    }
+
+    const bool Problem::is_steady() const
+    {
+        return steady_;
+    }
+
+    void Problem::make_steady()
+    {
+        std::cout << "Problem1D::make_steady\n";
+        steady_ = true;
+    }
+
+    void Problem::make_unsteady()
+    {
+        std::cout << "Problem1D::make_unsteady\n";
+        steady_ = false;
     }
 
     void Problem::dump_res_and_jac(std::ostream &res_stream, std::ostream &jac_stream) const
