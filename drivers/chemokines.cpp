@@ -121,11 +121,32 @@ private:
         // not neccessary here since all entries are set explicitly
         residual_.setZero();
 
+        // LHS boundary conditions/equations
+        // --------------------------------------------------------------------
+
         // C_u
         residual_(0) += (c_u(0,0) - 1.0)*dx_*dx_;
 
+        // C_b (full equation, not just BC)
+        // time derivative
+        residual_(n_node_) += -time_factor_*(c_b(0,0) - c_b(1,0))*dx_*dx_/dt_;
+
+        // binding/unbinding (Crank-Nicolson)
+        residual_(n_node_) += cn_theta_*(p.alpha*c_u(0,0) - p.beta*c_b(0,0) - p.gamma_b*c_b(0,0)*phi(0,0))*dx_*dx_;
+        residual_(n_node_) += (1.0-cn_theta_)*(p.alpha*c_u(1,0) - p.beta*c_b(1,0) - p.gamma_b*c_b(1,0)*phi(1,0))*dx_*dx_;
+
+        // C_s
+        residual_(2*n_node_) += (-1.5*c_s(0,0) + 2.0*c_s(0,1) - 0.5*c_s(0,2))*dx_ - p.p_u*c_s(0,0)*dx_*dx_;
+
+        // phi
+        residual_(3*n_node_) += (-1.5*phi(0,0) + 2.0*phi(0,1) - 0.5*phi(0,2))*dx_ - p.lambda*phi(0,0)*dx_*dx_;
+
+        // Bulk equations
+        // --------------------------------------------------------------------
+
         for(unsigned i = 1; i < n_node_-1; ++i)
         {
+            // C_u
             // time derivative
             residual_(i) += -time_factor_*(c_u(0,i) - c_u(1,i))*dx_*dx_/dt_;
 
@@ -140,26 +161,16 @@ private:
             // binding/unbinding (Crank-Nicolson)
             residual_(i) += cn_theta_*(-p.alpha*c_u(0,i) + p.beta*c_b(0,i) - p.gamma_u*c_u(0,i)*phi(0,i))*dx_*dx_;
             residual_(i) += (1.0-cn_theta_)*(-p.alpha*c_u(1,i) + p.beta*c_b(1,i) - p.gamma_u*c_u(1,i)*phi(1,i))*dx_*dx_;
-        }
 
-        residual_(n_node_-1) += (c_u(0,n_node_-1) - 0.0)*dx_*dx_;
-
-        // C_b (only ODEs so no boundary conditions)
-        for(unsigned i = 0; i < n_node_; ++i)
-        {
+            // C_b
             // time derivative
             residual_(n_node_ + i) += -time_factor_*(c_b(0,i) - c_b(1,i))*dx_*dx_/dt_;
 
             // binding/unbinding (Crank-Nicolson)
             residual_(n_node_ + i) += cn_theta_*(p.alpha*c_u(0,i) - p.beta*c_b(0,i) - p.gamma_b*c_b(0,i)*phi(0,i))*dx_*dx_;
             residual_(n_node_ + i) += (1.0-cn_theta_)*(p.alpha*c_u(1,i) - p.beta*c_b(1,i) - p.gamma_b*c_b(1,i)*phi(1,i))*dx_*dx_;
-        }
 
-        // C_s
-        residual_(2*n_node_) += (-1.5*c_s(0,0) + 2.0*c_s(0,1) - 0.5*c_s(0,2))*dx_ - p.p_u*c_s(0,0)*dx_*dx_;
-
-        for(unsigned i = 1; i < n_node_-1; ++i)
-        {
+            // C_s
             // time derivative
             residual_(2*n_node_ + i) += -time_factor_*(c_s(0,i) - c_s(1,i))*dx_*dx_/dt_;
 
@@ -174,15 +185,8 @@ private:
             // binding/unbinding (Crank-Nicolson)
             residual_(2*n_node_ + i) += cn_theta_*(p.gamma_u*c_u(0,i)*phi(0,i) + p.gamma_b*c_b(0,i)*phi(0,i))*dx_*dx_;
             residual_(2*n_node_ + i) += (1.0-cn_theta_)*(p.gamma_u*c_u(1,i)*phi(1,i) + p.gamma_b*c_b(1,i)*phi(1,i))*dx_*dx_;
-        }
 
-        residual_(3*n_node_ - 1) += (0.5*c_s(0,n_node_-3) - 2.0*c_s(0,n_node_-2) + 1.5*c_s(0,n_node_-1))*dx_ - p.p_u*c_s(0,n_node_-1)*dx_*dx_;
-
-        // phi
-        residual_(3*n_node_) += (-1.5*phi(0,0) + 2.0*phi(0,1) - 0.5*phi(0,2))*dx_ - p.lambda*phi(0,0)*dx_*dx_;
-
-        for(unsigned i = 1; i < n_node_-1; ++i)
-        {
+            // phi
             // time derivative
             residual_(3*n_node_ + i) += -time_factor_*(phi(0,i) - phi(1,i))*dx_*dx_/dt_;
 
@@ -198,6 +202,24 @@ private:
             residual_(3*n_node_ + i) += -(1.0-cn_theta_)*p.nu*phi(1,i)*(c_b(1,i-1) - 2.0*c_b(1,i) + c_b(1,i+1));
         }
 
+        // RHS boundary conditions/equations
+        // --------------------------------------------------------------------
+
+        // C_u
+        residual_(n_node_-1) += (c_u(0,n_node_-1) - 0.0)*dx_*dx_;
+
+        // C_b (full equation, not just BC)
+        // time derivative
+        residual_(2*n_node_ - 1) += -time_factor_*(c_b(0,n_node_-1) - c_b(1,n_node_-1))*dx_*dx_/dt_;
+
+        // binding/unbinding (Crank-Nicolson)
+        residual_(2*n_node_ - 1) += cn_theta_*(p.alpha*c_u(0,n_node_-1) - p.beta*c_b(0,n_node_-1) - p.gamma_b*c_b(0,n_node_-1)*phi(0,n_node_-1))*dx_*dx_;
+        residual_(2*n_node_ - 1) += (1.0-cn_theta_)*(p.alpha*c_u(1,n_node_-1) - p.beta*c_b(1,n_node_-1) - p.gamma_b*c_b(1,n_node_-1)*phi(1,n_node_-1))*dx_*dx_;
+
+        // C_s
+        residual_(3*n_node_ - 1) += (0.5*c_s(0,n_node_-3) - 2.0*c_s(0,n_node_-2) + 1.5*c_s(0,n_node_-1))*dx_ - p.p_u*c_s(0,n_node_-1)*dx_*dx_;
+
+        // phi
         residual_(4*n_node_ - 1) += (phi(0,n_node_-1) - 1.0)*dx_*dx_;
     }
 
@@ -210,122 +232,120 @@ private:
         // TODO reserve correct amount
         triplet_list.reserve(5*n_node_);
 
+        // LHS boundary conditions/equations
         // --------------------------------------------------------------------
 
         // C_u / C_u
         triplet_list.push_back( T(0, 0, 1.0*dx_*dx_) );
 
-        for(unsigned i = 1; i < n_node_-1; ++i)
-        {
-            triplet_list.push_back( T(i, i-1,  cn_theta_*(1.0 + p.p_u*0.5*dx_)) );
-            triplet_list.push_back( T(i, i,   -time_factor_*dx_*dx_/dt_ - cn_theta_*(2.0 - (p.alpha + p.gamma_u*phi(0,i))*dx_*dx_)) );
-            triplet_list.push_back( T(i, i+1,  cn_theta_*(1.0 - p.p_u*0.5*dx_)) );
-        }
-
-        triplet_list.push_back( T(n_node_-1, n_node_-1, 1.0*dx_*dx_) );
-
-        // C_u / C_b
-        for(unsigned i = 1; i < n_node_-1; ++i)
-        {
-            triplet_list.push_back( T(i, n_node_ + i, cn_theta_*p.beta*dx_*dx_) );
-        }
-
-        // C_u / C_s
-        // (no entries)
-        
-        // C_u / phi
-        for(unsigned i = 1; i < n_node_-1; ++i)
-        {
-            triplet_list.push_back( T(i, 3*n_node_ + i, -cn_theta_*p.gamma_u*c_u(0,i)*dx_*dx_) );
-        }
-
-        // --------------------------------------------------------------------
-
         // C_b / C_u
-        for(unsigned i = 0; i < n_node_; ++i)
-        {
-            triplet_list.push_back( T(n_node_ + i, i, cn_theta_*p.alpha*dx_*dx_) );
-        }
+        triplet_list.push_back( T(n_node_, 0, cn_theta_*p.alpha*dx_*dx_) );
 
         // C_b / C_b
-        for(unsigned i = 0; i < n_node_; ++i)
-        {
-            triplet_list.push_back( T(n_node_ + i, n_node_ + i, -time_factor_*dx_*dx_/dt_ - cn_theta_*(p.beta + p.gamma_b*phi(0,i))*dx_*dx_) );
-        }
+        triplet_list.push_back( T(n_node_, n_node_, -time_factor_*dx_*dx_/dt_ - cn_theta_*(p.beta + p.gamma_b*phi(0,0))*dx_*dx_) );
 
         // C_b / C_s
         // (no entries)
 
         // C_b / phi
-        for(unsigned i = 0; i < n_node_; ++i)
-        {
-            triplet_list.push_back( T(n_node_ + i, 3*n_node_ + i, -cn_theta_*(p.gamma_b*c_b(0,i))*dx_*dx_) );
-        }
-
-        // --------------------------------------------------------------------
-
-        // C_s / C_u
-        for(unsigned i = 1; i < n_node_-1; ++i)
-        {
-            triplet_list.push_back( T(2*n_node_ + i, i, cn_theta_*(p.gamma_u*phi(0,i))*dx_*dx_) );
-        }
-
-        // C_s / C_b
-        for(unsigned i = 1; i < n_node_-1; ++i)
-        {
-            triplet_list.push_back( T(2*n_node_ + i, n_node_ + i, cn_theta_*(p.gamma_b*phi(0,i)*dx_*dx_)) );
-        }
+        triplet_list.push_back( T(n_node_, 3*n_node_, -cn_theta_*(p.gamma_b*c_b(0,0))*dx_*dx_) );
 
         // C_s / C_s
         triplet_list.push_back( T(2*n_node_, 2*n_node_,  -1.5*dx_ - p.p_u*dx_*dx_) );
         triplet_list.push_back( T(2*n_node_, 2*n_node_+1, 2.0*dx_) );
         triplet_list.push_back( T(2*n_node_, 2*n_node_+2, -0.5*dx_) );
-        
-        for(unsigned i = 1; i < n_node_-1; ++i)
-        {
-            triplet_list.push_back( T(2*n_node_ + i, 2*n_node_ + i-1, cn_theta_*(p.D_su + p.p_u*0.5*dx_)) );
-            triplet_list.push_back( T(2*n_node_ + i, 2*n_node_ + i,   -time_factor_*dx_*dx_/dt_ - cn_theta_*2.0*p.D_su) );
-            triplet_list.push_back( T(2*n_node_ + i, 2*n_node_ + i+1, cn_theta_*(p.D_su - p.p_u*0.5*dx_)) );
-        }
 
-        triplet_list.push_back( T(3*n_node_-1, 3*n_node_-3,  0.5*dx_) );
-        triplet_list.push_back( T(3*n_node_-1, 3*n_node_-2, -2.0*dx_) );
-        triplet_list.push_back( T(3*n_node_-1, 3*n_node_-1,  1.5*dx_ - p.p_u*dx_*dx_) );
-
-        // C_s / phi
-        for(unsigned i = 1; i < n_node_-1; ++i)
-        {
-            triplet_list.push_back( T(2*n_node_ + i, 3*n_node_ + i, cn_theta_*(p.gamma_u*c_u(0,i) + p.gamma_b*c_b(0,i))*dx_*dx_) );
-        }
-
-        // --------------------------------------------------------------------
-
-        // phi / C_u
-        // (no entries)
-
-        // phi / C_b
-        for(unsigned i = 1; i < n_node_-1; ++i)
-        {
-            triplet_list.push_back( T(3*n_node_ + i, n_node_ + i-1,  cn_theta_*( 0.5*p.nu*(-0.5*phi(0,i-1) + 0.5*phi(0,i+1)) - p.nu*phi(0,i) )) );
-            triplet_list.push_back( T(3*n_node_ + i, n_node_ + i,    cn_theta_*2.0*p.nu*phi(0,i)) );
-            triplet_list.push_back( T(3*n_node_ + i, n_node_ + i+1, -cn_theta_*( 0.5*p.nu*(-0.5*phi(0,i-1) + 0.5*phi(0,i+1)) + p.nu*phi(0,i) )) );
-        }
-
-        // phi / C_s
-        // (no entries)
-        
         // phi / phi
         triplet_list.push_back( T(3*n_node_, 3*n_node_,   -1.5*dx_ - p.lambda*dx_*dx_) );
         triplet_list.push_back( T(3*n_node_, 3*n_node_+1, 2.0*dx_) );
         triplet_list.push_back( T(3*n_node_, 3*n_node_+2, -0.5*dx_) );
 
+        // Bulk equations
+        // --------------------------------------------------------------------
+
         for(unsigned i = 1; i < n_node_-1; ++i)
         {
+            // C_u / C_u
+            triplet_list.push_back( T(i, i-1,  cn_theta_*(1.0 + p.p_u*0.5*dx_)) );
+            triplet_list.push_back( T(i, i,   -time_factor_*dx_*dx_/dt_ - cn_theta_*(2.0 - (p.alpha + p.gamma_u*phi(0,i))*dx_*dx_)) );
+            triplet_list.push_back( T(i, i+1,  cn_theta_*(1.0 - p.p_u*0.5*dx_)) );
+
+            // C_u / C_b
+            triplet_list.push_back( T(i, n_node_ + i, cn_theta_*p.beta*dx_*dx_) );
+
+            // C_u / C_s
+            // (no entries)
+
+            // C_u / phi
+            triplet_list.push_back( T(i, 3*n_node_ + i, -cn_theta_*p.gamma_u*c_u(0,i)*dx_*dx_) );
+
+            // C_b / C_u
+            triplet_list.push_back( T(n_node_ + i, i, cn_theta_*p.alpha*dx_*dx_) );
+
+            // C_b / C_b
+            triplet_list.push_back( T(n_node_ + i, n_node_ + i, -time_factor_*dx_*dx_/dt_ - cn_theta_*(p.beta + p.gamma_b*phi(0,i))*dx_*dx_) );
+
+            // C_b / C_s
+            // (no entries)
+
+            // C_b / phi
+            triplet_list.push_back( T(n_node_ + i, 3*n_node_ + i, -cn_theta_*(p.gamma_b*c_b(0,i))*dx_*dx_) );
+
+            // C_s / C_u
+            triplet_list.push_back( T(2*n_node_ + i, i, cn_theta_*(p.gamma_u*phi(0,i))*dx_*dx_) );
+
+            // C_s / C_b
+            triplet_list.push_back( T(2*n_node_ + i, n_node_ + i, cn_theta_*(p.gamma_b*phi(0,i)*dx_*dx_)) );
+
+            // C_s / C_s
+            triplet_list.push_back( T(2*n_node_ + i, 2*n_node_ + i-1, cn_theta_*(p.D_su + p.p_u*0.5*dx_)) );
+            triplet_list.push_back( T(2*n_node_ + i, 2*n_node_ + i,   -time_factor_*dx_*dx_/dt_ - cn_theta_*2.0*p.D_su) );
+            triplet_list.push_back( T(2*n_node_ + i, 2*n_node_ + i+1, cn_theta_*(p.D_su - p.p_u*0.5*dx_)) );
+
+            // C_s / phi
+            triplet_list.push_back( T(2*n_node_ + i, 3*n_node_ + i, cn_theta_*(p.gamma_u*c_u(0,i) + p.gamma_b*c_b(0,i))*dx_*dx_) );
+
+            // phi / C_u
+            // (no entries)
+
+            // phi / C_b
+            triplet_list.push_back( T(3*n_node_ + i, n_node_ + i-1,  cn_theta_*( 0.5*p.nu*(-0.5*phi(0,i-1) + 0.5*phi(0,i+1)) - p.nu*phi(0,i) )) );
+            triplet_list.push_back( T(3*n_node_ + i, n_node_ + i,    cn_theta_*2.0*p.nu*phi(0,i)) );
+            triplet_list.push_back( T(3*n_node_ + i, n_node_ + i+1, -cn_theta_*( 0.5*p.nu*(-0.5*phi(0,i-1) + 0.5*phi(0,i+1)) + p.nu*phi(0,i) )) );
+
+            // phi / C_s
+            // (no entries)
+
+            // phi / phi
             triplet_list.push_back( T(3*n_node_ + i, 3*n_node_ + i-1, cn_theta_*(p.D_ju + p.nu*0.5*(-0.5*c_b(0,i-1) + 0.5*c_b(0,i+1)))) );
             triplet_list.push_back( T(3*n_node_ + i, 3*n_node_ + i,   -time_factor_*dx_*dx_/dt_ + cn_theta_*(-2.0*p.D_ju - p.nu*(c_b(0,i-1) - 2.0*c_b(0,i) + c_b(0,i+1)))) );
             triplet_list.push_back( T(3*n_node_ + i, 3*n_node_ + i+1, cn_theta_*(p.D_ju - p.nu*0.5*(-0.5*c_b(0,i-1) + 0.5*c_b(0,i+1)))) );
         }
 
+        // RHS boundary conditions/equations
+        // --------------------------------------------------------------------
+
+        // C_u / C_u
+        triplet_list.push_back( T(n_node_-1, n_node_-1, 1.0*dx_*dx_) );
+
+        // C_b / C_u
+        triplet_list.push_back( T(2*n_node_-1, n_node_-1, cn_theta_*p.alpha*dx_*dx_) );
+
+        // C_b / C_b
+        triplet_list.push_back( T(2*n_node_-1, 2*n_node_-1, -time_factor_*dx_*dx_/dt_ - cn_theta_*(p.beta + p.gamma_b*phi(0,n_node_-1))*dx_*dx_) );
+
+        // C_b / C_s
+        // (no entries)
+
+        // C_b / phi
+        triplet_list.push_back( T(2*n_node_-1, 4*n_node_-1, -cn_theta_*(p.gamma_b*c_b(0,n_node_-1))*dx_*dx_) );
+
+        // C_s / C_s
+        triplet_list.push_back( T(3*n_node_-1, 3*n_node_-3,  0.5*dx_) );
+        triplet_list.push_back( T(3*n_node_-1, 3*n_node_-2, -2.0*dx_) );
+        triplet_list.push_back( T(3*n_node_-1, 3*n_node_-1,  1.5*dx_ - p.p_u*dx_*dx_) );
+
+        // phi / phi
         triplet_list.push_back( T(4*n_node_-1, 4*n_node_-1, dx_*dx_) );
 
         // construct matrix
