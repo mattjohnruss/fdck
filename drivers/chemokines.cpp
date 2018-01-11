@@ -106,6 +106,26 @@ public:
         return u(t, i + phi_offset_);
     }
 
+    const double d_c_u_dx(unsigned t, unsigned i) const
+    {
+        return d_u_dx_helper(t, i, c_u_offset_);
+    }
+
+    const double d_c_b_dx(unsigned t, unsigned i) const
+    {
+        return d_u_dx_helper(t, i, c_b_offset_);
+    }
+
+    const double d_c_s_dx(unsigned t, unsigned i) const
+    {
+        return d_u_dx_helper(t, i, c_s_offset_);
+    }
+
+    const double d_phi_dx(unsigned t, unsigned i) const
+    {
+        return d_u_dx_helper(t, i, phi_offset_);
+    }
+
     void make_steady() override
     {
         Problem::make_steady();
@@ -130,9 +150,13 @@ public:
                 << c_u(0,i) << ' '
                 << c_b(0,i) << ' '
                 << c_s(0,i) << ' '
-                << phi(0,i) << '\n';
+                << phi(0,i) << ' ';
 
             // Output derivatives
+            out << d_c_u_dx(0,i) << ' '
+                << d_c_b_dx(0,i) << ' '
+                << d_c_s_dx(0,i) << ' '
+                << d_phi_dx(0,i) << '\n';
         }
     }
 
@@ -147,6 +171,28 @@ private:
     const unsigned c_b_offset_;
     const unsigned c_s_offset_;
     const unsigned phi_offset_;
+
+    const double d_u_dx_helper(unsigned t, unsigned i, unsigned offset) const
+    {
+        if(i == 0)
+        {
+            // Left boundary
+            return (-1.5*u(t,offset+0) + 2.0*u(t,offset+1) - 0.5*u(t,offset+2))/dx_;
+        }
+        else if(i == (n_node_-1))
+        {
+            // Right boundary
+            return (0.5*u(t,offset+n_node_-3) - 2.0*u(t,offset+n_node_-2) + 1.5*u(t,offset+n_node_-1))/dx_;
+        }
+        else
+        {
+            // Sanity check (debug only)
+            assert(i > 0 && i < (n_node_-1));
+
+            // Bulk
+            return (-0.5*u(t,offset+i-1) + 0.5*u(t,offset+i+1))/dx_;
+        }
+    }
 
     void calculate_residual()
     {
