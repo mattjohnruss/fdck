@@ -187,13 +187,11 @@ namespace mjrfd
 
     void Problem::make_steady()
     {
-        std::cout << "Problem1D::make_steady\n";
         steady_ = true;
     }
 
     void Problem::make_unsteady()
     {
-        std::cout << "Problem1D::make_unsteady\n";
         steady_ = false;
     }
 

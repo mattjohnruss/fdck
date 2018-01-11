@@ -81,7 +81,6 @@ public:
 
     void make_steady() override
     {
-        std::cout << "ChemokinesProblem1D::make_steady\n";
         Problem::make_steady();
         time_factor_ = 0.0;
         old_cn_theta_ = cn_theta_;
@@ -90,7 +89,6 @@ public:
 
     void make_unsteady() override
     {
-        std::cout << "ChemokinesProblem1D::make_unsteady\n";
         Problem::make_unsteady();
         time_factor_ = 1.0;
         cn_theta_ = old_cn_theta_;
