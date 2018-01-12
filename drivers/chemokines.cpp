@@ -144,6 +144,9 @@ public:
 
     void output(std::ostream &out) const override
     {
+        // Output headers
+        out << "x c_u c_b c_s phi dc_udx dc_bdx dc_sdx dphidx\n";
+
         for(unsigned i = 0; i < n_node_; ++i)
         {
             // Output values
