@@ -1,4 +1,5 @@
 #include <problem.h>
+#include <config_file.h>
 
 #include <iostream>
 #include <fstream>
@@ -434,48 +435,49 @@ private:
 
 int main(int argc, char **argv)
 {
-    if(argc != 4 && argc != 5)
+    if(argc != 5 && argc != 6)
     {
         std::cerr << "Usage: " << argv[0]
-                  << " n_node dt t_max [ output_interval ]\n";
+                  << " config_file n_node dt t_max [ output_interval ]\n";
         std::exit(1);
     }
 
-    const unsigned n_node = std::atoi(argv[1]);
-    const double dt = std::atof(argv[2]);
-    const double t_max = std::atof(argv[3]);
+    const unsigned n_node = std::atoi(argv[2]);
+    const double dt = std::atof(argv[3]);
+    const double t_max = std::atof(argv[4]);
 
     unsigned output_interval = 1;
 
-    if(argc == 5)
+    if(argc == 6)
     {
-        output_interval = std::atoi(argv[4]);
+        output_interval = std::atoi(argv[5]);
     }
 
     ChemokinesProblem1D problem(n_node, dt);
     ChemokinesProblem1D::Max_residual = 1e-14;
 
-    // Holly Jackson's params
-    problem.p.p_u     = 1.0;
-    problem.p.alpha   = 2.0;
-    problem.p.beta    = 1.0;
-    problem.p.gamma_u = 1.0;
-    problem.p.gamma_b = 1.0;
-    problem.p.D_su    = 0.01;
-    problem.p.D_ju    = 1.0;
-    problem.p.nu      = 1.0;
-    problem.p.lambda  = 1.0;
+    std::ifstream config_file(argv[1]);
+    ConfigFile cf(config_file);
 
-    // checking
-    //problem.p.p_u     = 1.0;
-    //problem.p.alpha   = 2.0;
-    //problem.p.beta    = 1.0;
-    //problem.p.gamma_u = 1.0;
-    //problem.p.gamma_b = 1.0;
-    //problem.p.D_su    = 0.01;
-    //problem.p.D_ju    = 1.0;
-    //problem.p.nu      = 1.0;
-    //problem.p.lambda  = 1.0;
+    problem.p.p_u     = cf.get<double>("p_u");
+    problem.p.alpha   = cf.get<double>("alpha");
+    problem.p.beta    = cf.get<double>("beta");
+    problem.p.gamma_u = cf.get<double>("gamma_u");
+    problem.p.gamma_b = cf.get<double>("gamma_b");
+    problem.p.D_su    = cf.get<double>("D_su");
+    problem.p.D_ju    = cf.get<double>("D_ju");
+    problem.p.nu      = cf.get<double>("nu");
+    problem.p.lambda  = cf.get<double>("lambda");
+
+    std::cout << "p_u     = " << problem.p.p_u     << '\n';
+    std::cout << "alpha   = " << problem.p.alpha   << '\n';
+    std::cout << "beta    = " << problem.p.beta    << '\n';
+    std::cout << "gamma_u = " << problem.p.gamma_u << '\n';
+    std::cout << "gamma_b = " << problem.p.gamma_b << '\n';
+    std::cout << "D_su    = " << problem.p.D_su    << '\n';
+    std::cout << "D_ju    = " << problem.p.D_ju    << '\n';
+    std::cout << "nu      = " << problem.p.nu      << '\n';
+    std::cout << "lambda  = " << problem.p.lambda  << '\n';
 
     problem.enable_terse_logging();
 
