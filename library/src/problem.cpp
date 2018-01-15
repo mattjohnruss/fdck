@@ -29,7 +29,7 @@ namespace mjrfd
     {
     }
 
-    void Problem::solve(bool dump)
+    void Problem::solve(const bool dump)
     {
         // backup the current solution before solving, unless the problem is steady
         if(steady_ == false)
@@ -143,7 +143,7 @@ namespace mjrfd
         }
     }
 
-    void Problem::steady_solve(bool dump)
+    void Problem::steady_solve(const bool dump)
     {
         // check if time derivatives enabled
         bool steady = is_steady();
@@ -164,7 +164,7 @@ namespace mjrfd
         }
     }
 
-    void Problem::unsteady_solve(bool dump)
+    void Problem::unsteady_solve(const bool dump)
     {
         time_ += dt_;
 
@@ -229,24 +229,24 @@ namespace mjrfd
         return time_;
     }
 
-    const double Problem::u(unsigned i) const
+    const double Problem::u(const unsigned i) const
     {
         return u_[0](i);
     }
 
-    const double Problem::u(unsigned t, unsigned i) const
+    const double Problem::u(const unsigned t, const unsigned i) const
     {
         assert(t < 2);
 
         return u_[t](i);
     }
 
-    double& Problem::u(unsigned i)
+    double& Problem::u(const unsigned i)
     {
         return u_[0](i);
     }
 
-    double& Problem::u(unsigned t, unsigned i)
+    double& Problem::u(const unsigned t, const unsigned i)
     {
         assert(t < 2);
 

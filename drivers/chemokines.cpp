@@ -67,62 +67,62 @@ public:
 
     ChemokinesParams p;
 
-    const double c_u(unsigned t, unsigned i) const
+    const double c_u(const unsigned t, const unsigned i) const
     {
         return u(t, i + c_u_offset_);
     }
 
-    const double c_b(unsigned t, unsigned i) const
+    const double c_b(const unsigned t, const unsigned i) const
     {
         return u(t, i + c_b_offset_);
     }
 
-    const double c_s(unsigned t, unsigned i) const
+    const double c_s(const unsigned t, const unsigned i) const
     {
         return u(t, i + c_s_offset_);
     }
 
-    const double phi(unsigned t, unsigned i) const
+    const double phi(const unsigned t, const unsigned i) const
     {
         return u(t, i + phi_offset_);
     }
 
-    double& c_u(unsigned t, unsigned i)
+    double& c_u(const unsigned t, const unsigned i)
     {
         return u(t, i + c_u_offset_);
     }
 
-    double& c_b(unsigned t, unsigned i)
+    double& c_b(const unsigned t, const unsigned i)
     {
         return u(t, i + c_b_offset_);
     }
 
-    double& c_s(unsigned t, unsigned i)
+    double& c_s(const unsigned t, const unsigned i)
     {
         return u(t, i + c_s_offset_);
     }
 
-    double& phi(unsigned t, unsigned i)
+    double& phi(const unsigned t, const unsigned i)
     {
         return u(t, i + phi_offset_);
     }
 
-    const double d_c_u_dx(unsigned t, unsigned i) const
+    const double d_c_u_dx(const unsigned t, const unsigned i) const
     {
         return d_u_dx_helper(t, i, c_u_offset_);
     }
 
-    const double d_c_b_dx(unsigned t, unsigned i) const
+    const double d_c_b_dx(const unsigned t, const unsigned i) const
     {
         return d_u_dx_helper(t, i, c_b_offset_);
     }
 
-    const double d_c_s_dx(unsigned t, unsigned i) const
+    const double d_c_s_dx(const unsigned t, const unsigned i) const
     {
         return d_u_dx_helper(t, i, c_s_offset_);
     }
 
-    const double d_phi_dx(unsigned t, unsigned i) const
+    const double d_phi_dx(const unsigned t, const unsigned i) const
     {
         return d_u_dx_helper(t, i, phi_offset_);
     }
@@ -176,7 +176,7 @@ private:
     const unsigned c_s_offset_;
     const unsigned phi_offset_;
 
-    const double d_u_dx_helper(unsigned t, unsigned i, unsigned offset) const
+    const double d_u_dx_helper(const unsigned t, const unsigned i, const unsigned offset) const
     {
         if(i == 0)
         {

@@ -19,9 +19,9 @@ namespace mjrfd
         static double Max_residual;
         static unsigned Max_newton_iterations;
 
-        void solve(bool dump = false);
-        void steady_solve(bool dump = false);
-        void unsteady_solve(bool dump = false);
+        void solve(const bool dump = false);
+        void steady_solve(const bool dump = false);
+        void unsteady_solve(const bool dump = false);
 
         const bool is_steady() const;
         virtual void make_steady();
@@ -33,11 +33,11 @@ namespace mjrfd
 
         void dump_res_and_jac(std::ostream &res_stream, std::ostream &jac_stream) const;
 
-        const double u(unsigned i) const;
-        const double u(unsigned t, unsigned i) const;
+        const double u(const unsigned i) const;
+        const double u(const unsigned t, const unsigned i) const;
 
-        double& u(unsigned i);
-        double& u(unsigned t, unsigned i);
+        double& u(const unsigned i);
+        double& u(const unsigned t, const unsigned i);
 
         void enable_terse_logging();
         void disable_terse_logging();
