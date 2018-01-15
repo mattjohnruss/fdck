@@ -208,68 +208,68 @@ private:
         }
     }
 
-    const double upwind_v_d_u_helper(const unsigned t, const unsigned i, const double v, const double offset) const
+    const double upwind_v_d_u_helper(const unsigned t, const Variable variable, const unsigned i, const double v) const
     {
         // TODO rewrite as an if statement? Possibly avoid calculating fw+bw diffs every time?
-        return std::min(0.0,v)*upwind_d_u_backward_helper(t,i,offset) + std::max(0.0,v)*upwind_d_u_forward_helper(t,i,offset);
+        return std::min(0.0,v)*upwind_d_u_backward_helper(t, variable, i) + std::max(0.0,v)*upwind_d_u_forward_helper(t, variable, i);
     }
 
-    const double upwind_d_u_backward_helper(const unsigned t, const unsigned i, const unsigned offset) const
+    const double upwind_d_u_backward_helper(const unsigned t, const Variable variable, const unsigned i) const
     {
         if(i == 0)
         {
             // Left boundary (forward difference)
-            return stencil_1_forward(t,offset+i);
+            return stencil_1_forward(t, variable, i);
         }
         else if(i == 1)
         {
             // Left boundary+1 (central difference)
-            return stencil_1_central(t,offset+i);
+            return stencil_1_central(t, variable, i);
         }
         else
         {
             // Bulk and right boundary (backward difference)
-            return stencil_1_backward(t,offset+i);
+            return stencil_1_backward(t, variable, i);
         }
     }
 
-    const double upwind_d_u_forward_helper(const unsigned t, const unsigned i, const unsigned offset) const
+    const double upwind_d_u_forward_helper(const unsigned t, const Variable variable, const unsigned i) const
     {
         if(i == (n_node_-1))
         {
             // Right boundary (backward difference)
-            return stencil_1_backward(t,offset+i);
+            return stencil_1_backward(t, variable, i);
         }
         else if(i == (n_node_-2))
         {
             // Right boundary-1 (central difference)
-            return stencil_1_central(t,offset+i);
+            return stencil_1_central(t, variable, i);
         }
         else
         {
             // Bulk and left boundary (forward difference)
-            return stencil_1_forward(t,offset+i);
+            return stencil_1_forward(t, variable, i);
         }
     }
 
     const double upwind_v_d_c_u(const unsigned t, const unsigned i, const double v) const
     {
-        return upwind_v_d_u_helper(t, i, v, c_u_offset_);
+        return upwind_v_d_u_helper(t, Variable::c_u, i, v);
     }
 
     const double upwind_v_d_c_b(const unsigned t, const unsigned i, const double v) const
     {
-        return upwind_v_d_u_helper(t, i, v, c_b_offset_);
+        return upwind_v_d_u_helper(t, Variable::c_b, i, v);
     }
 
     const double upwind_v_d_c_s(const unsigned t, const unsigned i, const double v) const
     {
-        return upwind_v_d_u_helper(t, i, v, c_s_offset_);
+        return upwind_v_d_u_helper(t, Variable::c_s, i, v);
     }
 
     const double upwind_v_d_phi(const unsigned t, const unsigned i, const double v) const
     {
-        return upwind_v_d_u_helper(t, i, v, phi_offset_);
+        return upwind_v_d_u_helper(t, Variable::phi, i, v);
     }
 
     void calculate_residual()
@@ -312,8 +312,8 @@ private:
             residual_(c_u_offset_+i) += (1.0-cn_theta_)*stencil_2_central(1,Variable::c_u,i);
 
             // advection (Crank-Nicolson)
-            residual_(c_u_offset_+i) += -cn_theta_*p.p_u*stencil_1_central(0,Variable::c_u,i)*dx_;
-            residual_(c_u_offset_+i) += -(1.0-cn_theta_)*p.p_u*stencil_1_central(1,Variable::c_u,i)*dx_;
+            residual_(c_u_offset_+i) += -cn_theta_*upwind_v_d_c_u(0,i,p.p_u)*dx_;
+            residual_(c_u_offset_+i) += -(1.0-cn_theta_)*upwind_v_d_c_u(1,i,p.p_u)*dx_;
 
             // binding/unbinding (Crank-Nicolson)
             residual_(c_u_offset_+i) += cn_theta_*(-p.alpha*c_u(0,i) + p.beta*c_b(0,i) - p.gamma_u*c_u(0,i)*phi(0,i))*dx_*dx_;
@@ -336,8 +336,8 @@ private:
             residual_(c_s_offset_+i) += (1.0-cn_theta_)*p.D_su*stencil_2_central(1,Variable::c_s,i);
 
             // advection (Crank-Nicolson)
-            residual_(c_s_offset_+i) += -cn_theta_*p.p_u*stencil_1_central(0,Variable::c_s,i)*dx_;
-            residual_(c_s_offset_+i) += -(1.0-cn_theta_)*p.p_u*stencil_1_central(1,Variable::c_s,i)*dx_;
+            residual_(c_s_offset_+i) += -cn_theta_*upwind_v_d_c_s(0,i,p.p_u)*dx_;
+            residual_(c_s_offset_+i) += -(1.0-cn_theta_)*upwind_v_d_c_s(1,i,p.p_u)*dx_;
 
             // binding/unbinding (Crank-Nicolson)
             residual_(c_s_offset_+i) += cn_theta_*(p.gamma_u*c_u(0,i)*phi(0,i) + p.gamma_b*c_b(0,i)*phi(0,i))*dx_*dx_;
@@ -352,8 +352,8 @@ private:
             residual_(phi_offset_+i) += (1.0-cn_theta_)*p.D_ju*stencil_2_central(1,Variable::phi,i);
 
             // advection (Chemotaxis?) (Crank-Nicolson)
-            residual_(phi_offset_+i) += -cn_theta_*p.nu*stencil_1_central(0,Variable::phi,i)*stencil_1_central(0,Variable::c_b,i);
-            residual_(phi_offset_+i) += -(1.0-cn_theta_)*p.nu*stencil_1_central(1,Variable::phi,i)*stencil_1_central(1,Variable::c_b,i);
+            residual_(phi_offset_+i) += -cn_theta_*p.nu*upwind_v_d_phi(0,i,stencil_1_central(0,Variable::c_b,i));
+            residual_(phi_offset_+i) += -(1.0-cn_theta_)*p.nu*upwind_v_d_phi(1,i,stencil_1_central(1,Variable::c_b,i));
 
             residual_(phi_offset_+i) += -cn_theta_*p.nu*phi(0,i)*stencil_2_central(0,Variable::c_b,i);
             residual_(phi_offset_+i) += -(1.0-cn_theta_)*p.nu*phi(1,i)*stencil_2_central(1,Variable::c_b,i);
