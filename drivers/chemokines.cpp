@@ -208,6 +208,70 @@ private:
         }
     }
 
+    const double upwind_v_d_u_helper(const unsigned t, const unsigned i, const double v, const double offset) const
+    {
+        // TODO rewrite as an if statement? Possibly avoid calculating fw+bw diffs every time?
+        return std::min(0.0,v)*upwind_d_u_backward_helper(t,i,offset) + std::max(0.0,v)*upwind_d_u_forward_helper(t,i,offset);
+    }
+
+    const double upwind_d_u_backward_helper(const unsigned t, const unsigned i, const unsigned offset) const
+    {
+        if(i == 0)
+        {
+            // Left boundary (forward difference)
+            return stencil_1_forward(t,offset+i);
+        }
+        else if(i == 1)
+        {
+            // Left boundary+1 (central difference)
+            return stencil_1_central(t,offset+i);
+        }
+        else
+        {
+            // Bulk and right boundary (backward difference)
+            return stencil_1_backward(t,offset+i);
+        }
+    }
+
+    const double upwind_d_u_forward_helper(const unsigned t, const unsigned i, const unsigned offset) const
+    {
+        if(i == (n_node_-1))
+        {
+            // Right boundary (backward difference)
+            return stencil_1_backward(t,offset+i);
+        }
+        else if(i == (n_node_-2))
+        {
+            // Right boundary-1 (central difference)
+            return stencil_1_central(t,offset+i);
+        }
+        else
+        {
+            // Bulk and left boundary (forward difference)
+            return stencil_1_forward(t,offset+i);
+        }
+    }
+
+    const double upwind_v_d_c_u(const unsigned t, const unsigned i, const double v) const
+    {
+        return upwind_v_d_u_helper(t, i, v, c_u_offset_);
+    }
+
+    const double upwind_v_d_c_b(const unsigned t, const unsigned i, const double v) const
+    {
+        return upwind_v_d_u_helper(t, i, v, c_b_offset_);
+    }
+
+    const double upwind_v_d_c_s(const unsigned t, const unsigned i, const double v) const
+    {
+        return upwind_v_d_u_helper(t, i, v, c_s_offset_);
+    }
+
+    const double upwind_v_d_phi(const unsigned t, const unsigned i, const double v) const
+    {
+        return upwind_v_d_u_helper(t, i, v, phi_offset_);
+    }
+
     void calculate_residual()
     {
         // set all entries to zero
