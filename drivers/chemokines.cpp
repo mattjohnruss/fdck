@@ -1,4 +1,4 @@
-#include <problem.h>
+#include <finite_difference_problem.h>
 #include <config_file.h>
 
 #include <iostream>
@@ -19,7 +19,7 @@ struct ChemokinesParams
     double lambda;
 };
 
-class ChemokinesProblem1D : public Problem
+class ChemokinesProblem1D : public FiniteDifferenceProblem
 {
     typedef Eigen::Triplet<double> T;
 
@@ -30,7 +30,7 @@ public:
     // C_s - 2*n_node--3*n_node-1
     // phi - 3*n_node--4*n_node-1
     ChemokinesProblem1D(const unsigned n_node, const double dt) :
-        Problem(4*n_node, dt),
+        FiniteDifferenceProblem(4*n_node, dt),
         n_node_(n_node),
         dx_(1.0/(n_node-1)),
         cn_theta_(1.0),
@@ -181,12 +181,12 @@ private:
         if(i == 0)
         {
             // Left boundary
-            return (-1.5*u(t,offset+0) + 2.0*u(t,offset+1) - 0.5*u(t,offset+2))/dx_;
+            return stencil_1_forward(t,offset+i)/dx_;
         }
         else if(i == (n_node_-1))
         {
             // Right boundary
-            return (0.5*u(t,offset+n_node_-3) - 2.0*u(t,offset+n_node_-2) + 1.5*u(t,offset+n_node_-1))/dx_;
+            return stencil_1_backward(t,offset+i)/dx_;
         }
         else
         {
@@ -194,7 +194,7 @@ private:
             assert(i > 0 && i < (n_node_-1));
 
             // Bulk
-            return (-0.5*u(t,offset+i-1) + 0.5*u(t,offset+i+1))/dx_;
+            return stencil_1_central(t,offset+i)/dx_;
         }
     }
 
@@ -219,10 +219,10 @@ private:
         residual_(c_b_offset_+0) += (1.0-cn_theta_)*(p.alpha*c_u(1,0) - p.beta*c_b(1,0) - p.gamma_b*c_b(1,0)*phi(1,0))*dx_*dx_;
 
         // C_s
-        residual_(c_s_offset_+0) += (-1.5*c_s(0,0) + 2.0*c_s(0,1) - 0.5*c_s(0,2))*dx_ - p.p_u*c_s(0,0)*dx_*dx_;
+        residual_(c_s_offset_+0) += stencil_1_forward(0,c_s_offset_+0)*dx_ - p.p_u*c_s(0,0)*dx_*dx_;
 
         // phi
-        residual_(phi_offset_+0) += (-1.5*phi(0,0) + 2.0*phi(0,1) - 0.5*phi(0,2))*dx_ - p.lambda*phi(0,0)*dx_*dx_;
+        residual_(phi_offset_+0) += stencil_1_forward(0,phi_offset_+0)*dx_ - p.lambda*phi(0,0)*dx_*dx_;
 
         // Bulk equations
         // --------------------------------------------------------------------
@@ -234,12 +234,12 @@ private:
             residual_(c_u_offset_+i) += -time_factor_*(c_u(0,i) - c_u(1,i))*dx_*dx_/dt_;
 
             // diffusion (Crank-Nicolson)
-            residual_(c_u_offset_+i) += cn_theta_*(c_u(0,i-1) - 2.0*c_u(0,i) + c_u(0,i+1));
-            residual_(c_u_offset_+i) += (1.0-cn_theta_)*(c_u(1,i-1) - 2.0*c_u(1,i) + c_u(1,i+1));
+            residual_(c_u_offset_+i) += cn_theta_*stencil_2_central(0,c_u_offset_+i);
+            residual_(c_u_offset_+i) += (1.0-cn_theta_)*stencil_2_central(1,c_u_offset_+i);
 
             // advection (Crank-Nicolson)
-            residual_(c_u_offset_+i) += -cn_theta_*p.p_u*(-0.5*c_u(0,i-1) + 0.5*c_u(0,i+1))*dx_;
-            residual_(c_u_offset_+i) += -(1.0-cn_theta_)*p.p_u*(-0.5*c_u(1,i-1) + 0.5*c_u(1,i+1))*dx_;
+            residual_(c_u_offset_+i) += -cn_theta_*p.p_u*stencil_1_central(0,c_u_offset_+i)*dx_;
+            residual_(c_u_offset_+i) += -(1.0-cn_theta_)*p.p_u*stencil_1_central(1,c_u_offset_+i)*dx_;
 
             // binding/unbinding (Crank-Nicolson)
             residual_(c_u_offset_+i) += cn_theta_*(-p.alpha*c_u(0,i) + p.beta*c_b(0,i) - p.gamma_u*c_u(0,i)*phi(0,i))*dx_*dx_;
@@ -258,12 +258,12 @@ private:
             residual_(c_s_offset_+i) += -time_factor_*(c_s(0,i) - c_s(1,i))*dx_*dx_/dt_;
 
             // diffusion (Crank-Nicolson)
-            residual_(c_s_offset_+i) += cn_theta_*p.D_su*(c_s(0,i-1) - 2.0*c_s(0,i) + c_s(0,i+1));
-            residual_(c_s_offset_+i) += (1.0-cn_theta_)*p.D_su*(c_s(1,i-1) - 2.0*c_s(1,i) + c_s(1,i+1));
+            residual_(c_s_offset_+i) += cn_theta_*p.D_su*stencil_2_central(0,c_s_offset_+i);
+            residual_(c_s_offset_+i) += (1.0-cn_theta_)*p.D_su*stencil_2_central(1,c_s_offset_+i);
 
             // advection (Crank-Nicolson)
-            residual_(c_s_offset_+i) += -cn_theta_*p.p_u*(-0.5*c_s(0,i-1) + 0.5*c_s(0,i+1))*dx_;
-            residual_(c_s_offset_+i) += -(1.0-cn_theta_)*p.p_u*(-0.5*c_s(1,i-1) + 0.5*c_s(1,i+1))*dx_;
+            residual_(c_s_offset_+i) += -cn_theta_*p.p_u*stencil_1_central(0,c_s_offset_+i)*dx_;
+            residual_(c_s_offset_+i) += -(1.0-cn_theta_)*p.p_u*stencil_1_central(1,c_s_offset_+i)*dx_;
 
             // binding/unbinding (Crank-Nicolson)
             residual_(c_s_offset_+i) += cn_theta_*(p.gamma_u*c_u(0,i)*phi(0,i) + p.gamma_b*c_b(0,i)*phi(0,i))*dx_*dx_;
@@ -274,15 +274,15 @@ private:
             residual_(phi_offset_+i) += -time_factor_*(phi(0,i) - phi(1,i))*dx_*dx_/dt_;
 
             // diffusion (Crank-Nicolson)
-            residual_(phi_offset_+i) += cn_theta_*p.D_ju*(phi(0,i-1) - 2.0*phi(0,i) + phi(0,i+1));
-            residual_(phi_offset_+i) += (1.0-cn_theta_)*p.D_ju*(phi(1,i-1) - 2.0*phi(1,i) + phi(1,i+1));
+            residual_(phi_offset_+i) += cn_theta_*p.D_ju*stencil_2_central(0,phi_offset_+i);
+            residual_(phi_offset_+i) += (1.0-cn_theta_)*p.D_ju*stencil_2_central(1,phi_offset_+i);
 
             // advection (Chemotaxis?) (Crank-Nicolson)
-            residual_(phi_offset_+i) += -cn_theta_*p.nu*(-0.5*phi(0,i-1) + 0.5*phi(0,i+1))*(-0.5*c_b(0,i-1) + 0.5*c_b(0,i+1));
-            residual_(phi_offset_+i) += -(1.0-cn_theta_)*p.nu*(-0.5*phi(1,i-1) + 0.5*phi(1,i+1))*(-0.5*c_b(1,i-1) + 0.5*c_b(1,i+1));
+            residual_(phi_offset_+i) += -cn_theta_*p.nu*stencil_1_central(0,phi_offset_+i)*stencil_1_central(0,c_b_offset_+i);
+            residual_(phi_offset_+i) += -(1.0-cn_theta_)*p.nu*stencil_1_central(1,phi_offset_+i)*stencil_1_central(1,c_b_offset_+i);
 
-            residual_(phi_offset_+i) += -cn_theta_*p.nu*phi(0,i)*(c_b(0,i-1) - 2.0*c_b(0,i) + c_b(0,i+1));
-            residual_(phi_offset_+i) += -(1.0-cn_theta_)*p.nu*phi(1,i)*(c_b(1,i-1) - 2.0*c_b(1,i) + c_b(1,i+1));
+            residual_(phi_offset_+i) += -cn_theta_*p.nu*phi(0,i)*stencil_2_central(0,c_b_offset_+i);
+            residual_(phi_offset_+i) += -(1.0-cn_theta_)*p.nu*phi(1,i)*stencil_2_central(1,c_b_offset_+i);
         }
 
         // RHS boundary conditions/equations
@@ -300,7 +300,7 @@ private:
         residual_(c_b_offset_+n_node_-1) += (1.0-cn_theta_)*(p.alpha*c_u(1,n_node_-1) - p.beta*c_b(1,n_node_-1) - p.gamma_b*c_b(1,n_node_-1)*phi(1,n_node_-1))*dx_*dx_;
 
         // C_s
-        residual_(c_s_offset_+n_node_-1) += (0.5*c_s(0,n_node_-3) - 2.0*c_s(0,n_node_-2) + 1.5*c_s(0,n_node_-1))*dx_ - p.p_u*c_s(0,n_node_-1)*dx_*dx_;
+        residual_(c_s_offset_+n_node_-1) += stencil_1_backward(0,c_s_offset_+n_node_-1)*dx_ - p.p_u*c_s(0,n_node_-1)*dx_*dx_;
 
         // phi
         residual_(phi_offset_+n_node_-1) += (phi(0,n_node_-1) - 1.0)*dx_*dx_;
