@@ -136,9 +136,15 @@ namespace mjrfd
                 stop = true;
                 std::cout << "\nThe maximum number of Newton iterations ("
                           << Max_newton_iterations << ") "
-                          << "has been exceeded\nExiting\n";
+                          << "has been exceeded\n";
 
-                std::exit(1);
+                // If we're doing a steady solve, keep going in case we want to
+                // timestep after it fails. Otherwise, exit
+                if(steady_ == false)
+                {
+                    std::cout << "Exiting\n";
+                    std::exit(1);
+                }
             }
         }
     }
