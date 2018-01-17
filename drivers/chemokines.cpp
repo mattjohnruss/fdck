@@ -219,7 +219,7 @@ private:
         residual_(c_b_offset_+0) += (1.0-cn_theta_)*(p.alpha*c_u(1,0) - p.beta*c_b(1,0) - p.gamma_b*c_b(1,0)*phi(1,0))*dx_*dx_;
 
         // C_s
-        residual_(c_s_offset_+0) += stencil_1_forward(0,c_s_offset_+0)*dx_ - p.p_u*c_s(0,0)*dx_*dx_;
+        residual_(c_s_offset_+0) += c_s(0,0)*dx_*dx_;
 
         // phi
         residual_(phi_offset_+0) += stencil_1_forward(0,phi_offset_+0)*dx_ - p.lambda*phi(0,0)*dx_*dx_;
@@ -300,7 +300,7 @@ private:
         residual_(c_b_offset_+n_node_-1) += (1.0-cn_theta_)*(p.alpha*c_u(1,n_node_-1) - p.beta*c_b(1,n_node_-1) - p.gamma_b*c_b(1,n_node_-1)*phi(1,n_node_-1))*dx_*dx_;
 
         // C_s
-        residual_(c_s_offset_+n_node_-1) += stencil_1_backward(0,c_s_offset_+n_node_-1)*dx_ - p.p_u*c_s(0,n_node_-1)*dx_*dx_;
+        residual_(c_s_offset_+n_node_-1) += c_s(0,n_node_-1)*dx_*dx_;
 
         // phi
         residual_(phi_offset_+n_node_-1) += (phi(0,n_node_-1) - 1.0)*dx_*dx_;
@@ -333,9 +333,7 @@ private:
         triplet_list.push_back( T(c_b_offset_+0, phi_offset_+0, -cn_theta_*(p.gamma_b*c_b(0,0))*dx_*dx_) );
 
         // C_s / C_s
-        triplet_list.push_back( T(c_s_offset_+0, c_s_offset_+0, -1.5*dx_ - p.p_u*dx_*dx_) );
-        triplet_list.push_back( T(c_s_offset_+0, c_s_offset_+1, 2.0*dx_) );
-        triplet_list.push_back( T(c_s_offset_+0, c_s_offset_+2, -0.5*dx_) );
+        triplet_list.push_back( T(c_s_offset_+0, c_s_offset_+0, 1.0*dx_*dx_) );
 
         // phi / phi
         triplet_list.push_back( T(phi_offset_+0, phi_offset_+0, -1.5*dx_ - p.lambda*dx_*dx_) );
@@ -423,9 +421,7 @@ private:
         triplet_list.push_back( T(c_b_offset_+n_node_-1, phi_offset_+n_node_-1, -cn_theta_*(p.gamma_b*c_b(0,n_node_-1))*dx_*dx_) );
 
         // C_s / C_s
-        triplet_list.push_back( T(c_s_offset_+n_node_-1, c_s_offset_+n_node_-3,  0.5*dx_) );
-        triplet_list.push_back( T(c_s_offset_+n_node_-1, c_s_offset_+n_node_-2, -2.0*dx_) );
-        triplet_list.push_back( T(c_s_offset_+n_node_-1, c_s_offset_+n_node_-1,  1.5*dx_ - p.p_u*dx_*dx_) );
+        triplet_list.push_back( T(c_s_offset_+n_node_-1, c_s_offset_+n_node_-1, 1.0*dx_*dx_) );
 
         // phi / phi
         triplet_list.push_back( T(phi_offset_+n_node_-1, phi_offset_+n_node_-1, dx_*dx_) );
