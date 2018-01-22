@@ -13,7 +13,10 @@ namespace mjrfd
     class Problem
     {
     public:
-        Problem(const unsigned n_dof, const double dt = 0.0);
+        Problem(const unsigned n_var,
+                const unsigned n_dof_per_var,
+                const double dt = 0.0);
+
         virtual ~Problem();
 
         static double Max_residual;
@@ -33,17 +36,19 @@ namespace mjrfd
 
         void dump_res_and_jac(std::ostream &res_stream, std::ostream &jac_stream) const;
 
-        const double u(const unsigned i) const;
-        const double u(const unsigned t, const unsigned i) const;
+        const double u(const unsigned v, const unsigned i) const;
+        const double u(const unsigned t, const unsigned v, const unsigned i) const;
 
-        double& u(const unsigned i);
-        double& u(const unsigned t, const unsigned i);
+        double& u(const unsigned v, const unsigned i);
+        double& u(const unsigned t, const unsigned v, const unsigned i);
 
         void enable_terse_logging();
         void disable_terse_logging();
 
     protected:
-        std::vector<Eigen::VectorXd> u_;
+        unsigned n_dof_;
+        unsigned n_var_;
+        std::vector<std::vector<Eigen::VectorXd>> u_;
 
     private:
         Eigen::VectorXd du_;
@@ -55,7 +60,6 @@ namespace mjrfd
         double time_;
         double dt_;
 
-        unsigned n_dof_;
         bool steady_;
 
         virtual void calculate_residual() = 0;

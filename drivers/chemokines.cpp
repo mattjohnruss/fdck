@@ -21,6 +21,14 @@ struct ChemokinesParams
 
 class ChemokinesProblem1D : public FiniteDifferenceProblem
 {
+    enum class Variable : unsigned
+    {
+        c_u = 0,
+        c_b = 1,
+        c_s = 2,
+        phi = 3
+    };
+
     typedef Eigen::Triplet<double> T;
 
 public:
@@ -30,7 +38,7 @@ public:
     // C_s - 2*n_node--3*n_node-1
     // phi - 3*n_node--4*n_node-1
     ChemokinesProblem1D(const unsigned n_node, const double dt) :
-        FiniteDifferenceProblem(4*n_node, dt),
+        FiniteDifferenceProblem(4, n_node, dt),
         n_node_(n_node),
         dx_(1.0/(n_node-1)),
         cn_theta_(1.0),
@@ -69,62 +77,62 @@ public:
 
     const double c_u(const unsigned t, const unsigned i) const
     {
-        return u(t, i + c_u_offset_);
+        return u(t, static_cast<unsigned>(Variable::c_u), i);
     }
 
     const double c_b(const unsigned t, const unsigned i) const
     {
-        return u(t, i + c_b_offset_);
+        return u(t, static_cast<unsigned>(Variable::c_b), i);
     }
 
     const double c_s(const unsigned t, const unsigned i) const
     {
-        return u(t, i + c_s_offset_);
+        return u(t, static_cast<unsigned>(Variable::c_s), i);
     }
 
     const double phi(const unsigned t, const unsigned i) const
     {
-        return u(t, i + phi_offset_);
+        return u(t, static_cast<unsigned>(Variable::phi), i);
     }
 
     double& c_u(const unsigned t, const unsigned i)
     {
-        return u(t, i + c_u_offset_);
+        return u(t, static_cast<unsigned>(Variable::c_u), i);
     }
 
     double& c_b(const unsigned t, const unsigned i)
     {
-        return u(t, i + c_b_offset_);
+        return u(t, static_cast<unsigned>(Variable::c_b), i);
     }
 
     double& c_s(const unsigned t, const unsigned i)
     {
-        return u(t, i + c_s_offset_);
+        return u(t, static_cast<unsigned>(Variable::c_s), i);
     }
 
     double& phi(const unsigned t, const unsigned i)
     {
-        return u(t, i + phi_offset_);
+        return u(t, static_cast<unsigned>(Variable::phi), i);
     }
 
     const double d_c_u_dx(const unsigned t, const unsigned i) const
     {
-        return d_u_dx_helper(t, i, c_u_offset_);
+        return d_u_dx_helper(t, Variable::c_u, i);
     }
 
     const double d_c_b_dx(const unsigned t, const unsigned i) const
     {
-        return d_u_dx_helper(t, i, c_b_offset_);
+        return d_u_dx_helper(t, Variable::c_b, i);
     }
 
     const double d_c_s_dx(const unsigned t, const unsigned i) const
     {
-        return d_u_dx_helper(t, i, c_s_offset_);
+        return d_u_dx_helper(t, Variable::c_s, i);
     }
 
     const double d_phi_dx(const unsigned t, const unsigned i) const
     {
-        return d_u_dx_helper(t, i, phi_offset_);
+        return d_u_dx_helper(t, Variable::phi, i);
     }
 
     void make_steady() override
@@ -176,17 +184,21 @@ private:
     const unsigned c_s_offset_;
     const unsigned phi_offset_;
 
-    const double d_u_dx_helper(const unsigned t, const unsigned i, const unsigned offset) const
+    const double d_u_dx_helper(const unsigned t,
+                               const Variable variable,
+                               const unsigned i) const
     {
+        unsigned v = static_cast<unsigned>(variable);
+
         if(i == 0)
         {
             // Left boundary
-            return stencil_1_forward(t,offset+i)/dx_;
+            return stencil_1_forward(t,v,i)/dx_;
         }
         else if(i == (n_node_-1))
         {
             // Right boundary
-            return stencil_1_backward(t,offset+i)/dx_;
+            return stencil_1_backward(t,v,i)/dx_;
         }
         else
         {
@@ -194,7 +206,7 @@ private:
             assert(i > 0 && i < (n_node_-1));
 
             // Bulk
-            return stencil_1_central(t,offset+i)/dx_;
+            return stencil_1_central(t,v,i)/dx_;
         }
     }
 
@@ -222,7 +234,7 @@ private:
         residual_(c_s_offset_+0) += c_s(0,0)*dx_*dx_;
 
         // phi
-        residual_(phi_offset_+0) += stencil_1_forward(0,phi_offset_+0)*dx_ - p.lambda*phi(0,0)*dx_*dx_;
+        residual_(phi_offset_+0) += stencil_1_forward(0,Variable::phi,0)*dx_ - p.lambda*phi(0,0)*dx_*dx_;
 
         // Bulk equations
         // --------------------------------------------------------------------
@@ -234,12 +246,12 @@ private:
             residual_(c_u_offset_+i) += -time_factor_*(c_u(0,i) - c_u(1,i))*dx_*dx_/dt_;
 
             // diffusion (Crank-Nicolson)
-            residual_(c_u_offset_+i) += cn_theta_*stencil_2_central(0,c_u_offset_+i);
-            residual_(c_u_offset_+i) += (1.0-cn_theta_)*stencil_2_central(1,c_u_offset_+i);
+            residual_(c_u_offset_+i) += cn_theta_*stencil_2_central(0,Variable::c_u,i);
+            residual_(c_u_offset_+i) += (1.0-cn_theta_)*stencil_2_central(1,Variable::c_u,i);
 
             // advection (Crank-Nicolson)
-            residual_(c_u_offset_+i) += -cn_theta_*p.p_u*stencil_1_central(0,c_u_offset_+i)*dx_;
-            residual_(c_u_offset_+i) += -(1.0-cn_theta_)*p.p_u*stencil_1_central(1,c_u_offset_+i)*dx_;
+            residual_(c_u_offset_+i) += -cn_theta_*p.p_u*stencil_1_central(0,Variable::c_u,i)*dx_;
+            residual_(c_u_offset_+i) += -(1.0-cn_theta_)*p.p_u*stencil_1_central(1,Variable::c_u,i)*dx_;
 
             // binding/unbinding (Crank-Nicolson)
             residual_(c_u_offset_+i) += cn_theta_*(-p.alpha*c_u(0,i) + p.beta*c_b(0,i) - p.gamma_u*c_u(0,i)*phi(0,i))*dx_*dx_;
@@ -258,12 +270,12 @@ private:
             residual_(c_s_offset_+i) += -time_factor_*(c_s(0,i) - c_s(1,i))*dx_*dx_/dt_;
 
             // diffusion (Crank-Nicolson)
-            residual_(c_s_offset_+i) += cn_theta_*p.D_su*stencil_2_central(0,c_s_offset_+i);
-            residual_(c_s_offset_+i) += (1.0-cn_theta_)*p.D_su*stencil_2_central(1,c_s_offset_+i);
+            residual_(c_s_offset_+i) += cn_theta_*p.D_su*stencil_2_central(0,Variable::c_s,i);
+            residual_(c_s_offset_+i) += (1.0-cn_theta_)*p.D_su*stencil_2_central(1,Variable::c_s,i);
 
             // advection (Crank-Nicolson)
-            residual_(c_s_offset_+i) += -cn_theta_*p.p_u*stencil_1_central(0,c_s_offset_+i)*dx_;
-            residual_(c_s_offset_+i) += -(1.0-cn_theta_)*p.p_u*stencil_1_central(1,c_s_offset_+i)*dx_;
+            residual_(c_s_offset_+i) += -cn_theta_*p.p_u*stencil_1_central(0,Variable::c_s,i)*dx_;
+            residual_(c_s_offset_+i) += -(1.0-cn_theta_)*p.p_u*stencil_1_central(1,Variable::c_s,i)*dx_;
 
             // binding/unbinding (Crank-Nicolson)
             residual_(c_s_offset_+i) += cn_theta_*(p.gamma_u*c_u(0,i)*phi(0,i) + p.gamma_b*c_b(0,i)*phi(0,i))*dx_*dx_;
@@ -274,15 +286,15 @@ private:
             residual_(phi_offset_+i) += -time_factor_*(phi(0,i) - phi(1,i))*dx_*dx_/dt_;
 
             // diffusion (Crank-Nicolson)
-            residual_(phi_offset_+i) += cn_theta_*p.D_ju*stencil_2_central(0,phi_offset_+i);
-            residual_(phi_offset_+i) += (1.0-cn_theta_)*p.D_ju*stencil_2_central(1,phi_offset_+i);
+            residual_(phi_offset_+i) += cn_theta_*p.D_ju*stencil_2_central(0,Variable::phi,i);
+            residual_(phi_offset_+i) += (1.0-cn_theta_)*p.D_ju*stencil_2_central(1,Variable::phi,i);
 
             // advection (Chemotaxis?) (Crank-Nicolson)
-            residual_(phi_offset_+i) += -cn_theta_*p.nu*stencil_1_central(0,phi_offset_+i)*stencil_1_central(0,c_b_offset_+i);
-            residual_(phi_offset_+i) += -(1.0-cn_theta_)*p.nu*stencil_1_central(1,phi_offset_+i)*stencil_1_central(1,c_b_offset_+i);
+            residual_(phi_offset_+i) += -cn_theta_*p.nu*stencil_1_central(0,Variable::phi,i)*stencil_1_central(0,Variable::c_b,i);
+            residual_(phi_offset_+i) += -(1.0-cn_theta_)*p.nu*stencil_1_central(1,Variable::phi,i)*stencil_1_central(1,Variable::c_b,i);
 
-            residual_(phi_offset_+i) += -cn_theta_*p.nu*phi(0,i)*stencil_2_central(0,c_b_offset_+i);
-            residual_(phi_offset_+i) += -(1.0-cn_theta_)*p.nu*phi(1,i)*stencil_2_central(1,c_b_offset_+i);
+            residual_(phi_offset_+i) += -cn_theta_*p.nu*phi(0,i)*stencil_2_central(0,Variable::c_b,i);
+            residual_(phi_offset_+i) += -(1.0-cn_theta_)*p.nu*phi(1,i)*stencil_2_central(1,Variable::c_b,i);
         }
 
         // RHS boundary conditions/equations

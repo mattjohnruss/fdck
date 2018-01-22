@@ -6,20 +6,26 @@
 
 namespace mjrfd
 {
-    Problem::Problem(const unsigned n_dof, const double dt) :
-        u_(2, Eigen::VectorXd(n_dof)),
-        du_(n_dof),
-        residual_(n_dof),
-        jacobian_(n_dof, n_dof),
+    Problem::Problem(const unsigned n_var,
+                     const unsigned n_dof_per_var,
+                     const double dt) :
+        n_dof_(n_var*n_dof_per_var),
+        n_var_(n_var),
+        u_(n_var, std::vector<Eigen::VectorXd>(2, Eigen::VectorXd(n_dof_per_var))),
+        du_(Eigen::VectorXd(n_dof_)),
+        residual_(n_dof_),
+        jacobian_(n_dof_, n_dof_),
         time_(0.0),
         dt_(dt),
-        n_dof_(n_dof),
         steady_(false),
         terse_logging_(false)
     {
-        for(unsigned i = 0; i < 2; ++i)
+        for(auto& var : u_)
         {
-            u_[i].setZero();
+            for(unsigned i = 0; i < 2; ++i)
+            {
+                var[i].setZero();
+            }
         }
 
         du_.setZero();
@@ -34,7 +40,11 @@ namespace mjrfd
         // backup the current solution before solving, unless the problem is steady
         if(steady_ == false)
         {
-            u_[1] = u_[0];
+            //u_[1] = u_[0];
+            for(auto& var : u_)
+            {
+                var[1] = var[0];
+            }
         }
 
         // the Newton iteration will continue until stop == true
@@ -110,7 +120,14 @@ namespace mjrfd
                 linear_solve();
 
                 // update the solution
-                u_[0] += du_;
+                for(unsigned v = 0; v < n_var_; ++v)
+                {
+                    u_[v][0] += du_.segment(v*n_dof_/n_var_, n_dof_/n_var_);
+                    //for(unsigned d = 0; d < n_dof_; ++d)
+                    //{
+                        //u_[v][0](d) += du_(v*n_dof_ + d);
+                    //}
+                }
             }
             else
             {
@@ -235,28 +252,28 @@ namespace mjrfd
         return time_;
     }
 
-    const double Problem::u(const unsigned i) const
+    const double Problem::u(const unsigned v, const unsigned i) const
     {
-        return u_[0](i);
+        return u_[v][0](i);
     }
 
-    const double Problem::u(const unsigned t, const unsigned i) const
+    const double Problem::u(const unsigned t, const unsigned v, const unsigned i) const
     {
         assert(t < 2);
 
-        return u_[t](i);
+        return u_[v][t](i);
     }
 
-    double& Problem::u(const unsigned i)
+    double& Problem::u(const unsigned v, const unsigned i)
     {
-        return u_[0](i);
+        return u_[v][0](i);
     }
 
-    double& Problem::u(const unsigned t, const unsigned i)
+    double& Problem::u(const unsigned t, const unsigned v, const unsigned i)
     {
         assert(t < 2);
 
-        return u_[t](i);
+        return u_[v][t](i);
     }
 
     void Problem::linear_solve()
@@ -268,6 +285,7 @@ namespace mjrfd
             std::cerr << "Problem::linear_solve() - Compute failed!\n";
         }
 
+        // get the update vector as a single array
         du_ = linear_solver_.solve(-residual_);
     }
 
