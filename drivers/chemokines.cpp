@@ -77,42 +77,42 @@ public:
 
     const double c_u(const unsigned t, const unsigned i) const
     {
-        return u(t, static_cast<unsigned>(Variable::c_u), i);
+        return u(t, Variable::c_u, i);
     }
 
     const double c_b(const unsigned t, const unsigned i) const
     {
-        return u(t, static_cast<unsigned>(Variable::c_b), i);
+        return u(t, Variable::c_b, i);
     }
 
     const double c_s(const unsigned t, const unsigned i) const
     {
-        return u(t, static_cast<unsigned>(Variable::c_s), i);
+        return u(t, Variable::c_s, i);
     }
 
     const double phi(const unsigned t, const unsigned i) const
     {
-        return u(t, static_cast<unsigned>(Variable::phi), i);
+        return u(t, Variable::phi, i);
     }
 
     double& c_u(const unsigned t, const unsigned i)
     {
-        return u(t, static_cast<unsigned>(Variable::c_u), i);
+        return u(t, Variable::c_u, i);
     }
 
     double& c_b(const unsigned t, const unsigned i)
     {
-        return u(t, static_cast<unsigned>(Variable::c_b), i);
+        return u(t, Variable::c_b, i);
     }
 
     double& c_s(const unsigned t, const unsigned i)
     {
-        return u(t, static_cast<unsigned>(Variable::c_s), i);
+        return u(t, Variable::c_s, i);
     }
 
     double& phi(const unsigned t, const unsigned i)
     {
-        return u(t, static_cast<unsigned>(Variable::phi), i);
+        return u(t, Variable::phi, i);
     }
 
     const double d_c_u_dx(const unsigned t, const unsigned i) const
@@ -188,17 +188,15 @@ private:
                                const Variable variable,
                                const unsigned i) const
     {
-        unsigned v = static_cast<unsigned>(variable);
-
         if(i == 0)
         {
             // Left boundary
-            return stencil_1_forward(t,v,i)/dx_;
+            return stencil_1_forward(t,variable,i)/dx_;
         }
         else if(i == (n_node_-1))
         {
             // Right boundary
-            return stencil_1_backward(t,v,i)/dx_;
+            return stencil_1_backward(t,variable,i)/dx_;
         }
         else
         {
@@ -206,7 +204,7 @@ private:
             assert(i > 0 && i < (n_node_-1));
 
             // Bulk
-            return stencil_1_central(t,v,i)/dx_;
+            return stencil_1_central(t,variable,i)/dx_;
         }
     }
 
@@ -465,7 +463,7 @@ int main(int argc, char **argv)
     }
 
     ChemokinesProblem1D problem(n_node, dt);
-    ChemokinesProblem1D::Max_residual = 1e-14;
+    ChemokinesProblem1D::Max_residual = 1e-10;
 
     std::ifstream config_file(argv[1]);
     ConfigFile cf(config_file);

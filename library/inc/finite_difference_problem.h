@@ -13,25 +13,6 @@ namespace mjrfd
 
         virtual ~FiniteDifferenceProblem();
 
-        //template<class T>
-        //const double stencil_1_central(const unsigned t,
-                                       //const T variable,
-                                       //const unsigned i) const;
-
-        //template<class T>
-        //const double stencil_1_forward(const unsigned t,
-                                       //const T variable,
-                                       //const unsigned i) const;
-
-        //template<class T>
-        //const double stencil_1_backward(const unsigned t,
-                                        //const T variable,
-                                        //const unsigned i) const;
-
-        //template<class T>
-        //const double stencil_2_central(const unsigned t,
-                                       //const T variable,
-                                       //const unsigned i) const;
         template<class T>
         const double stencil_1_central(const unsigned t,
                                        const T variable,

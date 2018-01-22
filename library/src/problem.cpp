@@ -252,30 +252,6 @@ namespace mjrfd
         return time_;
     }
 
-    const double Problem::u(const unsigned v, const unsigned i) const
-    {
-        return u_[v][0](i);
-    }
-
-    const double Problem::u(const unsigned t, const unsigned v, const unsigned i) const
-    {
-        assert(t < 2);
-
-        return u_[v][t](i);
-    }
-
-    double& Problem::u(const unsigned v, const unsigned i)
-    {
-        return u_[v][0](i);
-    }
-
-    double& Problem::u(const unsigned t, const unsigned v, const unsigned i)
-    {
-        assert(t < 2);
-
-        return u_[v][t](i);
-    }
-
     void Problem::linear_solve()
     {
         linear_solver_.compute(jacobian_);

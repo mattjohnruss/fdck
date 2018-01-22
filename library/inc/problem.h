@@ -36,11 +36,37 @@ namespace mjrfd
 
         void dump_res_and_jac(std::ostream &res_stream, std::ostream &jac_stream) const;
 
-        const double u(const unsigned v, const unsigned i) const;
-        const double u(const unsigned t, const unsigned v, const unsigned i) const;
+        template<class T>
+        const double u(const T variable, const unsigned i) const
+        {
+            unsigned v = static_cast<unsigned>(variable);
+            return u_[v][0](i);
+        }
 
-        double& u(const unsigned v, const unsigned i);
-        double& u(const unsigned t, const unsigned v, const unsigned i);
+        template<class T>
+        const double u(const unsigned t, const T variable, const unsigned i) const
+        {
+            assert(t < 2);
+
+            unsigned v = static_cast<unsigned>(variable);
+            return u_[v][t](i);
+        }
+
+        template<class T>
+        double& u(const T variable, const unsigned i)
+        {
+            unsigned v = static_cast<unsigned>(variable);
+            return u_[v][0](i);
+        }
+
+        template<class T>
+        double& u(const unsigned t, const T variable, const unsigned i)
+        {
+            assert(t < 2);
+
+            unsigned v = static_cast<unsigned>(variable);
+            return u_[v][t](i);
+        }
 
         void enable_terse_logging();
         void disable_terse_logging();
