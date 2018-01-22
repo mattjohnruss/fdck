@@ -56,12 +56,14 @@ namespace mjrfd
         // Newton method
         while(!stop)
         {
-            // calculate the residuals and jacobian for the current solution
+            // calculate the residuals for the current state
             calculate_residual();
-            calculate_jacobian();
 
             if(dump)
             {
+                // if we're dumping the jacobian, calculate it here
+                // this is inefficient, but less so than dumping the jacobian
+                calculate_jacobian();
                 char filename[100];
 
                 std::snprintf(filename, 100, "res_t=%f_%u.dat", time_, count);
@@ -105,6 +107,9 @@ namespace mjrfd
             if(max_residual > Max_residual)
             {
                 ++count; 
+
+                // calculate the jacobian for the current state
+                calculate_jacobian();
 
                 if(terse_logging_ == true)
                 {
