@@ -208,10 +208,34 @@ private:
         }
     }
 
+    const double upwind_d_u_helper(const unsigned t, const Variable variable, const unsigned i, const double v) const
+    {
+        // TODO rewrite as an if statement? Possibly avoid calculating fw+bw diffs every time?
+        //return std::max(0.0,v)*upwind_d_u_backward_helper(t, variable, i) + std::min(0.0,v)*upwind_d_u_forward_helper(t, variable, i);
+
+        if(v > 0.0)
+        {
+            return upwind_d_u_backward_helper(t, variable, i);
+        }
+        else
+        {
+            return upwind_d_u_forward_helper(t, variable, i);
+        }
+    }
+
     const double upwind_v_d_u_helper(const unsigned t, const Variable variable, const unsigned i, const double v) const
     {
         // TODO rewrite as an if statement? Possibly avoid calculating fw+bw diffs every time?
-        return std::min(0.0,v)*upwind_d_u_backward_helper(t, variable, i) + std::max(0.0,v)*upwind_d_u_forward_helper(t, variable, i);
+        //return std::max(0.0,v)*upwind_d_u_backward_helper(t, variable, i) + std::min(0.0,v)*upwind_d_u_forward_helper(t, variable, i);
+
+        if(v > 0.0)
+        {
+            return v*upwind_d_u_backward_helper(t, variable, i);
+        }
+        else
+        {
+            return v*upwind_d_u_forward_helper(t, variable, i);
+        }
     }
 
     const double upwind_d_u_backward_helper(const unsigned t, const Variable variable, const unsigned i) const
@@ -270,6 +294,11 @@ private:
     const double upwind_v_d_phi(const unsigned t, const unsigned i, const double v) const
     {
         return upwind_v_d_u_helper(t, Variable::phi, i, v);
+    }
+
+    const double upwind_d_phi(const unsigned t, const unsigned i, const double v) const
+    {
+        return upwind_d_u_helper(t, Variable::phi, i, v);
     }
 
     void calculate_residual()
@@ -386,6 +415,7 @@ private:
         //jacobian_.setZero();
 
         std::vector<T> triplet_list;
+        // TODO update the number of entries after completion of upwinding implementation
         triplet_list.reserve(10 + 20*(n_node_-2) + 8);
 
         // LHS boundary conditions/equations
@@ -420,9 +450,57 @@ private:
         for(unsigned i = 1; i < n_node_-1; ++i)
         {
             // C_u / C_u
-            triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i-1,  cn_theta_*(1.0 + p.p_u*0.5*dx_)) );
-            triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i,   -time_factor_*dx_*dx_/dt_ - cn_theta_*(2.0 - (p.alpha + p.gamma_u*phi(0,i))*dx_*dx_)) );
-            triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i+1,  cn_theta_*(1.0 - p.p_u*0.5*dx_)) );
+            // time derivative
+            triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i, -time_factor_*dx_*dx_/dt_) );
+
+            // diffusion
+            triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i-1,  cn_theta_*1.0) );
+            triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i,   -cn_theta_*2.0) );
+            triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i+1,  cn_theta_*1.0) );
+
+            // advection (upwinding)
+            if(p.p_u > 0)
+            {
+                // if peclet is positive
+                if(i == 1)
+                {
+                    // use central difference at left boundary+1
+                    triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i-1,  cn_theta_*p.p_u*0.5*dx_) );
+                    triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i+1, -cn_theta_*p.p_u*0.5*dx_) );
+                }
+                else
+                {
+                    // use backward difference away from left boundary
+                    triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i-2, -cn_theta_*p.p_u*0.5*dx_) );
+                    triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i-1,  cn_theta_*p.p_u*2.0*dx_) );
+                    triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i,   -cn_theta_*p.p_u*1.5*dx_) );
+                }
+            }
+            else
+            {
+                // if peclet is negative
+                if(i == (n_node_-2))
+                {
+                    // use central difference at right boundary-1
+                    triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i-1,  cn_theta_*p.p_u*0.5*dx_) );
+                    triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i+1, -cn_theta_*p.p_u*0.5*dx_) );
+                }
+                else
+                {
+                    // use forward difference away from right boundary
+                    triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i  ,  cn_theta_*p.p_u*1.5*dx_) );
+                    triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i+1, -cn_theta_*p.p_u*2.0*dx_) );
+                    triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i+2,  cn_theta_*p.p_u*0.5*dx_) );
+                }
+            }
+
+            // binding/unbinding
+            triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i,   -cn_theta_*(2.0 - (p.alpha + p.gamma_u*phi(0,i))*dx_*dx_)) );
+
+            // old - combined
+            //triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i-1,  cn_theta_*(1.0 + p.p_u*0.5*dx_)) );
+            //triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i,   -time_factor_*dx_*dx_/dt_ - cn_theta_*(2.0 - (p.alpha + p.gamma_u*phi(0,i))*dx_*dx_)) );
+            //triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i+1,  cn_theta_*(1.0 - p.p_u*0.5*dx_)) );
 
             // C_u / C_b
             triplet_list.push_back( T(c_u_offset_+i, c_b_offset_+i, cn_theta_*p.beta*dx_*dx_) );
@@ -452,9 +530,55 @@ private:
             triplet_list.push_back( T(c_s_offset_+i, c_b_offset_+i, cn_theta_*(p.gamma_b*phi(0,i)*dx_*dx_)) );
 
             // C_s / C_s
-            triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i-1, cn_theta_*(p.D_su + p.p_u*0.5*dx_)) );
-            triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i,   -time_factor_*dx_*dx_/dt_ - cn_theta_*2.0*p.D_su) );
-            triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i+1, cn_theta_*(p.D_su - p.p_u*0.5*dx_)) );
+
+            // time derivative
+            triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i,   -time_factor_*dx_*dx_/dt_) );
+
+            // diffusion
+            triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i-1,  cn_theta_*p.D_su) );
+            triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i,   -cn_theta_*2.0*p.D_su) );
+            triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i+1,  cn_theta_*p.D_su) );
+
+            // advection (upwinding)
+            if(p.p_u > 0)
+            {
+                // if peclet is positive
+                if(i == 1)
+                {
+                    // use central difference at left boundary+1
+                    triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i-1,  cn_theta_*p.p_u*0.5*dx_) );
+                    triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i+1, -cn_theta_*p.p_u*0.5*dx_) );
+                }
+                else
+                {
+                    // use backward difference away from left boundary
+                    triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i-2, -cn_theta_*p.p_u*0.5*dx_) );
+                    triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i-1,  cn_theta_*p.p_u*2.0*dx_) );
+                    triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i,   -cn_theta_*p.p_u*1.5*dx_) );
+                }
+            }
+            else
+            {
+                // if peclet is negative
+                if(i == (n_node_-2))
+                {
+                    // use central difference at right boundary-1
+                    triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i-1,  cn_theta_*p.p_u*0.5*dx_) );
+                    triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i+1, -cn_theta_*p.p_u*0.5*dx_) );
+                }
+                else
+                {
+                    // use forward difference away from right boundary
+                    triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i  ,  cn_theta_*p.p_u*1.5*dx_) );
+                    triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i+1, -cn_theta_*p.p_u*2.0*dx_) );
+                    triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i+2,  cn_theta_*p.p_u*0.5*dx_) );
+                }
+            }
+
+            // old - combined
+            //triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i-1, cn_theta_*(p.D_su + p.p_u*0.5*dx_)) );
+            //triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i,   -time_factor_*dx_*dx_/dt_ - cn_theta_*2.0*p.D_su) );
+            //triplet_list.push_back( T(c_s_offset_+i, c_s_offset_+i+1, cn_theta_*(p.D_su - p.p_u*0.5*dx_)) );
 
             // C_s / phi
             triplet_list.push_back( T(c_s_offset_+i, phi_offset_+i, cn_theta_*(p.gamma_u*c_u(0,i) + p.gamma_b*c_b(0,i))*dx_*dx_) );
@@ -463,17 +587,81 @@ private:
             // (no entries)
 
             // phi / C_b
-            triplet_list.push_back( T(phi_offset_+i, c_b_offset_+i-1,  cn_theta_*( 0.5*p.nu*(-0.5*phi(0,i-1) + 0.5*phi(0,i+1)) - p.nu*phi(0,i) )) );
+
+            const double d_c_b = stencil_1_central(0,Variable::c_b,i);
+            const double nu_d_c_b = p.nu*d_c_b;
+            const double d_phi = upwind_d_phi(0,i,nu_d_c_b);
+
+            // first chemotaxis term
+            triplet_list.push_back( T(phi_offset_+i, c_b_offset_+i-1,  cn_theta_*0.5*p.nu*d_phi) );
+            triplet_list.push_back( T(phi_offset_+i, c_b_offset_+i+1, -cn_theta_*0.5*p.nu*d_phi) );
+
+            // second chemotaxis term
+            triplet_list.push_back( T(phi_offset_+i, c_b_offset_+i-1, -cn_theta_*1.0*p.nu*phi(0,i)) );
             triplet_list.push_back( T(phi_offset_+i, c_b_offset_+i,    cn_theta_*2.0*p.nu*phi(0,i)) );
-            triplet_list.push_back( T(phi_offset_+i, c_b_offset_+i+1, -cn_theta_*( 0.5*p.nu*(-0.5*phi(0,i-1) + 0.5*phi(0,i+1)) + p.nu*phi(0,i) )) );
+            triplet_list.push_back( T(phi_offset_+i, c_b_offset_+i+1, -cn_theta_*1.0*p.nu*phi(0,i)) );
+
+            // old - combined
+            //triplet_list.push_back( T(phi_offset_+i, c_b_offset_+i-1,  cn_theta_*( 0.5*p.nu*(-0.5*phi(0,i-1) + 0.5*phi(0,i+1)) - p.nu*phi(0,i) )) );
+            //triplet_list.push_back( T(phi_offset_+i, c_b_offset_+i,    cn_theta_*2.0*p.nu*phi(0,i)) );
+            //triplet_list.push_back( T(phi_offset_+i, c_b_offset_+i+1, -cn_theta_*( 0.5*p.nu*(-0.5*phi(0,i-1) + 0.5*phi(0,i+1)) + p.nu*phi(0,i) )) );
 
             // phi / C_s
             // (no entries)
 
             // phi / phi
-            triplet_list.push_back( T(phi_offset_+i, phi_offset_+i-1, cn_theta_*(p.D_ju + p.nu*0.5*(-0.5*c_b(0,i-1) + 0.5*c_b(0,i+1)))) );
-            triplet_list.push_back( T(phi_offset_+i, phi_offset_+i,   -time_factor_*dx_*dx_/dt_ + cn_theta_*(-2.0*p.D_ju - p.nu*(c_b(0,i-1) - 2.0*c_b(0,i) + c_b(0,i+1)))) );
-            triplet_list.push_back( T(phi_offset_+i, phi_offset_+i+1, cn_theta_*(p.D_ju - p.nu*0.5*(-0.5*c_b(0,i-1) + 0.5*c_b(0,i+1)))) );
+
+            // time derivative
+            triplet_list.push_back( T(phi_offset_+i, phi_offset_+i, -time_factor_*dx_*dx_/dt_) );
+
+            // diffusion
+            triplet_list.push_back( T(phi_offset_+i, phi_offset_+i-1,  cn_theta_*p.D_ju) );
+            triplet_list.push_back( T(phi_offset_+i, phi_offset_+i,   -cn_theta_*2.0*p.D_ju) );
+            triplet_list.push_back( T(phi_offset_+i, phi_offset_+i+1,  cn_theta_*p.D_ju) );
+
+            // chemotaxis (upwinding)
+            if(nu_d_c_b > 0)
+            {
+                // if nu_d_c_b is positive
+                if(i == 1)
+                {
+                    // use central difference at left boundary+1
+                    triplet_list.push_back( T(phi_offset_+i, phi_offset_+i-1,  cn_theta_*nu_d_c_b*0.5) );
+                    triplet_list.push_back( T(phi_offset_+i, phi_offset_+i+1, -cn_theta_*nu_d_c_b*0.5) );
+                }
+                else
+                {
+                    // use backward difference away from left boundary
+                    triplet_list.push_back( T(phi_offset_+i, phi_offset_+i-2, -cn_theta_*nu_d_c_b*0.5) );
+                    triplet_list.push_back( T(phi_offset_+i, phi_offset_+i-1,  cn_theta_*nu_d_c_b*2.0) );
+                    triplet_list.push_back( T(phi_offset_+i, phi_offset_+i,   -cn_theta_*nu_d_c_b*1.5) );
+                }
+            }
+            else
+            {
+                // if nu_d_c_b is negative
+                if(i == (n_node_-2))
+                {
+                    // use central difference at right boundary-1
+                    triplet_list.push_back( T(phi_offset_+i, phi_offset_+i-1,  cn_theta_*nu_d_c_b*0.5) );
+                    triplet_list.push_back( T(phi_offset_+i, phi_offset_+i+1, -cn_theta_*nu_d_c_b*0.5) );
+                }
+                else
+                {
+                    // use forward difference away from right boundary
+                    triplet_list.push_back( T(phi_offset_+i, phi_offset_+i  ,  cn_theta_*nu_d_c_b*1.5) );
+                    triplet_list.push_back( T(phi_offset_+i, phi_offset_+i+1, -cn_theta_*nu_d_c_b*2.0) );
+                    triplet_list.push_back( T(phi_offset_+i, phi_offset_+i+2,  cn_theta_*nu_d_c_b*0.5) );
+                }
+            }
+
+            // second term of chemotaxis
+            triplet_list.push_back( T(phi_offset_+i, phi_offset_+i,   -cn_theta_*p.nu*(c_b(0,i-1) - 2.0*c_b(0,i) + c_b(0,i+1))) );
+
+            // old - combined
+            //triplet_list.push_back( T(phi_offset_+i, phi_offset_+i-1, cn_theta_*(p.D_ju + p.nu*0.5*(-0.5*c_b(0,i-1) + 0.5*c_b(0,i+1)))) );
+            //triplet_list.push_back( T(phi_offset_+i, phi_offset_+i,   -time_factor_*dx_*dx_/dt_ + cn_theta_*(-2.0*p.D_ju - p.nu*(c_b(0,i-1) - 2.0*c_b(0,i) + c_b(0,i+1)))) );
+            //triplet_list.push_back( T(phi_offset_+i, phi_offset_+i+1, cn_theta_*(p.D_ju - p.nu*0.5*(-0.5*c_b(0,i-1) + 0.5*c_b(0,i+1)))) );
         }
 
         // RHS boundary conditions/equations
