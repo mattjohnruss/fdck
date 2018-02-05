@@ -416,7 +416,8 @@ private:
 
         std::vector<T> triplet_list;
         // TODO update the number of entries after completion of upwinding implementation
-        triplet_list.reserve(10 + 20*(n_node_-2) + 8);
+        //triplet_list.reserve(10 + 20*(n_node_-2) + 8);
+        triplet_list.reserve(8 + 36*(n_node_-2) + 6);
 
         // LHS boundary conditions/equations
         // --------------------------------------------------------------------
@@ -495,7 +496,7 @@ private:
             }
 
             // binding/unbinding
-            triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i,   -cn_theta_*(2.0 - (p.alpha + p.gamma_u*phi(0,i))*dx_*dx_)) );
+            triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i, cn_theta_*((p.alpha + p.gamma_u*phi(0,i))*dx_*dx_)) );
 
             // old - combined
             //triplet_list.push_back( T(c_u_offset_+i, c_u_offset_+i-1,  cn_theta_*(1.0 + p.p_u*0.5*dx_)) );
