@@ -9,9 +9,11 @@ namespace mjrfd
     Problem::Problem(const unsigned n_var,
                      const unsigned n_dof_per_var,
                      const double dt) :
+        n_dof_per_var_(n_dof_per_var),
         n_dof_(n_var*n_dof_per_var),
         n_var_(n_var),
-        u_(n_var, std::vector<Eigen::VectorXd>(2, Eigen::VectorXd(n_dof_per_var))),
+        n_time_history_(2),
+        u_(n_time_history_, Eigen::VectorXd(n_dof_)),
         du_(Eigen::VectorXd(n_dof_)),
         residual_(n_dof_),
         jacobian_(n_dof_, n_dof_),
@@ -20,12 +22,9 @@ namespace mjrfd
         steady_(false),
         terse_logging_(false)
     {
-        for(auto& var : u_)
+        for(unsigned i = 0; i < n_time_history_; ++i)
         {
-            for(unsigned i = 0; i < 2; ++i)
-            {
-                var[i].setZero();
-            }
+            u_[i].setZero();
         }
 
         du_.setZero();
@@ -40,11 +39,8 @@ namespace mjrfd
         // backup the current solution before solving, unless the problem is steady
         if(steady_ == false)
         {
-            //u_[1] = u_[0];
-            for(auto& var : u_)
-            {
-                var[1] = var[0];
-            }
+            // TODO generalise this for n_time_history_ > 1
+            u_[1] = u_[0];
         }
 
         // the Newton iteration will continue until stop == true
@@ -125,14 +121,16 @@ namespace mjrfd
                 linear_solve();
 
                 // update the solution
-                for(unsigned v = 0; v < n_var_; ++v)
-                {
-                    u_[v][0] += du_.segment(v*n_dof_/n_var_, n_dof_/n_var_);
-                    //for(unsigned d = 0; d < n_dof_; ++d)
-                    //{
-                        //u_[v][0](d) += du_(v*n_dof_ + d);
-                    //}
-                }
+                u_[0] += du_;
+
+                //for(unsigned v = 0; v < n_var_; ++v)
+                //{
+                    //u_[v][0] += du_.segment(v*n_dof_/n_var_, n_dof_/n_var_);
+                    ////for(unsigned d = 0; d < n_dof_; ++d)
+                    ////{
+                        ////u_[v][0](d) += du_(v*n_dof_ + d);
+                    ////}
+                //}
             }
             else
             {
@@ -223,6 +221,11 @@ namespace mjrfd
         steady_ = false;
     }
 
+    const double Problem::time() const
+    {
+        return time_;
+    }
+
     void Problem::dump_res_and_jac(std::ostream &res_stream, std::ostream &jac_stream) const
     {
         // sensible output format for Eigen matrices
@@ -252,9 +255,84 @@ namespace mjrfd
         //jac_stream << Eigen::MatrixXd(jacobian_).format(plain_fmt);
     }
 
-    const double Problem::time() const
+    void Problem::enable_terse_logging()
     {
-        return time_;
+        terse_logging_ = true;
+    }
+
+    void Problem::disable_terse_logging()
+    {
+        terse_logging_ = false;
+    }
+
+    //const double& Problem::u_flat(const unsigned t, const unsigned i) const
+    //{
+        //assert(n_dof_ % n_var_ == 0);
+
+        //const unsigned n_dof_per_var = n_dof_/n_var_;
+        //const unsigned j = i/n_dof_per_var;
+        //const unsigned var = i*n_dof_per_var;
+
+        //return u_[var][t](j);
+    //}
+
+    //double& Problem::u_flat(const unsigned t, const unsigned i)
+    //{
+        //assert(n_dof_ % n_var_ == 0);
+
+        //const unsigned n_dof_per_var = n_dof_/n_var_;
+        //const unsigned j = i/n_dof_per_var;
+        //const unsigned var = i%n_dof_per_var;
+
+        //std::cout << "i = " << i << '\n';
+        //std::cout << "n_dof_per_var = " << n_dof_per_var << '\n';
+        //std::cout << "j = " << j << '\n';
+        //std::cout << "var = " << var << '\n';
+        //std::cout << "n_var_ = " << n_var_ << '\n';
+        //std::cout << "n_dof_ = " << n_dof_ << "\n\n";
+
+        //assert(j >= 0 && j < n_dof_per_var);
+        //assert(var >= 0 && var < n_var_);
+
+        //return u_[var][t](j);
+    //}
+
+    // Default implementation which calculates the jacobian by
+    // finite-differencing the residuals
+    void Problem::calculate_jacobian()
+    {
+        // Storage for the dense jacobian matrix
+        Eigen::MatrixXd dense_jacobian(n_dof_, n_dof_);
+
+        // Storage for the residuals after incrementing/decrementing a dof
+        Eigen::VectorXd residual_plus(residual_.size());
+        Eigen::VectorXd residual_minus(residual_.size());
+
+        // Derivative wrt dof i
+        for(unsigned i = 0; i < n_dof_; ++i)
+        {
+            // Backup the i-th dof
+            double u_i_backup = u_[0](i);
+
+            // Calculate plus residual
+            u_[0](i) += Jacobian_fd_step;
+            calculate_residual();
+            residual_plus = residual_;
+            u_[0](i) = u_i_backup;
+
+            // Calculate minus residual
+            u_[0](i) -= Jacobian_fd_step;
+            calculate_residual();
+            residual_minus = residual_;
+            u_[0](i) = u_i_backup;
+
+            dense_jacobian.col(i) =
+                (residual_plus - residual_minus)/(2.0*Jacobian_fd_step);
+        }
+
+        // Set the sparse jacobian from the dense one
+        // TODO check the tolerance for throwing away terms close to zero
+        jacobian_ = dense_jacobian.sparseView();
     }
 
     void Problem::linear_solve()
@@ -270,16 +348,8 @@ namespace mjrfd
         du_ = linear_solver_.solve(-residual_);
     }
 
-    void Problem::enable_terse_logging()
-    {
-        terse_logging_ = true;
-    }
-
-    void Problem::disable_terse_logging()
-    {
-        terse_logging_ = false;
-    }
-
     double Problem::Max_residual = 1.0e-8;
     unsigned Problem::Max_newton_iterations = 20;
+
+    double Problem::Jacobian_fd_step = 1.0e-8;
 }

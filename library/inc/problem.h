@@ -40,41 +40,56 @@ namespace mjrfd
         const double u(const T variable, const unsigned i) const
         {
             unsigned v = static_cast<unsigned>(variable);
-            return u_[v][0](i);
+            assert(v >= 0 && v < n_var_);
+            assert(i >= 0 && i < n_dof_per_var_);
+
+            return u_[0](v*n_dof_per_var_ + i);
         }
 
         template<class T>
         const double u(const unsigned t, const T variable, const unsigned i) const
         {
-            assert(t < 2);
-
             unsigned v = static_cast<unsigned>(variable);
-            return u_[v][t](i);
+            assert(t >= 0 && t < n_time_history_);
+            assert(v >= 0 && v < n_var_);
+            assert(i >= 0 && i < n_dof_per_var_);
+
+            return u_[t](v*n_dof_per_var_ + i);
         }
 
         template<class T>
         double& u(const T variable, const unsigned i)
         {
             unsigned v = static_cast<unsigned>(variable);
-            return u_[v][0](i);
+            assert(v >= 0 && v < n_var_);
+            assert(i >= 0 && i < n_dof_per_var_);
+
+            return u_[0](v*n_dof_per_var_ + i);
         }
 
         template<class T>
         double& u(const unsigned t, const T variable, const unsigned i)
         {
-            assert(t < 2);
-
             unsigned v = static_cast<unsigned>(variable);
-            return u_[v][t](i);
+            assert(t >= 0 && t < n_time_history_);
+            assert(v >= 0 && v < n_var_);
+            assert(i >= 0 && i < n_dof_per_var_);
+
+            return u_[t](v*n_dof_per_var_ + i);
         }
 
         void enable_terse_logging();
         void disable_terse_logging();
 
     protected:
-        unsigned n_dof_;
-        unsigned n_var_;
-        std::vector<std::vector<Eigen::VectorXd>> u_;
+        const unsigned n_dof_per_var_;
+        const unsigned n_dof_;
+        const unsigned n_var_;
+
+        const unsigned n_time_history_;
+
+        //std::vector<std::vector<Eigen::VectorXd>> u_;
+        std::vector<Eigen::VectorXd> u_;
 
     private:
         Eigen::VectorXd du_;
@@ -88,6 +103,9 @@ namespace mjrfd
 
         bool steady_;
 
+        const double& u_flat(const unsigned t, const unsigned i) const;
+        double& u_flat(const unsigned t, const unsigned i);
+
         virtual void calculate_residual() = 0;
         virtual void calculate_jacobian() = 0;
 
@@ -97,6 +115,8 @@ namespace mjrfd
         Eigen::SparseLU<Eigen::SparseMatrix<double> > linear_solver_;
 
         bool terse_logging_;
+
+        static double Jacobian_fd_step;
 
         //std::vector<Residual*> m_residuals;
     };
