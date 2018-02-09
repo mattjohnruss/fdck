@@ -81,6 +81,11 @@ namespace mjrfd
         void enable_terse_logging();
         void disable_terse_logging();
 
+        void enable_fd_jacobian();
+        void disable_fd_jacobian();
+
+        void clear_solution();
+
     protected:
         const unsigned n_dof_per_var_;
         const unsigned n_dof_;
@@ -103,9 +108,7 @@ namespace mjrfd
 
         bool steady_;
 
-        const double& u_flat(const unsigned t, const unsigned i) const;
-        double& u_flat(const unsigned t, const unsigned i);
-
+        // TODO rewrite so that these accept a vector/matrix/vector of triplets etc by reference
         virtual void calculate_residual() = 0;
         virtual void calculate_jacobian() = 0;
 
@@ -115,6 +118,7 @@ namespace mjrfd
         Eigen::SparseLU<Eigen::SparseMatrix<double> > linear_solver_;
 
         bool terse_logging_;
+        bool use_fd_jacobian_;
 
         static double Jacobian_fd_step;
 

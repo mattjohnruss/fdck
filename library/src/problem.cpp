@@ -20,7 +20,8 @@ namespace mjrfd
         time_(0.0),
         dt_(dt),
         steady_(false),
-        terse_logging_(false)
+        terse_logging_(false),
+        use_fd_jacobian_(false)
     {
         for(unsigned i = 0; i < n_time_history_; ++i)
         {
@@ -59,7 +60,15 @@ namespace mjrfd
             {
                 // if we're dumping the jacobian, calculate it here
                 // this is inefficient, but less so than dumping the jacobian
-                calculate_jacobian();
+                if(use_fd_jacobian_ == true)
+                {
+                    Problem::calculate_jacobian();
+                }
+                else
+                {
+                    calculate_jacobian();
+                }
+
                 char filename[100];
 
                 std::snprintf(filename, 100, "res_t=%f_%u.dat", time_, count);
@@ -105,7 +114,14 @@ namespace mjrfd
                 ++count; 
 
                 // calculate the jacobian for the current state
-                calculate_jacobian();
+                if(use_fd_jacobian_ == true)
+                {
+                    Problem::calculate_jacobian();
+                }
+                else
+                {
+                    calculate_jacobian();
+                }
 
                 if(terse_logging_ == true)
                 {
@@ -265,37 +281,26 @@ namespace mjrfd
         terse_logging_ = false;
     }
 
-    //const double& Problem::u_flat(const unsigned t, const unsigned i) const
-    //{
-        //assert(n_dof_ % n_var_ == 0);
+    void Problem::enable_fd_jacobian()
+    {
+        use_fd_jacobian_ = true;
+    }
 
-        //const unsigned n_dof_per_var = n_dof_/n_var_;
-        //const unsigned j = i/n_dof_per_var;
-        //const unsigned var = i*n_dof_per_var;
+    void Problem::disable_fd_jacobian()
+    {
+        use_fd_jacobian_ = false;
+    }
 
-        //return u_[var][t](j);
-    //}
-
-    //double& Problem::u_flat(const unsigned t, const unsigned i)
-    //{
-        //assert(n_dof_ % n_var_ == 0);
-
-        //const unsigned n_dof_per_var = n_dof_/n_var_;
-        //const unsigned j = i/n_dof_per_var;
-        //const unsigned var = i%n_dof_per_var;
-
-        //std::cout << "i = " << i << '\n';
-        //std::cout << "n_dof_per_var = " << n_dof_per_var << '\n';
-        //std::cout << "j = " << j << '\n';
-        //std::cout << "var = " << var << '\n';
-        //std::cout << "n_var_ = " << n_var_ << '\n';
-        //std::cout << "n_dof_ = " << n_dof_ << "\n\n";
-
-        //assert(j >= 0 && j < n_dof_per_var);
-        //assert(var >= 0 && var < n_var_);
-
-        //return u_[var][t](j);
-    //}
+    void Problem::clear_solution()
+    {
+        for(unsigned t = 0; t < n_time_history_; ++t)
+        {
+            for(unsigned i = 0; i < n_dof_; ++i)
+            {
+                u_[t](i) = 0;
+            }
+        }
+    }
 
     // Default implementation which calculates the jacobian by
     // finite-differencing the residuals
@@ -314,25 +319,42 @@ namespace mjrfd
             // Backup the i-th dof
             double u_i_backup = u_[0](i);
 
+            // TODO remove this debugging output
+            //Eigen::MatrixXd res_mat(n_dof_, 4);
+
             // Calculate plus residual
             u_[0](i) += Jacobian_fd_step;
             calculate_residual();
             residual_plus = residual_;
+            // TODO remove this debugging output
+            //res_mat.col(0) = u_[0];
             u_[0](i) = u_i_backup;
 
             // Calculate minus residual
             u_[0](i) -= Jacobian_fd_step;
             calculate_residual();
             residual_minus = residual_;
+            // TODO remove this debugging output
+            //res_mat.col(1) = u_[0];
             u_[0](i) = u_i_backup;
 
+            //res_mat.col(2) = residual_plus;
+            //res_mat.col(3) = residual_minus;
+
+            //std::cout << "\ni = " << i << '\n';
+            //std::cout << res_mat << '\n';
+
+            // Set the column of the jacobian matrix
             dense_jacobian.col(i) =
                 (residual_plus - residual_minus)/(2.0*Jacobian_fd_step);
         }
 
+        std::cout << std::setprecision(12) << dense_jacobian << '\n';
+
         // Set the sparse jacobian from the dense one
         // TODO check the tolerance for throwing away terms close to zero
         jacobian_ = dense_jacobian.sparseView();
+        jacobian_.makeCompressed();
     }
 
     void Problem::linear_solve()

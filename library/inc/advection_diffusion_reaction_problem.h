@@ -7,6 +7,7 @@
 #include <Eigen/Dense>
 
 #include <iostream>
+#include <iomanip>
 
 namespace mjrfd
 {
@@ -109,6 +110,7 @@ namespace mjrfd
     /// Calculate the residual vector
     void AdvectionDiffusionReactionProblem::calculate_residual()
     {
+        residual_.setZero();
         // Storage for the diffusion coefficients
         std::vector<double> d(n_var_);
         //std::vector<double> v(n_var_);
@@ -160,58 +162,58 @@ namespace mjrfd
     /// Calculate the jacobian matrix
     void AdvectionDiffusionReactionProblem::calculate_jacobian()
     {
-        // Calculate jacobian using finite differences
-        Problem::calculate_jacobian();
+        jacobian_.setZero();
 
-        //// Vector of triplets for constructing the sparse jacobian matrix
-        //// TODO maybe make triplet_list a member variable so that it doesn't
-        //// get reallocated every iteration
-        //std::vector<T> triplet_list;
+        // Vector of triplets for constructing the sparse jacobian matrix
+        // TODO maybe make triplet_list a member variable so that it doesn't
+        // get reallocated every iteration
+        std::vector<T> triplet_list;
 
-        //// TODO reserve the correct number of entries
-        //// triplet_list.reserve(*);
+        // TODO reserve the correct number of entries
+        // triplet_list.reserve(*);
 
-        //std::vector<double> d(n_var_);
-        ////std::vector<double> v(n_var_);
-        ////std::vector<double> r(n_var_);
-        ////std::vector<std::vector<double>> dv_du(n_var_,);
-        ////std::vector<std::vector<double>> dr_du(n_var_,);
+        std::vector<double> d(n_var_);
+        //std::vector<double> v(n_var_);
+        //std::vector<double> r(n_var_);
+        //std::vector<std::vector<double>> dv_du(n_var_,);
+        //std::vector<std::vector<double>> dr_du(n_var_,);
 
-        //// Get the diffusion coefficients
-        //get_d(d);
+        // Get the diffusion coefficients
+        get_d(d);
 
-        //// Loop over the variables
-        //for(unsigned var = 0; var < n_var_; ++var)
-        //{
-            //// Loop over the nodes
-            ////for(unsigned i = 0; i < n_node_; ++i)
+        // Loop over the variables
+        for(unsigned var = 0; var < n_var_; ++var)
+        {
+            // Loop over the nodes
             //for(unsigned i = 0; i < n_node_; ++i)
-            //{
-                //// Calculate the index of the current dof
-                //unsigned index = var*n_node_ + i;
+            for(unsigned i = 0; i < n_node_; ++i)
+            {
+                // Calculate the index of the current dof
+                unsigned index = var*n_node_ + i;
 
-                //// Diffusion
-                //if(i == 0)
-                //{
-                    //// FIXME this is a temporary hack
-                    //triplet_list.push_back( T(index, index, -1.0*dx_*dx_) );
-                //}
-                //else if(i == n_node_-1)
-                //{
-                    //// FIXME this is a temporary hack
-                    //triplet_list.push_back( T(index, index, -1.0*dx_*dx_) );
-                //}
-                //else
-                //{
-                    //diff_jac_helper(triplet_list, var, i, d[var]);
-                //}
-            //}
-        //}
+                // Diffusion
+                if(i == 0)
+                {
+                    // FIXME this is a temporary hack
+                    triplet_list.push_back( T(index, index, -1.0*dx_*dx_) );
+                }
+                else if(i == n_node_-1)
+                {
+                    // FIXME this is a temporary hack
+                    triplet_list.push_back( T(index, index, -1.0*dx_*dx_) );
+                }
+                else
+                {
+                    diff_jac_helper(triplet_list, var, i, d[var]);
+                }
+            }
+        }
 
-        //jacobian_.setFromTriplets(triplet_list.begin(), triplet_list.end());
-        //jacobian_.makeCompressed();
+        jacobian_.setFromTriplets(triplet_list.begin(), triplet_list.end());
+        jacobian_.makeCompressed();
 
-        ////std::cout << Eigen::MatrixXd(jacobian_).determinant() << '\n';
+        //std::cout << Eigen::MatrixXd(jacobian_).determinant() << '\n';
+        std::cout << std::setprecision(12) << Eigen::MatrixXd(jacobian_) << '\n';
     }
 
     double AdvectionDiffusionReactionProblem::diff_res_helper(const unsigned var,

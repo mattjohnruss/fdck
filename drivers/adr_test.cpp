@@ -75,24 +75,18 @@ int main(int argc, char **argv)
 {
     TestProblem problem(11, 0.01);
 
-    bool dump = true;
+    //bool dump = true;
+    bool dump = false;
 
+    std::cout << "solving with the exact jacobian:\n";
+    problem.steady_solve(dump);
+
+    std::cout << "solving with the finite differenced jacobian:\n";
+    problem.enable_fd_jacobian();
+    problem.clear_solution();
     problem.steady_solve(dump);
 
     std::ofstream outfile("output.dat");
     problem.output(outfile);
     outfile.close();
-
-    //Eigen::VectorXd x(3);
-    //x(0) = 3.4;
-    //x(1) = 5.1;
-    //x(2) = 9.3;
-
-    //Eigen::VectorXd x_plus(3), x_minus(3);
-
-    //double dx = 0.1;
-    //x_plus = x.array() - dx;
-
-    //std::cout << x << '\n';
-    //std::cout << x_plus << '\n';
 }
