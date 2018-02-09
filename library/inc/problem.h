@@ -22,9 +22,9 @@ namespace mjrfd
         static double Max_residual;
         static unsigned Max_newton_iterations;
 
-        void solve(const bool dump = false);
-        void steady_solve(const bool dump = false);
-        void unsteady_solve(const bool dump = false);
+        void solve();
+        void steady_solve();
+        void unsteady_solve();
 
         const bool is_steady() const;
         virtual void make_steady();
@@ -84,6 +84,9 @@ namespace mjrfd
         void enable_fd_jacobian();
         void disable_fd_jacobian();
 
+        void enable_dump_jacobian();
+        void disable_dump_jacobian();
+
         void clear_solution();
 
     protected:
@@ -119,6 +122,7 @@ namespace mjrfd
 
         bool terse_logging_;
         bool use_fd_jacobian_;
+        bool dump_jacobian_;
 
         static double Jacobian_fd_step;
 

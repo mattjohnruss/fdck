@@ -726,13 +726,13 @@ int main(int argc, char **argv)
     char filename[200];
     std::ofstream outfile;
 
-    bool dump = false;
+    //bool dump = false;
     //bool dump = true;
 
     problem.Max_newton_iterations = 100;
 
     // perform a steady solve and output it
-    problem.steady_solve(dump);
+    problem.steady_solve();
     std::sprintf(filename, "output_steady.csv");
     outfile.open(filename);
     problem.output(outfile);
@@ -753,7 +753,7 @@ int main(int argc, char **argv)
     while(problem.time() <= t_max)
     {
         // solve for current timestep
-        problem.unsteady_solve(dump);
+        problem.unsteady_solve();
 
         if(i % output_interval == 0)
         {

@@ -21,21 +21,17 @@ namespace mjrfd
         dt_(dt),
         steady_(false),
         terse_logging_(false),
-        use_fd_jacobian_(false)
+        use_fd_jacobian_(false),
+        dump_jacobian_(false)
     {
-        for(unsigned i = 0; i < n_time_history_; ++i)
-        {
-            u_[i].setZero();
-        }
-
-        du_.setZero();
+        clear_solution();
     }
 
     Problem::~Problem()
     {
     }
 
-    void Problem::solve(const bool dump)
+    void Problem::solve()
     {
         // backup the current solution before solving, unless the problem is steady
         if(steady_ == false)
@@ -56,32 +52,32 @@ namespace mjrfd
             // calculate the residuals for the current state
             calculate_residual();
 
-            if(dump)
-            {
-                // if we're dumping the jacobian, calculate it here
-                // this is inefficient, but less so than dumping the jacobian
-                if(use_fd_jacobian_ == true)
-                {
-                    Problem::calculate_jacobian();
-                }
-                else
-                {
-                    calculate_jacobian();
-                }
+            //if(dump_jacobian_ == true)
+            //{
+                //// if we're dumping the jacobian, calculate it here
+                //// this is inefficient, but less so than dumping the jacobian
+                //if(use_fd_jacobian_ == true)
+                //{
+                    //Problem::calculate_jacobian();
+                //}
+                //else
+                //{
+                    //calculate_jacobian();
+                //}
 
-                char filename[100];
+                //char filename[100];
 
-                std::snprintf(filename, 100, "res_t=%f_%u.dat", time_, count);
-                std::ofstream res_file(filename);
+                //std::snprintf(filename, 100, "res_t=%f_%u.dat", time_, count);
+                //std::ofstream res_file(filename);
 
-                std::snprintf(filename, 100, "jac_t=%f_%u.dat", time_, count);
-                std::ofstream jac_file(filename);
+                //std::snprintf(filename, 100, "jac_t=%f_%u.dat", time_, count);
+                //std::ofstream jac_file(filename);
 
-                dump_res_and_jac(res_file, jac_file);
+                //dump_res_and_jac(res_file, jac_file);
 
-                res_file.close();
-                jac_file.close();
-            }
+                //res_file.close();
+                //jac_file.close();
+            //}
 
             // find the l^\infty norm of the residual vector
             //double max_residual = residual_.lpNorm<Eigen::Infinity>();
@@ -133,20 +129,27 @@ namespace mjrfd
                               << ": performing Newton iteration\n";
                 }
 
+                if(dump_jacobian_ == true)
+                {
+                    char filename[100];
+
+                    std::snprintf(filename, 100, "res_t=%f_%u.dat", time_, count);
+                    std::ofstream res_file(filename);
+
+                    std::snprintf(filename, 100, "jac_t=%f_%u.dat", time_, count);
+                    std::ofstream jac_file(filename);
+
+                    dump_res_and_jac(res_file, jac_file);
+
+                    res_file.close();
+                    jac_file.close();
+                }
+
                 // solve the linear system jacobian_*du_ = -residual_ for du_
                 linear_solve();
 
                 // update the solution
                 u_[0] += du_;
-
-                //for(unsigned v = 0; v < n_var_; ++v)
-                //{
-                    //u_[v][0] += du_.segment(v*n_dof_/n_var_, n_dof_/n_var_);
-                    ////for(unsigned d = 0; d < n_dof_; ++d)
-                    ////{
-                        ////u_[v][0](d) += du_(v*n_dof_ + d);
-                    ////}
-                //}
             }
             else
             {
@@ -185,7 +188,7 @@ namespace mjrfd
         }
     }
 
-    void Problem::steady_solve(const bool dump)
+    void Problem::steady_solve()
     {
         // check if time derivatives enabled
         bool steady = is_steady();
@@ -197,7 +200,7 @@ namespace mjrfd
         }
 
         // solve the steady problem
-        solve(dump);
+        solve();
 
         // re-enable time derivatives if they were enabled before
         if(steady == false)
@@ -206,7 +209,7 @@ namespace mjrfd
         }
     }
 
-    void Problem::unsteady_solve(const bool dump)
+    void Problem::unsteady_solve()
     {
         time_ += dt_;
 
@@ -219,7 +222,7 @@ namespace mjrfd
             std::cout << "\nSolving at time = " << time_ << "\n\n";
         }
 
-        Problem::solve(dump);
+        Problem::solve();
     }
 
     const bool Problem::is_steady() const
@@ -291,14 +294,21 @@ namespace mjrfd
         use_fd_jacobian_ = false;
     }
 
+    void Problem::enable_dump_jacobian()
+    {
+        dump_jacobian_ = true;
+    }
+
+    void Problem::disable_dump_jacobian()
+    {
+        dump_jacobian_ = false;
+    }
+
     void Problem::clear_solution()
     {
         for(unsigned t = 0; t < n_time_history_; ++t)
         {
-            for(unsigned i = 0; i < n_dof_; ++i)
-            {
-                u_[t](i) = 0;
-            }
+            u_[t].setZero();
         }
     }
 
@@ -308,6 +318,9 @@ namespace mjrfd
     {
         // Storage for the dense jacobian matrix
         Eigen::MatrixXd dense_jacobian(n_dof_, n_dof_);
+
+        // Backup the residuals before doing anything
+        Eigen::VectorXd residual_backup = residual_;
 
         // Storage for the residuals after incrementing/decrementing a dof
         Eigen::VectorXd residual_plus(residual_.size());
@@ -319,42 +332,32 @@ namespace mjrfd
             // Backup the i-th dof
             double u_i_backup = u_[0](i);
 
-            // TODO remove this debugging output
-            //Eigen::MatrixXd res_mat(n_dof_, 4);
-
             // Calculate plus residual
             u_[0](i) += Jacobian_fd_step;
             calculate_residual();
             residual_plus = residual_;
-            // TODO remove this debugging output
-            //res_mat.col(0) = u_[0];
             u_[0](i) = u_i_backup;
 
             // Calculate minus residual
             u_[0](i) -= Jacobian_fd_step;
             calculate_residual();
             residual_minus = residual_;
-            // TODO remove this debugging output
-            //res_mat.col(1) = u_[0];
             u_[0](i) = u_i_backup;
-
-            //res_mat.col(2) = residual_plus;
-            //res_mat.col(3) = residual_minus;
-
-            //std::cout << "\ni = " << i << '\n';
-            //std::cout << res_mat << '\n';
 
             // Set the column of the jacobian matrix
             dense_jacobian.col(i) =
                 (residual_plus - residual_minus)/(2.0*Jacobian_fd_step);
         }
 
-        std::cout << std::setprecision(12) << dense_jacobian << '\n';
+        //std::cout << std::setprecision(12) << dense_jacobian << '\n';
 
         // Set the sparse jacobian from the dense one
         // TODO check the tolerance for throwing away terms close to zero
         jacobian_ = dense_jacobian.sparseView();
         jacobian_.makeCompressed();
+
+        // Restore the residuals to their previous state
+        residual_ = residual_backup;
     }
 
     void Problem::linear_solve()

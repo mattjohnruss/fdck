@@ -75,7 +75,7 @@ namespace mjrfd
 
     private:
         // Map parameter names to values
-        std::map<std::string, std::string> params_;
+        std::unordered_map<std::string, std::string> params_;
 
         // Helper function for removing all whitespace characters from a string
         static void remove_whitespace(std::string &s)
