@@ -47,7 +47,7 @@ private:
         {
             for(unsigned var2 = 0; var2 < n_var_; ++var2)
             {
-                dv_du[var2][var2] = 0.0;
+                dv_du[var][var2] = 0.0;
             }
         }
     }
