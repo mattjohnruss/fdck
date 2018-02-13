@@ -1,13 +1,9 @@
 #pragma once
 
-//#include <finite_difference_problem.h>
 #include <problem.h>
 #include <stencil.h>
 
-#include <Eigen/Dense>
-
 #include <iostream>
-#include <iomanip>
 
 namespace mjrfd
 {
@@ -17,6 +13,12 @@ namespace mjrfd
         typedef Eigen::Triplet<double> T;
 
     public:
+        enum class Boundary
+        {
+            Left,
+            Right
+        };
+
         /// Constructor
         AdvectionDiffusionReactionProblem(const unsigned n_var,
                                           const unsigned n_node,
@@ -38,7 +40,16 @@ namespace mjrfd
         /// Calculate the jacobian matrix
         void calculate_jacobian() override;
 
+        void enable_bc(Boundary b, const std::vector<unsigned> &vars);
+        void disable_bc(Boundary b, const std::vector<unsigned> &vars);
+
     private:
+        /// Get the coefficients a1, a2, a3 for the (Robin) boundary conditions
+        virtual void get_bc(Boundary b,
+                            std::vector<double> &a1,
+                            std::vector<double> &a2,
+                            std::vector<double> &a3) const = 0;
+
         /// Get the vector of diffusivities
         virtual void get_d(std::vector<double> &d) const = 0;
 
@@ -60,11 +71,11 @@ namespace mjrfd
         virtual void get_dr_du(const std::vector<double> &u,
                                std::vector<std::vector<double>> &dr_du) const = 0;
 
-        double diffusion_res_helper(const unsigned i,
-                                    const unsigned var);
+        //double diffusion_res_helper(const unsigned i,
+                                    //const unsigned var);
 
-        double advection_res_helper(const unsigned i,
-                                    const unsigned var);
+        //double advection_res_helper(const unsigned i,
+                                    //const unsigned var);
 
         void diffusion_jac_helper(std::vector<T> &triplet_list,
                                   const unsigned i,
@@ -90,6 +101,9 @@ namespace mjrfd
 
         /// Time factor for switching between steady/unsteady solutions
         double time_factor_;
+
+        std::vector<bool> left_bc_;
+        std::vector<bool> right_bc_;
     };
 
     /// Contructor
@@ -101,7 +115,9 @@ namespace mjrfd
         n_node_(n_node),
         cn_theta_(1.0),
         dx_(1.0/(n_node-1)),
-        time_factor_(1.0)
+        time_factor_(1.0),
+        left_bc_(n_var, false),
+        right_bc_(n_var, false)
     {
     }
 
@@ -155,21 +171,27 @@ namespace mjrfd
         // Storage for the diffusion coefficients
         std::vector<double> d(n_var_);
 
+        // Get the diffusion coefficients. Do it here because they are
+        // constants for each variable
+        get_d(d);
+
+        std::vector<double> a1_left(n_var_);
+        std::vector<double> a2_left(n_var_);
+        std::vector<double> a3_left(n_var_);
+        get_bc(Boundary::Left, a1_left, a2_left, a3_left);
+
+        std::vector<double> a1_right(n_var_);
+        std::vector<double> a2_right(n_var_);
+        std::vector<double> a3_right(n_var_);
+        get_bc(Boundary::Right, a1_right, a2_right, a3_right);
+
         // Storage for the advection velocity at a node
         double v = 0;
 
         std::vector<double> r(n_var_);
 
-
         // Storage for u (all vars) at a node
         std::vector<double> u_at_node(n_var_);
-
-        //std::vector<std::vector<double>> dv_du(n_var_,);
-        //std::vector<std::vector<double>> dr_du(n_var_,);
-
-        // Get the diffusion coefficients. Do it here because they are
-        // constants for each variable
-        get_d(d);
 
         // Loop over the nodes
         for(unsigned i = 0; i < n_node_; ++i)
@@ -188,15 +210,23 @@ namespace mjrfd
                 // Calculate the index of the current dof
                 const unsigned index = var*n_node_ + i;
 
-                if(i == 0)
+                if(i == 0 && left_bc_[var] == true)
                 {
-                    // FIXME this is a temporary hack
-                    residual_(index) += (1.0 - u(0, var, i))*dx_*dx_;
+                    residual_(index) += (a1_left[var]*u(0, var, i) - a3_left[var])*dx_*dx_;
+
+                    for(const auto& [j, w] : stencil::forward_1::weights)
+                    {
+                        residual_(index) += w*a2_left[var]*u(0, var, i+j)*dx_;
+                    }
                 }
-                else if(i == n_node_-1)
+                else if(i == n_node_-1 && right_bc_[var] == true)
                 {
-                    // FIXME this is a temporary hack
-                    residual_(index) += (0.0 - u(0, var, i))*dx_*dx_;
+                    residual_(index) += (a1_right[var]*u(0, var, i) - a3_right[var])*dx_*dx_;
+
+                    for(const auto& [j, w] : stencil::backward_1::weights)
+                    {
+                        residual_(index) += w*a2_right[var]*u(0, var, i+j)*dx_;
+                    }
                 }
                 else
                 {
@@ -211,7 +241,10 @@ namespace mjrfd
                     for(const auto& [j, w] : stencil::central_2::weights)
                     {
                         // Sum the contributions from the stencil points
-                        residual_(index) += -d[var]*w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j));
+                        if(d[var] > 0.0)
+                        {
+                            residual_(index) += -d[var]*w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j));
+                        }
                     }
 
                     // Advection (or chemotaxis etc)
@@ -222,7 +255,10 @@ namespace mjrfd
                         get_v(i+j, var, v);
 
                         // Sum the contributions from the stencil points
-                        residual_(index) += dx_*v*w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j));
+                        if(v > 0.0)
+                        {
+                            residual_(index) += dx_*v*w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j));
+                        }
                     }
 
                     // Reaction
@@ -285,10 +321,40 @@ namespace mjrfd
         jacobian_.makeCompressed();
     }
 
-    double AdvectionDiffusionReactionProblem::diffusion_res_helper(const unsigned i,
-                                                                   const unsigned var)
+    void AdvectionDiffusionReactionProblem::enable_bc(Boundary b, const std::vector<unsigned> &vars)
     {
-        double result = 0.0;
+        for(auto &var : vars)
+        {
+            if(b == Boundary::Left)
+            {
+                left_bc_[var] = true;
+            }
+            else if(b == Boundary::Right)
+            {
+                right_bc_[var] = true;
+            }
+        }
+    }
+
+    void AdvectionDiffusionReactionProblem::disable_bc(Boundary b, const std::vector<unsigned> &vars)
+    {
+        for(auto &var : vars)
+        {
+            if(b == Boundary::Left)
+            {
+                left_bc_[var] = false;
+            }
+            else if(b == Boundary::Right)
+            {
+                right_bc_[var] = false;
+            }
+        }
+    }
+
+    //double AdvectionDiffusionReactionProblem::diffusion_res_helper(const unsigned i,
+                                                                   //const unsigned var)
+    //{
+        //double result = 0.0;
 
         //// Loop over the stencil points and get the offset j (relative to i)
         //// and the weight w
@@ -298,13 +364,13 @@ namespace mjrfd
             //result += w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j));
         //}
 
-        return result;
-    }
+        //return result;
+    //}
 
-    double AdvectionDiffusionReactionProblem::advection_res_helper(const unsigned i,
-                                                                   const unsigned var)
-    {
-        double result = 0.0;
+    //double AdvectionDiffusionReactionProblem::advection_res_helper(const unsigned i,
+                                                                   //const unsigned var)
+    //{
+        //double result = 0.0;
 
         // Loop over the stencil points and get the offset j (relative to i)
         // and the weight w
@@ -317,8 +383,8 @@ namespace mjrfd
             //result += w*v*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j));
         //}
 
-        return result;
-    }
+        //return result;
+    //}
 
     void AdvectionDiffusionReactionProblem::diffusion_jac_helper(
         std::vector<T> &triplet_list,

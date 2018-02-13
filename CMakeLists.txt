@@ -1,6 +1,8 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.9)
 
 project(fd_diff++ C CXX)
+
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 
 include_directories(${fd_diff++_SOURCE_DIR}/inc)
 
