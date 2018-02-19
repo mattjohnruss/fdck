@@ -167,7 +167,9 @@ namespace mjrfd
     /// Calculate the residual vector
     void AdvectionDiffusionReactionProblem::calculate_residual()
     {
+        // Set the residuals to zero
         residual_.setZero();
+
         // Storage for the diffusion coefficients
         std::vector<double> d(n_var_);
 
@@ -175,11 +177,13 @@ namespace mjrfd
         // constants for each variable
         get_d(d);
 
+        // Get the left boundary condition coefficients
         std::vector<double> a1_left(n_var_);
         std::vector<double> a2_left(n_var_);
         std::vector<double> a3_left(n_var_);
         get_bc(Boundary::Left, a1_left, a2_left, a3_left);
 
+        // Get the right boundary condition coefficients
         std::vector<double> a1_right(n_var_);
         std::vector<double> a2_right(n_var_);
         std::vector<double> a3_right(n_var_);
@@ -210,6 +214,7 @@ namespace mjrfd
                 // Calculate the index of the current dof
                 const unsigned index = var*n_node_ + i;
 
+                // Boundary conditions
                 if(i == 0 && left_bc_[var] == true)
                 {
                     residual_(index) += (a1_left[var]*u(0, var, i) - a3_left[var])*dx_*dx_;
