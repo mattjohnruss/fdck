@@ -82,6 +82,8 @@ namespace mjrfd
                                   const unsigned var,
                                   const double d);
 
+        const std::unordered_map<unsigned, double>& upwind_stencil_weights(const unsigned i, const double v) const;
+
     protected:
         /// Calculate the x coordinate from the node number i
         const double x(const unsigned i) const;
@@ -287,13 +289,32 @@ namespace mjrfd
         // triplet_list.reserve(*);
 
         std::vector<double> d(n_var_);
-        //std::vector<double> v(n_var_);
-        //std::vector<double> r(n_var_);
+
         //std::vector<std::vector<double>> dv_du(n_var_,);
         //std::vector<std::vector<double>> dr_du(n_var_,);
 
         // Get the diffusion coefficients
         get_d(d);
+
+        // Get the left boundary condition coefficients
+        std::vector<double> a1_left(n_var_);
+        std::vector<double> a2_left(n_var_);
+        std::vector<double> a3_left(n_var_);
+        get_bc(Boundary::Left, a1_left, a2_left, a3_left);
+
+        // Get the right boundary condition coefficients
+        std::vector<double> a1_right(n_var_);
+        std::vector<double> a2_right(n_var_);
+        std::vector<double> a3_right(n_var_);
+        get_bc(Boundary::Right, a1_right, a2_right, a3_right);
+
+        // Storage for the advection velocity at a node
+        double v = 0;
+
+        std::vector<double> r(n_var_);
+
+        // Storage for u (all vars) at a node
+        std::vector<double> u_at_node(n_var_);
 
         // Loop over the variables
         for(unsigned var = 0; var < n_var_; ++var)
@@ -302,7 +323,7 @@ namespace mjrfd
             for(unsigned i = 0; i < n_node_; ++i)
             {
                 // Calculate the index of the current dof
-                unsigned index = var*n_node_ + i;
+                const unsigned index = var*n_node_ + i;
 
                 if(i == 0)
                 {
@@ -317,7 +338,17 @@ namespace mjrfd
                 else
                 {
                     // Diffusion
-                    diffusion_jac_helper(triplet_list, i, var, d[var]);
+                    //diffusion_jac_helper(triplet_list, i, var, d[var]);
+                    for(const auto& [j, w] : stencil::central_2::weights)
+                    {
+                        if(d[var] > 0.0)
+                        {
+                            const unsigned index2 = var*n_node_ + i + j;
+                            triplet_list.push_back( T(index, index2, -d[var]*w*cn_theta_) );
+                        }
+                    }
+
+                    // Advection (or chemotaxis etc)
                 }
             }
         }
@@ -406,6 +437,13 @@ namespace mjrfd
             triplet_list.push_back( T(index, index2, -w*cn_theta_) );
         }
     }
+
+    const std::unordered_map<unsigned, double>&
+    AdvectionDiffusionReactionProblem::upwind_stencil_weights(const unsigned i, const double v) const
+    {
+        if(v > 0)
+        {
+            return stencil::
 
     const double AdvectionDiffusionReactionProblem::x(const unsigned i) const
     {
