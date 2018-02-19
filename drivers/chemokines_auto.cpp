@@ -139,13 +139,25 @@ private:
     void get_dr_du(const std::vector<double> &u,
                    std::vector<std::vector<double>> &dr_du) const override
     {
-        for(unsigned var = 0; var < n_var_; ++var)
-        {
-            for(unsigned var2 = 0; var2 < n_var_; ++var2)
-            {
-                dr_du[var][var2] = 0.0;
-            }
-        }
+        dr_du[0][0] = -p.alpha - p.gamma_u*u[3];
+        dr_du[0][1] = p.beta;
+        dr_du[0][2] = 0.0;
+        dr_du[0][3] = -p.gamma_u*u[0];
+
+        dr_du[1][0] = p.alpha;
+        dr_du[1][1] = -p.beta - p.gamma_b*u[3];
+        dr_du[1][2] = 0.0;
+        dr_du[1][3] = -p.gamma_b*u[1];
+
+        dr_du[2][0] = p.gamma_u*u[3];
+        dr_du[2][1] = p.gamma_b*u[3];
+        dr_du[2][2] = 0.0;
+        dr_du[2][3] = p.gamma_u*u[0] + p.gamma_b*u[1];
+
+        dr_du[3][0] = 0.0;
+        dr_du[3][1] = 0.0;
+        dr_du[3][2] = 0.0;
+        dr_du[3][3] = 0.0;
     }
 };
 
@@ -183,7 +195,7 @@ int main(int argc, char **argv)
     std::cout << "nu      = " << problem.p.nu      << '\n';
     std::cout << "lambda  = " << problem.p.lambda  << '\n';
 
-    problem.enable_fd_jacobian();
+    //problem.enable_fd_jacobian();
     problem.enable_terse_logging();
 
     char filename[200];

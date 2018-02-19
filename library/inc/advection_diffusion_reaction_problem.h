@@ -185,16 +185,19 @@ namespace mjrfd
         double v = 0;
 
         std::vector<double> r(n_var_);
+        std::vector<double> r_old(n_var_);
 
         // Storage for u (all vars) at a node
         std::vector<double> u_at_node(n_var_);
+        std::vector<double> u_old_at_node(n_var_);
 
         // Loop over the nodes
         for(unsigned i = 0; i < n_node_; ++i)
         {
             for(unsigned var = 0; var < n_var_; ++var)
             {
-                u_at_node[var] = u(0, var, i);
+                u_at_node[var]     = u(0, var, i);
+                u_old_at_node[var] = u(1, var, i);
             }
 
             // Get the reaction term at the current node
@@ -246,7 +249,7 @@ namespace mjrfd
                     // Advection (or chemotaxis etc)
 
                     // Get the velocity at the location of the target node
-                    double v_at_node;
+                    double v_at_node = 0.0;
                     get_v(i, var, v_at_node);
 
                     // Loop over the stencil points, using the upwind stencil helper,
@@ -264,7 +267,7 @@ namespace mjrfd
                     }
 
                     // Reaction
-                    residual_(index) += -dx_*dx_*r[var];
+                    residual_(index) += -dx_*dx_*(cn_theta_*r[var] + (1.0-cn_theta_)*r_old[var]);
                 }
             }
         }
@@ -307,6 +310,7 @@ namespace mjrfd
         double v = 0;
 
         std::vector<double> r(n_var_);
+        std::vector<std::vector<double>> dr_du(n_var_, std::vector<double>(n_var_));
 
         // Storage for u (all vars) at a node
         std::vector<double> u_at_node(n_var_);
@@ -314,35 +318,64 @@ namespace mjrfd
         // Loop over the nodes
         for(unsigned i = 0; i < n_node_; ++i)
         {
+            for(unsigned var = 0; var < n_var_; ++var)
+            {
+                u_at_node[var] = u(0, var, i);
+            }
+
+            // Get the reaction term and derivatives at the current node
+            get_r(u_at_node, r);
+            get_dr_du(u_at_node, dr_du);
+
             // Loop over the variables
             for(unsigned var = 0; var < n_var_; ++var)
             {
                 // Calculate the index of the current dof
                 const unsigned index = var*n_node_ + i;
 
-                if(i == 0)
+                if(i == 0 && left_bc_[var] == true)
                 {
-                    // FIXME this is a temporary hack
-                    triplet_list.push_back( T(index, index, -1.0*dx_*dx_) );
+                    triplet_list.push_back( T(index, index, a1_left[var]*dx_*dx_) );
+
+                    for(const auto& [j, w] : stencil::forward_1::weights)
+                    {
+                        triplet_list.push_back( T(index, index+j, w*a2_left[var]*dx_) );
+                    }
                 }
-                else if(i == n_node_-1)
+                else if(i == n_node_-1 && right_bc_[var] == true)
                 {
-                    // FIXME this is a temporary hack
-                    triplet_list.push_back( T(index, index, -1.0*dx_*dx_) );
+                    triplet_list.push_back( T(index, index, a1_right[var]*dx_*dx_) );
+
+                    for(const auto& [j, w] : stencil::backward_1::weights)
+                    {
+                        triplet_list.push_back( T(index, index+j, w*a2_right[var]*dx_) );
+                    }
                 }
                 else
                 {
+                    // Time derivatives
+                    triplet_list.push_back( T(index, index, time_factor_*dx_*dx_/dt_) );
+
                     // Diffusion
                     for(const auto& [j, w] : stencil::central_2::weights)
                     {
                         if(d[var] > 0.0)
                         {
-                            const unsigned index2 = var*n_node_ + i + j;
-                            triplet_list.push_back( T(index, index2, -d[var]*w*cn_theta_) );
+                            triplet_list.push_back( T(index, index+j, -d[var]*w*cn_theta_) );
                         }
                     }
 
                     // Advection (or chemotaxis etc)
+                    // TODO
+
+                    // Reaction
+
+                    // Loop over the variables again
+                    for(unsigned var2 = 0; var2 < n_var_; ++var2)
+                    {
+                        unsigned index2 = var2*n_node_ + i;
+                        triplet_list.push_back( T(index, index2, -dx_*dx_*cn_theta_*dr_du[var][var2]) );
+                    }
                 }
             }
         }
