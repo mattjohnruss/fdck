@@ -317,6 +317,11 @@ namespace mjrfd
     // finite-differencing the residuals
     void Problem::calculate_jacobian()
     {
+        //typedef Eigen::Triplet<double> T;
+
+        //std::vector<T> triplet_list;
+        //triplet_list.reserve(n_dof_*n_dof_);
+
         // Storage for the dense jacobian matrix
         Eigen::MatrixXd dense_jacobian(n_dof_, n_dof_);
 
@@ -348,6 +353,16 @@ namespace mjrfd
             // Set the column of the jacobian matrix
             dense_jacobian.col(i) =
                 (residual_plus - residual_minus)/(2.0*Jacobian_fd_step);
+
+            //for(unsigned j = 0; j < n_dof_; ++j)
+            //{
+                //double value = (residual_plus(j) - residual_minus(j))/(2.0*Jacobian_fd_step);
+
+                //if(std::abs(value) >= 1.0e-14)
+                //{
+                    //triplet_list.push_back( T(j, i, value) );
+                //}
+            //}
         }
 
         //std::cout << std::setprecision(12) << dense_jacobian << '\n';
@@ -355,6 +370,7 @@ namespace mjrfd
         // Set the sparse jacobian from the dense one
         // TODO check the tolerance for throwing away terms close to zero
         jacobian_ = dense_jacobian.sparseView();
+        //jacobian_.setFromTriplets(triplet_list.begin(), triplet_list.end());
         jacobian_.makeCompressed();
 
         // Restore the residuals to their previous state
