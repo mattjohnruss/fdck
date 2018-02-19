@@ -105,8 +105,8 @@ namespace mjrfd
             }
 
             // test if the current max residual is greater than the threshold
-            // TODO always do one Newton iteration regardless of the residuals
-            if(max_residual > Max_residual)
+            // always do one Newton iteration regardless of the residuals
+            if(max_residual > Max_residual || count == 0)
             {
                 ++count; 
 
