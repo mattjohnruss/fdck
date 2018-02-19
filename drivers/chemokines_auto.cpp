@@ -133,7 +133,7 @@ private:
         r[0] = -p.alpha*u[0] + p.beta*u[1] - p.gamma_u*u[3]*u[0];
         r[1] = p.alpha*u[0] - p.beta*u[1] - p.gamma_b*u[3]*u[1];
         r[2] = p.gamma_u*u[3]*u[0] + p.gamma_b*u[3]*u[1];
-        r[4] = 0.0;
+        r[3] = 0.0;
     }
 
     void get_dr_du(const std::vector<double> &u,
