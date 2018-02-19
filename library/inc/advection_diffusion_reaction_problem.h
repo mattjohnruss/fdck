@@ -71,18 +71,8 @@ namespace mjrfd
         virtual void get_dr_du(const std::vector<double> &u,
                                std::vector<std::vector<double>> &dr_du) const = 0;
 
-        //double diffusion_res_helper(const unsigned i,
-                                    //const unsigned var);
-
-        //double advection_res_helper(const unsigned i,
-                                    //const unsigned var);
-
-        void diffusion_jac_helper(std::vector<T> &triplet_list,
-                                  const unsigned i,
-                                  const unsigned var,
-                                  const double d);
-
-        const std::unordered_map<unsigned, double>& upwind_stencil_weights(const unsigned i, const double v) const;
+        const std::unordered_map<int, double>&
+        upwind_stencil_weights(const unsigned i, const double v) const;
 
     protected:
         /// Calculate the x coordinate from the node number i
@@ -241,7 +231,6 @@ namespace mjrfd
                     residual_(index) += time_factor_*dx_*dx_/dt_*(u(0, var, i) - u(1, var, i));
 
                     // Diffusion
-                    //residual_(index) += -d[var]*diffusion_res_helper(i, var);
 
                     // Loop over the stencil points and get the offset j (relative to i)
                     // and the weight w
@@ -255,8 +244,14 @@ namespace mjrfd
                     }
 
                     // Advection (or chemotaxis etc)
-                    //residual_(index) += dx_*advection_res_helper(i, var);
-                    for(const auto& [j, w] : stencil::central_1::weights)
+
+                    // Get the velocity at the location of the target node
+                    double v_at_node;
+                    get_v(i, var, v_at_node);
+
+                    // Loop over the stencil points, using the upwind stencil helper,
+                    // and get the offset j (relative to i) and the weight w
+                    for(const auto& [j, w] : upwind_stencil_weights(i, v_at_node))
                     {
                         // Get the velocity at the current stencil point
                         get_v(i+j, var, v);
@@ -316,11 +311,11 @@ namespace mjrfd
         // Storage for u (all vars) at a node
         std::vector<double> u_at_node(n_var_);
 
-        // Loop over the variables
-        for(unsigned var = 0; var < n_var_; ++var)
+        // Loop over the nodes
+        for(unsigned i = 0; i < n_node_; ++i)
         {
-            // Loop over the nodes
-            for(unsigned i = 0; i < n_node_; ++i)
+            // Loop over the variables
+            for(unsigned var = 0; var < n_var_; ++var)
             {
                 // Calculate the index of the current dof
                 const unsigned index = var*n_node_ + i;
@@ -338,7 +333,6 @@ namespace mjrfd
                 else
                 {
                     // Diffusion
-                    //diffusion_jac_helper(triplet_list, i, var, d[var]);
                     for(const auto& [j, w] : stencil::central_2::weights)
                     {
                         if(d[var] > 0.0)
@@ -387,63 +381,31 @@ namespace mjrfd
         }
     }
 
-    //double AdvectionDiffusionReactionProblem::diffusion_res_helper(const unsigned i,
-                                                                   //const unsigned var)
-    //{
-        //double result = 0.0;
-
-        //// Loop over the stencil points and get the offset j (relative to i)
-        //// and the weight w
-        //for(const auto& [j, w] : stencil::central_2::weights)
-        //{
-            //// Sum the contributions from the stencil points
-            //result += w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j));
-        //}
-
-        //return result;
-    //}
-
-    //double AdvectionDiffusionReactionProblem::advection_res_helper(const unsigned i,
-                                                                   //const unsigned var)
-    //{
-        //double result = 0.0;
-
-        // Loop over the stencil points and get the offset j (relative to i)
-        // and the weight w
-        // TODO use upwinding for the advection terms!
-        //for(const auto& [j, w] : stencil::central_1::weights)
-        //{
-            //double v = 0;
-            //get_v(i+j, var, v);
-
-            //result += w*v*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j));
-        //}
-
-        //return result;
-    //}
-
-    void AdvectionDiffusionReactionProblem::diffusion_jac_helper(
-        std::vector<T> &triplet_list,
-        const unsigned i,
-        const unsigned var,
-        const double d)
+    const std::unordered_map<int, double>&
+    AdvectionDiffusionReactionProblem::upwind_stencil_weights(const unsigned i,
+                                                              const double v) const
     {
-        unsigned index = var*n_node_ + i;
+        assert(i >= 0 && i <= n_node_-1);
 
-        // Loop over the stencil points
-        for(const auto& [j, w] : stencil::central_2::weights)
+        if(v > 0.0)
         {
-            unsigned index2 = var*n_node_ + i + j;
-            triplet_list.push_back( T(index, index2, -w*cn_theta_) );
+            if(i >= 2)
+                return stencil::backward_1::weights;
+            else if(i == 1)
+                return stencil::central_1::weights;
+            else if(i == 0)
+                return stencil::forward_1::weights;
+        }
+        else
+        {
+            if(i <= n_node_-3)
+                return stencil::forward_1::weights;
+            else if(i == n_node_-2)
+                return stencil::central_1::weights;
+            else if(i == n_node_-1)
+                return stencil::backward_1::weights;
         }
     }
-
-    const std::unordered_map<unsigned, double>&
-    AdvectionDiffusionReactionProblem::upwind_stencil_weights(const unsigned i, const double v) const
-    {
-        if(v > 0)
-        {
-            return stencil::
 
     const double AdvectionDiffusionReactionProblem::x(const unsigned i) const
     {
