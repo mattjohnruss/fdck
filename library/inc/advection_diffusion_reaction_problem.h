@@ -58,11 +58,13 @@ namespace mjrfd
                            const unsigned var,
                            double &v) const = 0;
 
-        /// Get the derivatives of then advection (or chemotaxis etc) velocities wrt dofs
+        /// Get the derivatives of the advection (or chemotaxis etc) velocities wrt dofs
         virtual void get_dv_du(const unsigned i,
-                               const std::vector<double> &u,
-                               std::vector<std::vector<double>> &dv_du) const = 0;
-        
+                               const unsigned var,
+                               const unsigned i2,
+                               const unsigned var2,
+                               double &dv_du) const = 0;
+
         /// Get the vector of reactions
         virtual void get_r(const std::vector<double> &u,
                            std::vector<double> &r) const = 0;
@@ -71,15 +73,18 @@ namespace mjrfd
         virtual void get_dr_du(const std::vector<double> &u,
                                std::vector<std::vector<double>> &dr_du) const = 0;
 
+    protected:
         const std::unordered_map<int, double>&
         upwind_stencil_weights(const unsigned i, const double v) const;
 
-    protected:
         /// Calculate the x coordinate from the node number i
         const double x(const unsigned i) const;
 
         /// The number of nodes
         const unsigned n_node_;
+
+        /// Spatial step size
+        const double dx_;
 
     private:
         /// Crank-Nicolson theta
@@ -87,9 +92,6 @@ namespace mjrfd
 
         /// Backup for Crank-Nicolson theta
         double cn_theta_backup_;
-
-        /// Spatial step size
-        const double dx_;
 
         /// Time factor for switching between steady/unsteady solutions
         double time_factor_;
@@ -105,8 +107,8 @@ namespace mjrfd
         const double dt) :
         Problem(n_var, n_node, dt),
         n_node_(n_node),
-        cn_theta_(1.0),
         dx_(1.0/(n_node-1)),
+        cn_theta_(1.0),
         time_factor_(1.0),
         left_bc_(n_var, false),
         right_bc_(n_var, false)
@@ -206,7 +208,7 @@ namespace mjrfd
             // Loop over the variables
             for(unsigned var = 0; var < n_var_; ++var)
             {
-                // Calculate the index of the current dof
+                // Calculate the index of the current unknown
                 const unsigned index = var*n_node_ + i;
 
                 // Boundary conditions
@@ -260,7 +262,7 @@ namespace mjrfd
                         get_v(i+j, var, v);
 
                         // Sum the contributions from the stencil points
-                        if(v > 0.0)
+                        if(std::abs(v) > 0.0)
                         {
                             residual_(index) += dx_*v*w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j));
                         }
@@ -279,17 +281,13 @@ namespace mjrfd
         jacobian_.setZero();
 
         // Vector of triplets for constructing the sparse jacobian matrix
-        // TODO maybe make triplet_list a member variable so that it doesn't
-        // get reallocated every iteration
         std::vector<T> triplet_list;
 
-        // TODO reserve the correct number of entries
-        // triplet_list.reserve(*);
+        // TODO check this! It appears to be ~6x the actual number of entries
+        // Reserve the correct number of entries
+        triplet_list.reserve(n_node_*n_var_*(15*n_var_ + 7));
 
         std::vector<double> d(n_var_);
-
-        //std::vector<std::vector<double>> dv_du(n_var_,);
-        //std::vector<std::vector<double>> dr_du(n_var_,);
 
         // Get the diffusion coefficients
         get_d(d);
@@ -307,7 +305,8 @@ namespace mjrfd
         get_bc(Boundary::Right, a1_right, a2_right, a3_right);
 
         // Storage for the advection velocity at a node
-        double v = 0;
+        double v = 0.0;
+        double dv_du = 0.0;
 
         std::vector<double> r(n_var_);
         std::vector<std::vector<double>> dr_du(n_var_, std::vector<double>(n_var_));
@@ -330,7 +329,7 @@ namespace mjrfd
             // Loop over the variables
             for(unsigned var = 0; var < n_var_; ++var)
             {
-                // Calculate the index of the current dof
+                // Calculate the index of the current unknown
                 const unsigned index = var*n_node_ + i;
 
                 if(i == 0 && left_bc_[var] == true)
@@ -366,7 +365,47 @@ namespace mjrfd
                     }
 
                     // Advection (or chemotaxis etc)
-                    // TODO
+                    double v_at_node = 0.0;
+                    get_v(i, var, v_at_node);
+
+                    for(const auto& [j, w] : upwind_stencil_weights(i, v_at_node))
+                    {
+                        get_v(i+j, var, v);
+
+                        if(std::abs(v) > 0.0)
+                        {
+                            triplet_list.push_back( T(index, index+j, dx_*w*cn_theta_*v) );
+
+                            // Loop over the variables again
+                            for(unsigned var2 = 0; var2 < n_var_; ++var2)
+                            {
+                                // Loop over the 5 stencil points that might be
+                                // used in any reasonable definition of get_v
+                                // This should cover forward/backward/central
+                                // first derivative stencils
+                                for(int k = -2; k <= 2; ++k)
+                                {
+                                    int i2 = i+j+k;
+
+                                    if(i2 < 0 || i2 >= n_node_)
+                                    {
+                                        // if the index we're trying is out of
+                                        // the possible range then skip it
+                                        continue;
+                                    }
+
+                                    const unsigned index2 = var2*n_node_ + i2;
+
+                                    get_dv_du(i+j, var, i2, var2, dv_du);
+
+                                    if(std::abs(dv_du) > 0.0)
+                                    {
+                                        triplet_list.push_back( T(index, index2, dx_*w*cn_theta_*u(0, var, i+j)*dv_du) );
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     // Reaction
 
@@ -379,6 +418,8 @@ namespace mjrfd
                 }
             }
         }
+
+        //std::cout << "triplet_list.size() = " << triplet_list.size() << '\n';
 
         jacobian_.setFromTriplets(triplet_list.begin(), triplet_list.end());
         jacobian_.makeCompressed();

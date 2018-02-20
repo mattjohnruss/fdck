@@ -45,6 +45,16 @@ public:
     ChemokinesParams p;
 
 private:
+    const std::unordered_map<int, double>& stencil_1_helper(unsigned i) const
+    {
+        if(i == 0)
+            return stencil::forward_1::weights;
+        else if(i == n_node_-1)
+            return stencil::backward_1::weights;
+        else
+            return stencil::central_1::weights;
+    }
+
     void get_bc(Boundary b,
                 std::vector<double> &a1,
                 std::vector<double> &a2,
@@ -77,52 +87,41 @@ private:
                double &v) const override
     {
         if(var == 0)
-        {
             v = p.p_u;
-        }
         else if(var == 1)
-        {
             v = 0.0;
-        }
         else if(var == 2)
-        {
             v = p.p_u;
-        }
         else if(var == 3)
         {
-            std::unordered_map<int, double> weights;
+            v = 0.0;
 
-            if(i == 0)
+            for(const auto& [j, w] : stencil_1_helper(i))
             {
-                weights = stencil::forward_1::weights;
-            }
-            else if(i == n_node_-1)
-            {
-                weights = stencil::backward_1::weights;
-            }
-            else
-            {
-                weights = stencil::central_1::weights;
-            }
-
-            v = 0;
-
-            for(const auto& [j, w] : weights)
-            {
-                v += w*p.nu*u(0, 1, i+j);
+                v += w*p.nu*u(0, 1, i+j)/dx_;
             }
         }
     }
 
     void get_dv_du(const unsigned i,
-                   const std::vector<double> &u,
-                   std::vector<std::vector<double>> &dv_du) const override
+                   const unsigned var,
+                   const unsigned i2,
+                   const unsigned var2,
+                   double &dv_du) const override
     {
-        for(unsigned var = 0; var < n_var_; ++var)
+        dv_du = 0.0;
+
+        if(var == 3 && var2 == 1)
         {
-            for(unsigned var2 = 0; var2 < n_var_; ++var2)
+            for(const auto& [j, w] : stencil_1_helper(i))
             {
-                dv_du[var][var2] = 0.0;
+                if(i+j == i2)
+                {
+                    // this condition will be true at most once per loop so we
+                    // can break
+                    dv_du = w*p.nu/dx_;
+                    break;
+                }
             }
         }
     }
@@ -163,14 +162,26 @@ private:
 
 int main(int argc, char **argv)
 {
-    unsigned n_node = 11;
-
-    if(argc == 3)
+    if(argc != 5 && argc != 6)
     {
-        n_node = std::atoi(argv[2]);
+        std::cerr << "Usage: " << argv[0]
+                  << " config_file n_node dt t_max [ output_interval ]\n";
+        std::exit(1);
     }
 
-    ChemokinesProblem1D problem(n_node, 0.01);
+    const unsigned n_node = std::atoi(argv[2]);
+    const double dt = std::atof(argv[3]);
+    const double t_max = std::atof(argv[4]);
+
+    unsigned output_interval = 1;
+
+    if(argc == 6)
+    {
+        output_interval = std::atoi(argv[5]);
+    }
+
+    ChemokinesProblem1D problem(n_node, dt);
+    ChemokinesProblem1D::Max_residual = 1e-14;
 
     std::ifstream config_file(argv[1]);
     ConfigFile cf(config_file);
@@ -198,6 +209,8 @@ int main(int argc, char **argv)
     //problem.enable_fd_jacobian();
     problem.enable_terse_logging();
 
+    //problem.enable_dump_jacobian();
+
     char filename[200];
     std::ofstream outfile;
 
@@ -208,7 +221,7 @@ int main(int argc, char **argv)
     problem.output(outfile);
     outfile.close();
 
-    // set initial conditions (zero)
+    // set initial conditions
     problem.set_initial_conditions();
 
     // output initial conditions
@@ -218,9 +231,6 @@ int main(int argc, char **argv)
     outfile.close();
 
     unsigned i = 1;
-
-    double t_max = 10.0;
-    unsigned output_interval = 1;
 
     // timestepping loop
     while(problem.time() <= t_max)

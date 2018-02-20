@@ -8,12 +8,12 @@ class TestProblem : public AdvectionDiffusionReactionProblem
 {
 public:
     TestProblem(const unsigned n_node, const double dt) :
-        AdvectionDiffusionReactionProblem(1, n_node, dt)
+        AdvectionDiffusionReactionProblem(2, n_node, dt)
     {
-        //enable_bc(Boundary::Left, { 0, 1 });
-        //enable_bc(Boundary::Right, { 0, 1 });
-        enable_bc(Boundary::Left, { 0 });
-        enable_bc(Boundary::Right, { 0 });
+        enable_bc(Boundary::Left, { 0, 1 });
+        enable_bc(Boundary::Right, { 0, 1 });
+        //enable_bc(Boundary::Left, { 0 });
+        //enable_bc(Boundary::Right, { 0 });
     }
 
     ~TestProblem()
@@ -29,19 +29,19 @@ private:
         if(b == Boundary::Left)
         {
             a1[0] = 1.0; a2[0] = 0.0; a3[0] = 1.0;
-            //a1[1] = 0.0; a2[1] = 1.0; a3[1] = 0.0;
+            a1[1] = 1.0; a2[1] = 0.0; a3[1] = 0.0;
         }
         if(b == Boundary::Right)
         {
             a1[0] = 1.0; a2[0] = 0.0; a3[0] = 0.0;
-            //a1[1] = 1.0; a2[1] = 1.0; a3[1] = 1.0;
+            a1[1] = 1.0; a2[1] = 0.0; a3[1] = 1.0;
         }
     }
 
     void get_d(std::vector<double> &d) const override
     {
         d[0] = 1.0;
-        //d[1] = 0.1;
+        d[1] = 0.1;
     }
 
     void get_v(const unsigned i,
@@ -51,23 +51,40 @@ private:
         if(var == 0)
         {
             //v = 10*x(i);
-            v = 6.5;
+            //v = 6.5;
+
+            v = 0.0;
+
+            // v_0 now depends on u_1!
+            for(const auto& [j, w] : stencil::central_1::weights)
+            {
+                v += 10.0*w*u(0, 1, i+j)/dx_;
+            }
         }
-        //else if(var == 1)
-        //{
-            //v = 1.5;
-        //}
+        else if(var == 1)
+        {
+            v = 1.5;
+        }
     }
 
     void get_dv_du(const unsigned i,
-                   const std::vector<double> &u,
-                   std::vector<std::vector<double>> &dv_du) const override
+                   const unsigned var,
+                   const unsigned i2,
+                   const unsigned var2,
+                   double &dv_du) const override
     {
-        for(unsigned var = 0; var < n_var_; ++var)
+        dv_du = 0.0;
+
+        // only contribution is from the case d(u_0)/d(u_1)
+        if(var == 0 && var2 == 1)
         {
-            for(unsigned var2 = 0; var2 < n_var_; ++var2)
+            // loop over the velocity stencil points
+            for(const auto& [j, w] : stencil::central_1::weights)
             {
-                dv_du[var][var2] = 0.0;
+                if(i+j == i2)
+                {
+                    dv_du += 10.0*w/dx_;
+                }
             }
         }
     }
@@ -75,20 +92,18 @@ private:
     void get_r(const std::vector<double> &u,
                std::vector<double> &r) const override
     {
-        r[0] = -1.0*u[0];
-        //r[1] = 1.0*u[0];
+        r[0] = -1.0*u[1];
+        r[1] = 1.0*u[0];
     }
 
     void get_dr_du(const std::vector<double> &u,
                    std::vector<std::vector<double>> &dr_du) const override
     {
-        for(unsigned var = 0; var < n_var_; ++var)
-        {
-            for(unsigned var2 = 0; var2 < n_var_; ++var2)
-            {
-                dr_du[var][var2] = 0.0;
-            }
-        }
+        dr_du[0][0] = 0.0;
+        dr_du[0][1] = -1.0;
+
+        dr_du[1][0] = 1.0;
+        dr_du[1][1] = 0.0;
     }
 };
 
@@ -103,7 +118,8 @@ int main(int argc, char **argv)
 
     TestProblem problem(n_node, 0.01);
 
-    problem.enable_fd_jacobian();
+    //problem.enable_fd_jacobian();
+
     //problem.enable_dump_jacobian();
     //problem.steady_solve();
 
