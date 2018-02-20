@@ -1,3 +1,5 @@
+set clip two
+
 fn(i) = sprintf("output_%05i.csv", i)
 
 n_var = words(vars)

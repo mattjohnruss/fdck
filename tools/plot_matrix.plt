@@ -11,4 +11,5 @@ do for [i = 1:m-1] {
 
 unset key
 set size square
-plot "jac_t=0.010000_0.dat" w p pt 5 ps 1
+#filename = "jac_t=0.100000_0.dat"
+plot filename w p pt 5 ps 1
