@@ -108,8 +108,6 @@ namespace mjrfd
             // always do one Newton iteration regardless of the residuals
             if(max_residual > Max_residual || count == 0)
             {
-                ++count; 
-
                 // calculate the jacobian for the current state
                 if(use_fd_jacobian_ == true)
                 {
@@ -151,6 +149,9 @@ namespace mjrfd
 
                 // update the solution
                 u_[0] += du_;
+
+                // Increment the counter
+                ++count;
             }
             else
             {
