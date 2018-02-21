@@ -52,6 +52,9 @@ public:
         std::cout << "n_dof  = " << n_dof_ << '\n';
         std::cout << "dx     = " << dx_ << '\n';
         std::cout << "dt     = " << dt_ << "\n\n";
+
+        Max_newton_iterations = 100;
+        Max_residual = 1e-10;
     }
 
     ~ChemokinesProblem1D()
@@ -696,7 +699,6 @@ int main(int argc, char **argv)
     }
 
     ChemokinesProblem1D problem(n_node, dt);
-    ChemokinesProblem1D::Max_residual = 1e-10;
 
     std::ifstream config_file(argv[1]);
     ConfigFile cf(config_file);
@@ -728,8 +730,6 @@ int main(int argc, char **argv)
 
     //bool dump = false;
     //bool dump = true;
-
-    problem.Max_newton_iterations = 100;
 
     // perform a steady solve and output it
     problem.steady_solve();

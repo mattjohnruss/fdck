@@ -20,6 +20,9 @@ namespace mjrfd
         time_(0.0),
         dt_(dt),
         steady_(false),
+        Max_residual(1.0e-8),
+        Max_newton_iterations(20),
+        Jacobian_fd_step(1.0e-8),
         terse_logging_(false),
         use_fd_jacobian_(false),
         dump_jacobian_(false)
@@ -390,9 +393,4 @@ namespace mjrfd
         // get the update vector as a single array
         du_ = linear_solver_.solve(-residual_);
     }
-
-    double Problem::Max_residual = 1.0e-8;
-    unsigned Problem::Max_newton_iterations = 20;
-
-    double Problem::Jacobian_fd_step = 1.0e-8;
 }

@@ -19,9 +19,6 @@ namespace mjrfd
 
         virtual ~Problem();
 
-        static double Max_residual;
-        static unsigned Max_newton_iterations;
-
         void solve();
         void steady_solve();
         void unsteady_solve();
@@ -115,6 +112,10 @@ namespace mjrfd
         virtual void calculate_residual() = 0;
         virtual void calculate_jacobian() = 0;
 
+        double Max_residual;
+        unsigned Max_newton_iterations;
+        double Jacobian_fd_step;
+
     private:
         void linear_solve();
 
@@ -123,8 +124,6 @@ namespace mjrfd
         bool terse_logging_;
         bool use_fd_jacobian_;
         bool dump_jacobian_;
-
-        static double Jacobian_fd_step;
 
         //std::vector<Residual*> m_residuals;
     };
