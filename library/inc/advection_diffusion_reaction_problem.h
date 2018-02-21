@@ -334,20 +334,32 @@ namespace mjrfd
 
                 if(i == 0 && left_bc_[var] == true)
                 {
-                    triplet_list.push_back( T(index, index, a1_left[var]*dx_*dx_) );
-
-                    for(const auto& [j, w] : stencil::forward_1::weights)
+                    if(std::abs(a1_left[var]) > 0.0)
                     {
-                        triplet_list.push_back( T(index, index+j, w*a2_left[var]*dx_) );
+                        triplet_list.push_back( T(index, index, a1_left[var]*dx_*dx_) );
+                    }
+
+                    if(std::abs(a2_left[var]) > 0.0)
+                    {
+                        for(const auto& [j, w] : stencil::forward_1::weights)
+                        {
+                            triplet_list.push_back( T(index, index+j, w*a2_left[var]*dx_) );
+                        }
                     }
                 }
                 else if(i == n_node_-1 && right_bc_[var] == true)
                 {
-                    triplet_list.push_back( T(index, index, a1_right[var]*dx_*dx_) );
-
-                    for(const auto& [j, w] : stencil::backward_1::weights)
+                    if(std::abs(a1_right[var]) > 0.0)
                     {
-                        triplet_list.push_back( T(index, index+j, w*a2_right[var]*dx_) );
+                        triplet_list.push_back( T(index, index, a1_right[var]*dx_*dx_) );
+                    }
+
+                    if(std::abs(a2_right[var]) > 0.0)
+                    {
+                        for(const auto& [j, w] : stencil::backward_1::weights)
+                        {
+                            triplet_list.push_back( T(index, index+j, w*a2_right[var]*dx_) );
+                        }
                     }
                 }
                 else
@@ -413,7 +425,11 @@ namespace mjrfd
                     for(unsigned var2 = 0; var2 < n_var_; ++var2)
                     {
                         unsigned index2 = var2*n_node_ + i;
-                        triplet_list.push_back( T(index, index2, -dx_*dx_*cn_theta_*dr_du[var][var2]) );
+
+                        if(std::abs(dr_du[var][var2]) > 0.0)
+                        {
+                            triplet_list.push_back( T(index, index2, -dx_*dx_*cn_theta_*dr_du[var][var2]) );
+                        }
                     }
                 }
             }
