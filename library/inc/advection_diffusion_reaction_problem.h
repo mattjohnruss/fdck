@@ -483,11 +483,7 @@ namespace mjrfd
     void AdvectionDiffusionReactionProblem::set_variable_names(const std::vector<std::string> &var_names)
     {
         assert(var_names.size() == n_var_);
-
-        for(unsigned var = 0; var < n_var_; ++var)
-        {
-            var_names_[var] = var_names[var];
-        }
+        var_names_ = var_names;
     }
 
     const std::unordered_map<int, double>&
