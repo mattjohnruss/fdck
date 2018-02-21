@@ -448,6 +448,18 @@ namespace mjrfd
 
         //std::cout << "triplet_list.size() = " << triplet_list.size() << '\n';
 
+        //unsigned n_zero = 0;
+        //for(const auto& t : triplet_list)
+        //{
+            //if(std::abs(t.value()) < 1.0e-30)
+            ////if(t.value() == 0.0)
+            //{
+                //n_zero++;
+            //}
+        //}
+
+        //std::cout << "ZEROS IN TRIPLET LIST: " << n_zero << " (TOTAL ENTRIES: " << triplet_list.size() << ")\n";
+
         jacobian_.setFromTriplets(triplet_list.begin(), triplet_list.end());
         jacobian_.makeCompressed();
     }

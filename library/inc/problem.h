@@ -93,7 +93,6 @@ namespace mjrfd
 
         const unsigned n_time_history_;
 
-        //std::vector<std::vector<Eigen::VectorXd>> u_;
         std::vector<Eigen::VectorXd> u_;
 
     private:
@@ -124,7 +123,5 @@ namespace mjrfd
         bool terse_logging_;
         bool use_fd_jacobian_;
         bool dump_jacobian_;
-
-        //std::vector<Residual*> m_residuals;
     };
 }

@@ -200,10 +200,7 @@ int main(int argc, char **argv)
     problem.p.nu      = cf.get<double>("nu");
     problem.p.lambda  = cf.get<double>("lambda");
 
-    //problem.enable_fd_jacobian();
     problem.enable_terse_logging();
-
-    //problem.enable_dump_jacobian();
 
     char filename[200];
     std::ofstream outfile;

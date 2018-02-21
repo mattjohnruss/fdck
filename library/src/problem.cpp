@@ -55,33 +55,6 @@ namespace mjrfd
             // calculate the residuals for the current state
             calculate_residual();
 
-            //if(dump_jacobian_ == true)
-            //{
-                //// if we're dumping the jacobian, calculate it here
-                //// this is inefficient, but less so than dumping the jacobian
-                //if(use_fd_jacobian_ == true)
-                //{
-                    //Problem::calculate_jacobian();
-                //}
-                //else
-                //{
-                    //calculate_jacobian();
-                //}
-
-                //char filename[100];
-
-                //std::snprintf(filename, 100, "res_t=%f_%u.dat", time_, count);
-                //std::ofstream res_file(filename);
-
-                //std::snprintf(filename, 100, "jac_t=%f_%u.dat", time_, count);
-                //std::ofstream jac_file(filename);
-
-                //dump_res_and_jac(res_file, jac_file);
-
-                //res_file.close();
-                //jac_file.close();
-            //}
-
             // find the l^\infty norm of the residual vector
             //double max_residual = residual_.lpNorm<Eigen::Infinity>();
             double max_residual = 0.0;
@@ -195,7 +168,7 @@ namespace mjrfd
 
     void Problem::steady_solve()
     {
-        // check if time derivatives enabled
+        // check if time derivatives are enabled
         bool steady = is_steady();
 
         // disable time derivatives if they are enabled
@@ -321,11 +294,6 @@ namespace mjrfd
     // finite-differencing the residuals
     void Problem::calculate_jacobian()
     {
-        //typedef Eigen::Triplet<double> T;
-
-        //std::vector<T> triplet_list;
-        //triplet_list.reserve(n_dof_*n_dof_);
-
         // Storage for the dense jacobian matrix
         Eigen::MatrixXd dense_jacobian(n_dof_, n_dof_);
 
@@ -358,23 +326,11 @@ namespace mjrfd
             dense_jacobian.col(i) =
                 (residual_plus - residual_minus)/(2.0*Jacobian_fd_step);
 
-            //for(unsigned j = 0; j < n_dof_; ++j)
-            //{
-                //double value = (residual_plus(j) - residual_minus(j))/(2.0*Jacobian_fd_step);
-
-                //if(std::abs(value) >= 1.0e-14)
-                //{
-                    //triplet_list.push_back( T(j, i, value) );
-                //}
-            //}
         }
-
-        //std::cout << std::setprecision(12) << dense_jacobian << '\n';
 
         // Set the sparse jacobian from the dense one
         // TODO check the tolerance for throwing away terms close to zero
         jacobian_ = dense_jacobian.sparseView();
-        //jacobian_.setFromTriplets(triplet_list.begin(), triplet_list.end());
         jacobian_.makeCompressed();
 
         // Restore the residuals to their previous state
