@@ -188,6 +188,7 @@ int main(int argc, char **argv)
 
     std::ifstream config_file(argv[1]);
     ConfigFile cf(config_file);
+    cf.print_all();
 
     problem.p.p_u     = cf.get<double>("p_u");
     problem.p.alpha   = cf.get<double>("alpha");
@@ -198,16 +199,6 @@ int main(int argc, char **argv)
     problem.p.D_ju    = cf.get<double>("D_ju");
     problem.p.nu      = cf.get<double>("nu");
     problem.p.lambda  = cf.get<double>("lambda");
-
-    std::cout << "p_u     = " << problem.p.p_u     << '\n';
-    std::cout << "alpha   = " << problem.p.alpha   << '\n';
-    std::cout << "beta    = " << problem.p.beta    << '\n';
-    std::cout << "gamma_u = " << problem.p.gamma_u << '\n';
-    std::cout << "gamma_b = " << problem.p.gamma_b << '\n';
-    std::cout << "D_su    = " << problem.p.D_su    << '\n';
-    std::cout << "D_ju    = " << problem.p.D_ju    << '\n';
-    std::cout << "nu      = " << problem.p.nu      << '\n';
-    std::cout << "lambda  = " << problem.p.lambda  << '\n';
 
     //problem.enable_fd_jacobian();
     problem.enable_terse_logging();

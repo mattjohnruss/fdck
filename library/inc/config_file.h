@@ -5,6 +5,7 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <iostream>
 
 namespace mjrfd
 {
@@ -70,6 +71,15 @@ namespace mjrfd
                         params_[key] = value;
                     }
                 }
+            }
+        }
+
+        // Print all key-value pairs to stream out
+        void print_all(std::ostream &out = std::cout) const
+        {
+            for(const auto& [key, value] : params_)
+            {
+                out << key << " = " << value << '\n';
             }
         }
 
