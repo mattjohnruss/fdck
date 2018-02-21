@@ -204,6 +204,7 @@ namespace mjrfd
 
             // Get the reaction term at the current node
             get_r(u_at_node, r);
+            get_r(u_old_at_node, r_old);
 
             // Loop over the variables
             for(unsigned var = 0; var < n_var_; ++var)
