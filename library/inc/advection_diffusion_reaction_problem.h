@@ -43,6 +43,8 @@ namespace mjrfd
         void enable_bc(Boundary b, const std::vector<unsigned> &vars);
         void disable_bc(Boundary b, const std::vector<unsigned> &vars);
 
+        void set_variable_names(const std::vector<std::string> &var_names);
+
     private:
         /// Get the coefficients a1, a2, a3 for the (Robin) boundary conditions
         virtual void get_bc(Boundary b,
@@ -98,6 +100,8 @@ namespace mjrfd
 
         std::vector<bool> left_bc_;
         std::vector<bool> right_bc_;
+
+        std::vector<std::string> var_names_;
     };
 
     /// Contructor
@@ -111,8 +115,14 @@ namespace mjrfd
         cn_theta_(1.0),
         time_factor_(1.0),
         left_bc_(n_var, false),
-        right_bc_(n_var, false)
+        right_bc_(n_var, false),
+        var_names_(n_var)
     {
+        // Set the default variable names
+        for(unsigned var = 0; var < n_var_; ++var)
+        {
+            var_names_[var] = "c" + std::to_string(var);
+        }
     }
 
     /// Destructor
@@ -142,7 +152,7 @@ namespace mjrfd
 
         for(unsigned var = 0; var < n_var_; ++var)
         {
-            out << "c" << var;
+            out << var_names_[var];
             out << (var < (n_var_-1) ? ' ' : '\n');
         }
 
@@ -469,6 +479,16 @@ namespace mjrfd
             {
                 right_bc_[var] = false;
             }
+        }
+    }
+
+    void AdvectionDiffusionReactionProblem::set_variable_names(const std::vector<std::string> &var_names)
+    {
+        assert(var_names.size() == n_var_);
+
+        for(unsigned var = 0; var < n_var_; ++var)
+        {
+            var_names_[var] = var_names[var];
         }
     }
 

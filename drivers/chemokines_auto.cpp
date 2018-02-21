@@ -26,6 +26,8 @@ public:
     {
         enable_bc(Boundary::Left, { 0, 2, 3 });
         enable_bc(Boundary::Right, { 0, 2, 3 });
+
+        set_variable_names({ "c_u", "c_b", "c_s", "phi" });
     }
 
     ~ChemokinesProblem1D()
