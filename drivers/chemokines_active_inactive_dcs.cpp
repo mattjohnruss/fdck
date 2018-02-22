@@ -142,6 +142,16 @@ private:
         }
     }
 
+    static double hill(const double c, const double n, const double k)
+    {
+        return std::pow(c,n)/(std::pow(k,n) + std::pow(c,n));
+    }
+
+    static double dhill_dc(const double c, const double n, const double k)
+    {
+        return n*std::pow(k,n)*std::pow(c,n-1.0)/std::pow(std::pow(k,n) + std::pow(c,n), 2);
+    }
+
     static double k(const double c_u)       { return 10.0*c_u; }
     static double dk_dc_u(const double c_u) { return 10.0; }
 

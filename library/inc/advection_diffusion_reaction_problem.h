@@ -492,6 +492,34 @@ namespace mjrfd
     {
         assert(i >= 0 && i <= n_node_-1);
 
+        //if(v > 2.0)
+        //{
+            //if(i >= 2)
+                //return stencil::backward_1::weights;
+            //else if(i == 1)
+                //return stencil::central_1::weights;
+            //else if(i == 0)
+                //return stencil::forward_1::weights;
+        //}
+        //else if(v < -2.0)
+        //{
+            //if(i <= n_node_-3)
+                //return stencil::forward_1::weights;
+            //else if(i == n_node_-2)
+                //return stencil::central_1::weights;
+            //else if(i == n_node_-1)
+                //return stencil::backward_1::weights;
+        //}
+        //else
+        //{
+            //if(i == 0)
+                //return stencil::forward_1::weights;
+            //else if(i == n_node_-1)
+                //return stencil::backward_1::weights;
+            //else
+                //return stencil::central_1::weights;
+        //}
+
         if(v > 0.0)
         {
             if(i >= 2)
