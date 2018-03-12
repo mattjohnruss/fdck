@@ -17,6 +17,8 @@ struct ChemokinesParams
     double nu;
     double lambda;
     double phi_i_max;
+    double hill_n;
+    double hill_k;
 };
 
 enum Variable
@@ -152,11 +154,13 @@ private:
         return n*std::pow(k,n)*std::pow(c,n-1.0)/std::pow(std::pow(k,n) + std::pow(c,n), 2);
     }
 
-    static double k(const double c_u)       { return 10.0*c_u; }
-    static double dk_dc_u(const double c_u) { return 10.0; }
+    //static double k(const double c_u)       { return 10.0*c_u; }
+    //static double dk_dc_u(const double c_u) { return 10.0; }
+    static double k(const double c_u)       { return 1.0; }
+    static double dk_dc_u(const double c_u) { return 0.0; }
 
-    static double k_a(const double c_u)       { return 5.0*c_u; }
-    static double dk_a_dc_u(const double c_u) { return 5.0; }
+    //static double k_a(const double c_u)       { return 5.0*c_u; }
+    //static double dk_a_dc_u(const double c_u) { return 5.0; }
 
     void get_r(const std::vector<double> &u,
                std::vector<double> &r) const override
@@ -164,8 +168,8 @@ private:
         r[c_u]   = -p.alpha*u[c_u] + p.beta*u[c_b] - p.gamma_u*u[phi_a]*u[c_u];
         r[c_b]   = p.alpha*u[c_u] - p.beta*u[c_b] - p.gamma_b*u[phi_a]*u[c_b];
         r[c_s]   = p.gamma_u*u[phi_a]*u[c_u] + p.gamma_b*u[phi_a]*u[c_b];
-        r[phi_a] = k_a(u[c_u])*u[phi_i] - 1.0*u[phi_a];
-        r[phi_i] = k(u[c_u])*u[phi_i]*(p.phi_i_max - u[phi_i]) - k_a(u[c_u])*u[phi_i];
+        r[phi_a] = hill(u[c_u], p.hill_n, p.hill_k)*u[phi_i] - 1.0*u[phi_a];
+        r[phi_i] = k(u[c_u])*u[phi_i]*(p.phi_i_max - u[phi_i]) - hill(u[c_u], p.hill_n, p.hill_k)*u[phi_i];
     }
 
     void get_dr_du(const std::vector<double> &u,
@@ -189,17 +193,17 @@ private:
         dr_du[c_s][phi_a] = p.gamma_u*u[c_u] + p.gamma_b*u[c_b];
         dr_du[c_s][phi_i] = 0.0;
 
-        dr_du[phi_a][c_u]   = dk_a_dc_u(u[c_u])*u[phi_i];
+        dr_du[phi_a][c_u]   = dhill_dc(u[c_u], p.hill_n, p.hill_k)*u[phi_i];
         dr_du[phi_a][c_b]   = 0.0;
         dr_du[phi_a][c_s]   = 0.0;
         dr_du[phi_a][phi_a] = -1.0;
-        dr_du[phi_a][phi_i] = k_a(u[c_u]);
+        dr_du[phi_a][phi_i] = hill(u[c_u], p.hill_n, p.hill_k);
 
-        dr_du[phi_i][c_u]   = dk_dc_u(u[c_u])*u[phi_i]*(p.phi_i_max - u[phi_i]) - dk_a_dc_u(u[c_u])*u[phi_i];
+        dr_du[phi_i][c_u]   = dk_dc_u(u[c_u])*u[phi_i]*(p.phi_i_max - u[phi_i]) - dhill_dc(u[c_u], p.hill_n, p.hill_k)*u[phi_i];
         dr_du[phi_i][c_b]   = 0.0;
         dr_du[phi_i][c_s]   = 0.0;
         dr_du[phi_i][phi_a] = 0.0;
-        dr_du[phi_i][phi_i] = k(u[c_u])*(p.phi_i_max - 2.0*u[phi_i]) - k_a(u[c_u]);
+        dr_du[phi_i][phi_i] = k(u[c_u])*(p.phi_i_max - 2.0*u[phi_i]) - hill(u[c_u], p.hill_n, p.hill_k);
     }
 };
 
@@ -239,6 +243,8 @@ int main(int argc, char **argv)
     problem.p.nu         = cf.get<double>("nu");
     problem.p.lambda     = cf.get<double>("lambda");
     problem.p.phi_i_max  = cf.get<double>("phi_i_max");
+    problem.p.hill_n     = cf.get<double>("hill_n");
+    problem.p.hill_k     = cf.get<double>("hill_k");
 
     problem.enable_terse_logging();
 
