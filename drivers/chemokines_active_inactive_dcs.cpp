@@ -7,18 +7,28 @@ using namespace mjrfd;
 
 struct ChemokinesParams
 {
-    double p_u;
+    double pe_u;
     double alpha;
     double beta;
-    double gamma_u;
-    double gamma_b;
+    double gamma_ui;
+    double gamma_bi;
+    double gamma_si;
+    double gamma_um;
+    double gamma_bm;
+    double gamma_sm;
+    double q_u;
+    double q_b;
+    double q_s;
     double D_su;
-    double D_ju;
-    double nu;
+    double D_iu;
+    double D_mu;
+    double nu_u;
+    double nu_b;
+    double nu_s;
     double lambda;
-    double phi_i_max;
-    double hill_n;
-    double hill_k;
+    double phi_i_init;
+    double R;
+    double M;
 };
 
 enum Variable
@@ -26,8 +36,8 @@ enum Variable
     c_u   = 0,
     c_b   = 1,
     c_s   = 2,
-    phi_a = 3,
-    phi_i = 4
+    phi_i = 3,
+    phi_m = 4
 };
 
 class ChemokinesProblem1D : public AdvectionDiffusionReactionProblem
@@ -36,10 +46,10 @@ public:
     ChemokinesProblem1D(const unsigned n_node, const double dt) :
         AdvectionDiffusionReactionProblem(5, n_node, dt)
     {
-        enable_bc(Boundary::Left,  { c_u, c_s, phi_a, phi_i });
-        enable_bc(Boundary::Right, { c_u, c_s, phi_a, phi_i });
+        enable_bc(Boundary::Left,  { c_u, c_s, phi_i, phi_m });
+        enable_bc(Boundary::Right, { c_u, c_s, phi_i, phi_m });
 
-        set_variable_names({ "c_u", "c_b", "c_s", "phi_a", "phi_i" });
+        set_variable_names({ "c_u", "c_b", "c_s", "phi_i", "phi_m" });
 
         Max_residual = 1.0e-14;
     }
@@ -53,10 +63,14 @@ public:
         // Set everything to zero
         clear_solution();
 
-        // Then set c_u and phi_a at the appropriate boundaries
+        // Set c_u to 1.0 at the left-hand boundary
         u(0, c_u, 0) = 1.0;
-        u(0, phi_a, n_node_-1) = 1.0;
-        u(0, phi_i, n_node_-1) = 1.0;
+
+        // Set phi_i to its uniform initial density
+        for(unsigned i = 0; i < n_node_; ++i)
+        {
+            u(0, phi_i, i) = p.phi_i_init;
+        }
     }
 
     ChemokinesParams p;
@@ -81,15 +95,15 @@ private:
         {
             a1[c_u]   = 1.0;       a2[c_u]   = 0.0; a3[c_u]   = 1.0;
             a1[c_s]   = 1.0;       a2[c_s]   = 0.0; a3[c_s]   = 0.0;
-            a1[phi_a] = -p.lambda; a2[phi_a] = 1.0; a3[phi_a] = 0.0;
-            a1[phi_i] = -p.lambda; a2[phi_i] = 1.0; a3[phi_i] = 0.0;
+            a1[phi_i] = 0.0;       a2[phi_i] = 1.0; a3[phi_i] = 0.0;
+            a1[phi_m] = -p.lambda; a2[phi_m] = 1.0; a3[phi_m] = 0.0;
         }
         if(b == Boundary::Right)
         {
             a1[c_u]   = 1.0; a2[c_u]   = 0.0; a3[c_u]   = 0.0;
             a1[c_s]   = 1.0; a2[c_s]   = 0.0; a3[c_s]   = 0.0;
-            a1[phi_a] = 1.0; a2[phi_a] = 0.0; a3[phi_a] = 1.0;
-            a1[phi_i] = 1.0; a2[phi_i] = 0.0; a3[phi_i] = 1.0;
+            a1[phi_i] = 0.0; a2[phi_i] = 1.0; a3[phi_i] = 0.0;
+            a1[phi_m] = 0.0; a2[phi_m] = 1.0; a3[phi_m] = 0.0;
         }
     }
 
@@ -98,8 +112,8 @@ private:
         d[c_u]   = 1.0;
         d[c_b]   = 0.0;
         d[c_s]   = p.D_su;
-        d[phi_a] = p.D_ju;
-        d[phi_i] = p.D_ju;
+        d[phi_i] = p.D_iu;
+        d[phi_m] = p.D_mu;
     }
 
     void get_v(const unsigned i,
@@ -109,14 +123,16 @@ private:
         v = 0.0;
 
         if(var == c_u)
-            v = p.p_u;
+            v = p.pe_u;
         else if(var == c_s)
-            v = p.p_u;
-        else if(var == phi_a)
+            v = p.pe_u;
+        else if(var == phi_m)
         {
             for(const auto& [j, w] : stencil_1_helper(i))
             {
-                v += w*p.nu*u(0, c_b, i+j)/dx_;
+                v += w*p.nu_u*u(0, c_u, i+j)/dx_;
+                v += w*p.nu_b*u(0, c_b, i+j)/dx_;
+                v += w*p.nu_s*u(0, c_s, i+j)/dx_;
             }
         }
     }
@@ -129,81 +145,74 @@ private:
     {
         dv_du = 0.0;
 
-        if(var == phi_a && var2 == c_b)
+        if(var == phi_m && (var2 == c_u || var2 == c_b || var2 == c_s))
         {
+            double nu;
+
+            if(var2 == c_u)
+                nu = p.nu_u;
+            else if(var2 == c_b)
+                nu = p.nu_b;
+            else if(var2 == c_s)
+                nu = p.nu_s;
+            else
+                std::cerr << "var2 is not any of the expected values!\n";
+
             for(const auto& [j, w] : stencil_1_helper(i))
             {
                 if(i+j == i2)
                 {
                     // this condition will be true at most once per loop so we
                     // can break
-                    dv_du = w*p.nu/dx_;
+                    dv_du = w*nu/dx_;
                     break;
                 }
             }
         }
     }
 
-    static double hill(const double c, const double n, const double k)
-    {
-        return std::pow(c,n)/(std::pow(k,n) + std::pow(c,n));
-    }
-
-    static double dhill_dc(const double c, const double n, const double k)
-    {
-        return n*std::pow(k,n)*std::pow(c,n-1.0)/std::pow(std::pow(k,n) + std::pow(c,n), 2);
-    }
-
-    //static double k(const double c_u)       { return 10.0*c_u; }
-    //static double dk_dc_u(const double c_u) { return 10.0; }
-    static double k(const double c_u)       { return 1.0; }
-    static double dk_dc_u(const double c_u) { return 0.0; }
-
-    //static double k_a(const double c_u)       { return 5.0*c_u; }
-    //static double dk_a_dc_u(const double c_u) { return 5.0; }
-
     void get_r(const std::vector<double> &u,
                std::vector<double> &r) const override
     {
-        r[c_u]   = -p.alpha*u[c_u] + p.beta*u[c_b] - p.gamma_u*u[phi_a]*u[c_u];
-        r[c_b]   = p.alpha*u[c_u] - p.beta*u[c_b] - p.gamma_b*u[phi_a]*u[c_b];
-        r[c_s]   = p.gamma_u*u[phi_a]*u[c_u] + p.gamma_b*u[phi_a]*u[c_b];
-        r[phi_a] = hill(u[c_u], p.hill_n, p.hill_k)*u[phi_i] - 1.0*u[phi_a];
-        r[phi_i] = k(u[c_u])*u[phi_i]*(p.phi_i_max - u[phi_i]) - hill(u[c_u], p.hill_n, p.hill_k)*u[phi_i];
+        r[c_u]   = -p.alpha*u[c_u] + p.beta*u[c_b] - p.gamma_ui*u[phi_i]*u[c_u] - p.gamma_um*u[phi_m]*u[c_u] - p.q_u*u[phi_i]*u[c_u];
+        r[c_b]   = p.alpha*u[c_u] - p.beta*u[c_b] - p.gamma_bi*u[phi_i]*u[c_b] - p.gamma_bm*u[phi_m]*u[c_b] - p.q_b*u[phi_i]*u[c_b];
+        r[c_s]   = p.gamma_ui*u[phi_i]*u[c_u] + p.gamma_um*u[phi_m]*u[c_u] + p.gamma_bi*u[phi_i]*u[c_b] + p.gamma_bm*u[phi_m]*u[c_b] - p.q_s*u[phi_i]*u[c_s];
+        r[phi_i] = p.R*u[phi_i]*(1.0 - u[phi_i]) - p.M*u[phi_i];
+        r[phi_m] = p.M*u[phi_i];
     }
 
     void get_dr_du(const std::vector<double> &u,
                    std::vector<std::vector<double>> &dr_du) const override
     {
-        dr_du[c_u][c_u]   = -p.alpha - p.gamma_u*u[phi_a];
+        dr_du[c_u][c_u]   = -p.alpha - p.gamma_ui*u[phi_i] - p.gamma_um*u[phi_m] - p.q_u*u[phi_i];
         dr_du[c_u][c_b]   = p.beta;
         dr_du[c_u][c_s]   = 0.0;
-        dr_du[c_u][phi_a] = -p.gamma_u*u[c_u];
-        dr_du[c_u][phi_i] = 0.0;
+        dr_du[c_u][phi_i] = -p.gamma_ui*u[c_u] - p.q_u*u[c_u];
+        dr_du[c_u][phi_m] = -p.gamma_um*u[c_u];
 
         dr_du[c_b][c_u]   = p.alpha;
-        dr_du[c_b][c_b]   = -p.beta - p.gamma_b*u[phi_a];
+        dr_du[c_b][c_b]   = -p.beta - p.gamma_bi*u[phi_i] - p.gamma_bm*u[phi_m] - p.q_b*u[phi_i];
         dr_du[c_b][c_s]   = 0.0;
-        dr_du[c_b][phi_a] = -p.gamma_b*u[c_b];
-        dr_du[c_b][phi_i] = 0.0;
+        dr_du[c_b][phi_i] = -p.gamma_bi*u[c_b] - p.q_b*u[c_b];
+        dr_du[c_b][phi_m] = -p.gamma_bm*u[c_b];
 
-        dr_du[c_s][c_u]   = p.gamma_u*u[phi_a];
-        dr_du[c_s][c_b]   = p.gamma_b*u[phi_a];
-        dr_du[c_s][c_s]   = 0.0;
-        dr_du[c_s][phi_a] = p.gamma_u*u[c_u] + p.gamma_b*u[c_b];
-        dr_du[c_s][phi_i] = 0.0;
+        dr_du[c_s][c_u]   = p.gamma_ui*u[phi_i] + p.gamma_um*u[phi_m];
+        dr_du[c_s][c_b]   = p.gamma_bi*u[phi_i] + p.gamma_bm*u[phi_m];
+        dr_du[c_s][c_s]   = -p.q_s*u[phi_i];
+        dr_du[c_s][phi_i] = p.gamma_ui*u[c_u] + p.gamma_bi*u[c_b] - p.q_s*u[c_s];
+        dr_du[c_s][phi_m] = p.gamma_um*u[c_u] + p.gamma_bm*u[c_b];
 
-        dr_du[phi_a][c_u]   = dhill_dc(u[c_u], p.hill_n, p.hill_k)*u[phi_i];
-        dr_du[phi_a][c_b]   = 0.0;
-        dr_du[phi_a][c_s]   = 0.0;
-        dr_du[phi_a][phi_a] = -1.0;
-        dr_du[phi_a][phi_i] = hill(u[c_u], p.hill_n, p.hill_k);
-
-        dr_du[phi_i][c_u]   = dk_dc_u(u[c_u])*u[phi_i]*(p.phi_i_max - u[phi_i]) - dhill_dc(u[c_u], p.hill_n, p.hill_k)*u[phi_i];
+        dr_du[phi_i][c_u]   = 0.0;
         dr_du[phi_i][c_b]   = 0.0;
         dr_du[phi_i][c_s]   = 0.0;
-        dr_du[phi_i][phi_a] = 0.0;
-        dr_du[phi_i][phi_i] = k(u[c_u])*(p.phi_i_max - 2.0*u[phi_i]) - hill(u[c_u], p.hill_n, p.hill_k);
+        dr_du[phi_i][phi_i] = p.R*(1.0 - 2.0*u[phi_i]) - p.M;
+        dr_du[phi_i][phi_m] = 0.0;
+
+        dr_du[phi_m][c_u]   = 0.0;
+        dr_du[phi_m][c_b]   = 0.0;
+        dr_du[phi_m][c_s]   = 0.0;
+        dr_du[phi_m][phi_i] = p.M;
+        dr_du[phi_m][phi_m] = 0.0;
     }
 };
 
@@ -233,20 +242,32 @@ int main(int argc, char **argv)
     ConfigFile cf(config_file);
     cf.print_all();
 
-    problem.p.p_u        = cf.get<double>("p_u");
+    problem.p.pe_u       = cf.get<double>("pe_u");
     problem.p.alpha      = cf.get<double>("alpha");
     problem.p.beta       = cf.get<double>("beta");
-    problem.p.gamma_u    = cf.get<double>("gamma_u");
-    problem.p.gamma_b    = cf.get<double>("gamma_b");
+    problem.p.gamma_ui   = cf.get<double>("gamma_ui");
+    problem.p.gamma_bi   = cf.get<double>("gamma_bi");
+    problem.p.gamma_si   = cf.get<double>("gamma_si");
+    problem.p.gamma_um   = cf.get<double>("gamma_um");
+    problem.p.gamma_bm   = cf.get<double>("gamma_bm");
+    problem.p.gamma_sm   = cf.get<double>("gamma_sm");
+    problem.p.q_u        = cf.get<double>("q_u");
+    problem.p.q_b        = cf.get<double>("q_b");
+    problem.p.q_s        = cf.get<double>("q_s");
     problem.p.D_su       = cf.get<double>("D_su");
-    problem.p.D_ju       = cf.get<double>("D_ju");
-    problem.p.nu         = cf.get<double>("nu");
+    problem.p.D_iu       = cf.get<double>("D_iu");
+    problem.p.D_mu       = cf.get<double>("D_mu");
+    problem.p.nu_u       = cf.get<double>("nu_u");
+    problem.p.nu_b       = cf.get<double>("nu_b");
+    problem.p.nu_s       = cf.get<double>("nu_s");
     problem.p.lambda     = cf.get<double>("lambda");
-    problem.p.phi_i_max  = cf.get<double>("phi_i_max");
-    problem.p.hill_n     = cf.get<double>("hill_n");
-    problem.p.hill_k     = cf.get<double>("hill_k");
+    problem.p.phi_i_init = cf.get<double>("phi_i_init");
+    problem.p.R          = cf.get<double>("R");
+    problem.p.M          = cf.get<double>("M");
 
     problem.enable_terse_logging();
+
+    //problem.enable_fd_jacobian();
 
     char filename[200];
     std::ofstream outfile;
