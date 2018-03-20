@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 #include <iostream>
+#include <iomanip>
 
 namespace mjrfd
 {
@@ -77,9 +78,23 @@ namespace mjrfd
         // Print all key-value pairs to stream out
         void print_all(std::ostream &out = std::cout) const
         {
+            out << "Recognised parameters:\n";
+
+            // find the length of the longest key
+            std::size_t max_key_length = 0;
+
+            for(const auto& p : params_)
+            {
+                if(p.first.size() > max_key_length)
+                {
+                    max_key_length = p.first.size();
+                }
+            }
+
+            // print all the keys and values
             for(const auto& [key, value] : params_)
             {
-                out << key << " = " << value << '\n';
+                out << std::setw(max_key_length) << std::left << key << " = " << value << '\n';
             }
         }
 
