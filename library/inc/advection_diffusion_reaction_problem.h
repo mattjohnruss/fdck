@@ -265,6 +265,11 @@ namespace mjrfd
                     double v_at_node = 0.0;
                     get_v(i, var, v_at_node);
 
+                    // TODO when cn_theta != 1 the velocity residuals are
+                    // incorrect because we use the same v for both the current
+                    // and previous timestep terms - must add time arg to get_v
+                    // and use it here
+
                     // Loop over the stencil points, using the upwind stencil helper,
                     // and get the offset j (relative to i) and the weight w
                     for(const auto& [j, w] : upwind_stencil_weights(i, v_at_node))
