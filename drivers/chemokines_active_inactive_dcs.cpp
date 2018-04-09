@@ -12,10 +12,8 @@ struct ChemokinesParams
     double beta;
     double gamma_ui;
     double gamma_bi;
-    double gamma_si;
     double gamma_um;
     double gamma_bm;
-    double gamma_sm;
     double q_u;
     double q_b;
     double q_s;
@@ -247,10 +245,8 @@ int main(int argc, char **argv)
     problem.p.beta       = cf.get<double>("beta");
     problem.p.gamma_ui   = cf.get<double>("gamma_ui");
     problem.p.gamma_bi   = cf.get<double>("gamma_bi");
-    problem.p.gamma_si   = cf.get<double>("gamma_si");
     problem.p.gamma_um   = cf.get<double>("gamma_um");
     problem.p.gamma_bm   = cf.get<double>("gamma_bm");
-    problem.p.gamma_sm   = cf.get<double>("gamma_sm");
     problem.p.q_u        = cf.get<double>("q_u");
     problem.p.q_b        = cf.get<double>("q_b");
     problem.p.q_s        = cf.get<double>("q_s");
