@@ -306,5 +306,5 @@ int main(int argc, char **argv)
         ++i;
     }
 
-    std::cout << '\n';
+    std::cout << "\n\nReached t > t_max (" << t_max << ") after performing " << i-1 << " timesteps\n";
 }
