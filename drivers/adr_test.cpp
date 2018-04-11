@@ -4,16 +4,22 @@
 
 using namespace mjrfd;
 
+enum Variable
+{
+    c_0 = 0,
+    c_1 = 1,
+};
+
 class TestProblem : public AdvectionDiffusionReactionProblem
 {
 public:
     TestProblem(const unsigned n_node, const double dt) :
         AdvectionDiffusionReactionProblem(2, n_node, dt)
     {
-        enable_bc(Boundary::Left, { 0, 1 });
-        enable_bc(Boundary::Right, { 0, 1 });
-        //enable_bc(Boundary::Left, { 0 });
-        //enable_bc(Boundary::Right, { 0 });
+        enable_bc(Boundary::Left,  { c_0, c_1 });
+        enable_bc(Boundary::Right, { c_0, c_1 });
+
+        set_variable_names({ "c_0 num", "c_1 num" });
     }
 
     ~TestProblem()
@@ -21,6 +27,16 @@ public:
     }
 
 private:
+    const std::unordered_map<int, double>& stencil_1_helper(unsigned i) const
+    {
+        if(i == 0)
+            return stencil::forward_1::weights;
+        else if(i == n_node_-1)
+            return stencil::backward_1::weights;
+        else
+            return stencil::central_1::weights;
+    }
+
     void get_bc(Boundary b,
                 std::vector<double> &a1,
                 std::vector<double> &a2,
@@ -28,43 +44,66 @@ private:
     {
         if(b == Boundary::Left)
         {
-            a1[0] = 1.0; a2[0] = 0.0; a3[0] = 1.0;
-            a1[1] = 1.0; a2[1] = 0.0; a3[1] = 0.0;
+            a1[c_0] = 1.0; a2[c_0] = 0.0; a3[c_0] = 1.0;
+            a1[c_1] = 1.0; a2[c_1] = 0.0; a3[c_1] = 1.0;
         }
         if(b == Boundary::Right)
         {
-            a1[0] = 1.0; a2[0] = 0.0; a3[0] = 0.0;
-            a1[1] = 1.0; a2[1] = 0.0; a3[1] = 1.0;
+            a1[c_0] = 1.0; a2[c_0] = 0.0; a3[c_0] = 0.0;
+            a1[c_1] = 1.0; a2[c_1] = 0.0; a3[c_1] = 0.0;
         }
     }
 
-    void get_d(std::vector<double> &d) const override
+    void get_d(const unsigned i,
+               const std::vector<double> &u,
+               std::vector<double> &d) const override
     {
-        d[0] = 1.0;
-        d[1] = 0.1;
+        const double x = this->x(i);
+        static constexpr double pi = std::acos(-1.0);
+
+        d[c_0] = 1.0;
+        d[c_1] = 1.0 - 0.9*u[c_0];
+    }
+
+    void get_dd_dx(const unsigned i,
+                   const std::vector<double> &u,
+                   std::vector<double> &dd_dx) const override
+    {
+        const double x = this->x(i);
+        static constexpr double pi = std::acos(-1.0);
+
+        dd_dx[c_0] = 0.0;
+
+        dd_dx[c_1] = 0.0;
+        for(const auto& [j, w] : stencil_1_helper(i))
+        {
+            dd_dx[c_1] += -0.9*w*this->u(0, c_0, i+j)/dx_;
+        }
     }
 
     void get_v(const unsigned i,
                const unsigned var,
                double &v) const override
     {
-        if(var == 0)
-        {
-            //v = 10*x(i);
-            //v = 6.5;
+        v = 0.0;
 
-            v = 0.0;
+        //if(var == 0)
+        //{
+            ////v = 10*x(i);
+            ////v = 6.5;
 
-            // v_0 now depends on u_1!
-            for(const auto& [j, w] : stencil::central_1::weights)
-            {
-                v += 10.0*w*u(0, 1, i+j)/dx_;
-            }
-        }
-        else if(var == 1)
-        {
-            v = 1.5;
-        }
+            //v = 0.0;
+
+            //// v_0 now depends on u_1!
+            //for(const auto& [j, w] : stencil::central_1::weights)
+            //{
+                //v += 10.0*w*u(0, 1, i+j)/dx_;
+            //}
+        //}
+        //else if(var == 1)
+        //{
+            //v = 1.5;
+        //}
     }
 
     void get_dv_du(const unsigned i,
@@ -75,35 +114,37 @@ private:
     {
         dv_du = 0.0;
 
-        // only contribution is from the case d(u_0)/d(u_1)
-        if(var == 0 && var2 == 1)
-        {
-            // loop over the velocity stencil points
-            for(const auto& [j, w] : stencil::central_1::weights)
-            {
-                if(i+j == i2)
-                {
-                    dv_du += 10.0*w/dx_;
-                }
-            }
-        }
+        //// only contribution is from the case d(u_0)/d(u_1)
+        //if(var == 0 && var2 == 1)
+        //{
+            //// loop over the velocity stencil points
+            //for(const auto& [j, w] : stencil::central_1::weights)
+            //{
+                //if(i+j == i2)
+                //{
+                    //dv_du += 10.0*w/dx_;
+                //}
+            //}
+        //}
     }
 
     void get_r(const std::vector<double> &u,
                std::vector<double> &r) const override
     {
-        r[0] = -1.0*u[1];
-        r[1] = 1.0*u[0];
+        r[c_0] = 0.0;
+        r[c_1] = 0.0;
+        //r[0] = -1.0*u[1];
+        //r[1] = 1.0*u[0];
     }
 
     void get_dr_du(const std::vector<double> &u,
                    std::vector<std::vector<double>> &dr_du) const override
     {
-        dr_du[0][0] = 0.0;
-        dr_du[0][1] = -1.0;
+        dr_du[c_0][c_0] = 0.0;
+        dr_du[c_0][c_1] = 0.0;
 
-        dr_du[1][0] = 1.0;
-        dr_du[1][1] = 0.0;
+        dr_du[c_1][c_1] = 0.0;
+        dr_du[c_1][c_1] = 0.0;
     }
 };
 
@@ -118,7 +159,7 @@ int main(int argc, char **argv)
 
     TestProblem problem(n_node, 0.01);
 
-    //problem.enable_fd_jacobian();
+    problem.enable_fd_jacobian();
 
     //problem.enable_dump_jacobian();
     //problem.steady_solve();
@@ -148,39 +189,41 @@ int main(int argc, char **argv)
     problem.output(outfile);
     outfile.close();
 
-    // set initial conditions (zero)
-    problem.clear_solution();
+    std::cout << '\n';
 
-    // output initial conditions
-    std::sprintf(filename, "output_%05i.csv", 0);
-    outfile.open(filename);
-    problem.output(outfile);
-    outfile.close();
+    //// set initial conditions (zero)
+    //problem.clear_solution();
 
-    unsigned i = 1;
+    //// output initial conditions
+    //std::sprintf(filename, "output_%05i.csv", 0);
+    //outfile.open(filename);
+    //problem.output(outfile);
+    //outfile.close();
 
-    double t_max = 10.0;
-    unsigned output_interval = 1;
+    //unsigned i = 1;
 
-    // timestepping loop
-    while(problem.time() <= t_max)
-    {
-        // solve for current timestep
-        problem.unsteady_solve();
+    //double t_max = 10.0;
+    //unsigned output_interval = 1;
 
-        if(i % output_interval == 0)
-        {
-            // output current solution
-            //std::cout << "Outputting solution at time = " << problem.time() << '\n';
-            std::cout << ";\tOutputting";
-            std::sprintf(filename, "output_%05i.csv", i/output_interval);
-            outfile.open(filename);
-            problem.output(outfile);
-            outfile.close();
-        }
+    //// timestepping loop
+    //while(problem.time() <= t_max)
+    //{
+        //// solve for current timestep
+        //problem.unsteady_solve();
 
-        ++i;
-    }
+        //if(i % output_interval == 0)
+        //{
+            //// output current solution
+            ////std::cout << "Outputting solution at time = " << problem.time() << '\n';
+            //std::cout << ";\tOutputting";
+            //std::sprintf(filename, "output_%05i.csv", i/output_interval);
+            //outfile.open(filename);
+            //problem.output(outfile);
+            //outfile.close();
+        //}
 
-    std::cout << "\n\nReached t > t_max (" << t_max << ") after performing " << i-1 << " timesteps\n";
+        //++i;
+    //}
+
+    //std::cout << "\n\nReached t > t_max (" << t_max << ") after performing " << i-1 << " timesteps\n";
 }
