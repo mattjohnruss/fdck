@@ -53,7 +53,14 @@ namespace mjrfd
                             std::vector<double> &a3) const = 0;
 
         /// Get the vector of diffusivities
-        virtual void get_d(std::vector<double> &d) const = 0;
+        virtual void get_d(const unsigned i,
+                           const std::vector<double> &u,
+                           std::vector<double> &d) const = 0;
+
+        /// Get the spatial derivative of the vector of diffusivities (defaults to zero)
+        virtual void get_dd_dx(const unsigned i,
+                               const std::vector<double> &u,
+                               std::vector<double> &dd_dx) const;
 
         /// Get the vector of advection (or chemotaxis etc) velocities
         virtual void get_v(const unsigned i,
@@ -152,7 +159,7 @@ namespace mjrfd
 
         for(unsigned var = 0; var < n_var_; ++var)
         {
-            out << var_names_[var];
+            out << '\"' << var_names_[var] << '\"';
             out << (var < (n_var_-1) ? ' ' : '\n');
         }
 
@@ -174,12 +181,9 @@ namespace mjrfd
         // Set the residuals to zero
         residual_.setZero();
 
-        // Storage for the diffusion coefficients
+        // Storage for the diffusion coefficients and their spatial derivatives
         std::vector<double> d(n_var_);
-
-        // Get the diffusion coefficients. Do it here because they are
-        // constants for each variable
-        get_d(d);
+        std::vector<double> dd_dx(n_var_);
 
         // Get the left boundary condition coefficients
         std::vector<double> a1_left(n_var_);
@@ -211,6 +215,12 @@ namespace mjrfd
                 u_at_node[var]     = u(0, var, i);
                 u_old_at_node[var] = u(1, var, i);
             }
+
+            // Get the diffusion coefficients at the current node
+            // Node number i is passed in so D can explicitly depend on the
+            // spatial coordinate
+            get_d(i, u_at_node, d);
+            get_dd_dx(i, u_at_node, dd_dx);
 
             // Get the reaction term at the current node
             get_r(u_at_node, r);
@@ -248,6 +258,9 @@ namespace mjrfd
 
                     // Diffusion
 
+                    // TODO same probably goes for diffusion as noted below for
+                    // velocities regarding old and new values and cn_theta
+
                     // Loop over the stencil points and get the offset j (relative to i)
                     // and the weight w
                     for(const auto& [j, w] : stencil::central_2::weights)
@@ -256,6 +269,15 @@ namespace mjrfd
                         if(d[var] > 0.0)
                         {
                             residual_(index) += -d[var]*w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j));
+                        }
+                    }
+
+                    // TODO check this upwinding thing w.r.t. the sign of dd_dx etc
+                    for(const auto& [j, w] : upwind_stencil_weights(i, -dd_dx[var]))
+                    {
+                        if(std::abs(dd_dx[var]) > 0.0)
+                        {
+                            residual_(index) += -dd_dx[var]*w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j))*dx_;
                         }
                     }
 
@@ -304,9 +326,7 @@ namespace mjrfd
         triplet_list.reserve(n_node_*n_var_*(15*n_var_ + 7));
 
         std::vector<double> d(n_var_);
-
-        // Get the diffusion coefficients
-        get_d(d);
+        std::vector<double> dd_dx(n_var_);
 
         // Get the left boundary condition coefficients
         std::vector<double> a1_left(n_var_);
@@ -337,6 +357,12 @@ namespace mjrfd
             {
                 u_at_node[var] = u(0, var, i);
             }
+
+            // Get the diffusion coefficients at the current node
+            // Node number i is passed in so D can explicitly depend on the
+            // spatial coordinate
+            get_d(i, u_at_node, d);
+            get_dd_dx(i, u_at_node, dd_dx);
 
             // Get the reaction term and derivatives at the current node
             get_r(u_at_node, r);
@@ -489,6 +515,16 @@ namespace mjrfd
     {
         assert(var_names.size() == n_var_);
         var_names_ = var_names;
+    }
+
+    void AdvectionDiffusionReactionProblem::get_dd_dx(const unsigned i,
+                                                      const std::vector<double> &u,
+                                                      std::vector<double> &dd_dx) const
+    {
+        for(unsigned var = 0; var < n_var_; ++var)
+        {
+            dd_dx[var] = 0.0;
+        }
     }
 
     const std::unordered_map<int, double>&
