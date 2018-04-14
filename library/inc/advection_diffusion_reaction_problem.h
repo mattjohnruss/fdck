@@ -53,13 +53,13 @@ namespace mjrfd
                             std::vector<double> &a3) const = 0;
 
         /// Get the vector of diffusivities
-        virtual void get_d(const unsigned i,
-                           const std::vector<double> &u,
+        virtual void get_d(const unsigned t,
+                           const unsigned i,
                            std::vector<double> &d) const = 0;
 
         /// Get the spatial derivative of the vector of diffusivities (defaults to zero)
-        virtual void get_dd_dx(const unsigned i,
-                               const std::vector<double> &u,
+        virtual void get_dd_dx(const unsigned t,
+                               const unsigned i,
                                std::vector<double> &dd_dx) const;
 
         /// Get the vector of advection (or chemotaxis etc) velocities
@@ -96,6 +96,15 @@ namespace mjrfd
         const double dx_;
 
     private:
+        static const double lerp(const double v1,
+                                 const double v2,
+                                 const double s);
+
+        static void lerp(const std::vector<double> &v1,
+                         const std::vector<double> &v2,
+                         const double s,
+                         std::vector<double> &result);
+
         /// Crank-Nicolson theta
         double cn_theta_;
 
@@ -183,7 +192,9 @@ namespace mjrfd
 
         // Storage for the diffusion coefficients and their spatial derivatives
         std::vector<double> d(n_var_);
-        std::vector<double> dd_dx(n_var_);
+        std::vector<double> d_plus(n_var_);
+        std::vector<double> d_minus(n_var_);
+        //std::vector<double> dd_dx(n_var_);
 
         // Get the left boundary condition coefficients
         std::vector<double> a1_left(n_var_);
@@ -216,15 +227,13 @@ namespace mjrfd
                 u_old_at_node[var] = u(1, var, i);
             }
 
-            // Get the diffusion coefficients at the current node
-            // Node number i is passed in so D can explicitly depend on the
-            // spatial coordinate
-            get_d(i, u_at_node, d);
-            get_dd_dx(i, u_at_node, dd_dx);
-
             // Get the reaction term at the current node
             get_r(u_at_node, r);
             get_r(u_old_at_node, r_old);
+
+            //TODO testing - remove
+            //get_d(0, i, d);
+            //get_dd_dx(0, i, dd_dx);
 
             // Loop over the variables
             for(unsigned var = 0; var < n_var_; ++var)
@@ -261,23 +270,70 @@ namespace mjrfd
                     // TODO same probably goes for diffusion as noted below for
                     // velocities regarding old and new values and cn_theta
 
-                    // Loop over the stencil points and get the offset j (relative to i)
-                    // and the weight w
-                    for(const auto& [j, w] : stencil::central_2::weights)
-                    {
-                        // Sum the contributions from the stencil points
-                        if(d[var] > 0.0)
-                        {
-                            residual_(index) += -d[var]*w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j));
-                        }
-                    }
+                    //// Loop over the stencil points and get the offset j (relative to i)
+                    //// and the weight w
+                    //for(const auto& [j, w] : stencil::central_2::weights)
+                    //{
+                        //// Sum the contributions from the stencil points
+                        //if(d[var] > 0.0)
+                        //{
+                            //residual_(index) += -d[var]*w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j));
+                        //}
+                    //}
 
-                    // TODO check this upwinding thing w.r.t. the sign of dd_dx etc
-                    for(const auto& [j, w] : upwind_stencil_weights(i, -dd_dx[var]))
+                    //// TODO check this upwinding thing w.r.t. the sign of dd_dx etc
+                    //for(const auto& [j, w] : upwind_stencil_weights(i, -dd_dx[var]))
+                    //{
+                        //if(std::abs(dd_dx[var]) > 0.0)
+                        //{
+                            //residual_(index) += -dd_dx[var]*w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j))*dx_;
+                        //}
+                    //}
+
+                    // Get the diffusion coefficients at the current node and
+                    // the ones surrounding it so we can interpolate
+                    // TODO this is super inefficient because it gets the
+                    // coeffs for all variables every time
+
+                    // the i+-1 here is a bit hardcoded, but we know that these
+                    // indices will always be appropriate and in range since
+                    // we're using central differences in the outer loop below
+                    get_d(0, i,   d);
+                    get_d(0, i+1, d_plus);
+                    get_d(0, i-1, d_minus);
+
+                    for(const auto& [j, w] : stencil::central_1::weights)
                     {
-                        if(std::abs(dd_dx[var]) > 0.0)
+                        double inner_0 = 0.0;
+                        double inner_1 = 0.0;
+
+                        for(const auto& [k, w2] : stencil::central_1::weights)
                         {
-                            residual_(index) += -dd_dx[var]*w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j))*dx_;
+                            inner_0 += w2*u(0, var, i + (j+k)/2);
+                            inner_1 += w2*u(1, var, i + (j+k)/2);
+                        }
+
+                        // linearly interpolate the diffusion coeff to the
+                        // mid-node locations
+                        const double s = j/2.0;
+                        double d_lerp_var = 0.0;
+
+                        // if the interpolation location is on the right,
+                        // interpolate between d and d_plus with location s
+                        // if it's on the left, go between d_minus and d with
+                        // location 1-s
+                        if(s > 0)
+                        {
+                            d_lerp_var = lerp(d[var], d_plus[var], s);
+                        }
+                        else
+                        {
+                            d_lerp_var = lerp(d_minus[var], d[var], -s);
+                        }
+
+                        if(d_lerp_var > 0.0)
+                        {
+                            residual_(index) += -d_lerp_var*w*(cn_theta_*inner_0 + (1.0-cn_theta_)*inner_1);
                         }
                     }
 
@@ -361,8 +417,9 @@ namespace mjrfd
             // Get the diffusion coefficients at the current node
             // Node number i is passed in so D can explicitly depend on the
             // spatial coordinate
-            get_d(i, u_at_node, d);
-            get_dd_dx(i, u_at_node, dd_dx);
+            // TODO update this to match residuals!
+            get_d(0, i, d);
+            get_dd_dx(0, i, dd_dx);
 
             // Get the reaction term and derivatives at the current node
             get_r(u_at_node, r);
@@ -517,8 +574,8 @@ namespace mjrfd
         var_names_ = var_names;
     }
 
-    void AdvectionDiffusionReactionProblem::get_dd_dx(const unsigned i,
-                                                      const std::vector<double> &u,
+    void AdvectionDiffusionReactionProblem::get_dd_dx(const unsigned t,
+                                                      const unsigned i,
                                                       std::vector<double> &dd_dx) const
     {
         for(unsigned var = 0; var < n_var_; ++var)
@@ -584,5 +641,30 @@ namespace mjrfd
     const double AdvectionDiffusionReactionProblem::x(const unsigned i) const
     {
         return static_cast<double>(i)/static_cast<double>(n_node_-1);
+    }
+
+    const double AdvectionDiffusionReactionProblem::lerp(
+        const double v1,
+        const double v2,
+        const double s)
+    {
+        return (1.0 - s)*v1 + s*v2;
+    }
+
+    void AdvectionDiffusionReactionProblem::lerp(
+        const std::vector<double> &v1,
+        const std::vector<double> &v2,
+        const double s,
+        std::vector<double> &result)
+    {
+        assert(v1.size() == v2.size());
+        assert(v1.size() == result.size());
+
+        unsigned n = v1.size();
+
+        for(unsigned i = 0; i < n; ++i)
+        {
+            result[i] = (1.0 - s)*v1[i] + s*v2[i];
+        }
     }
 }

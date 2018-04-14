@@ -33,5 +33,22 @@ namespace mjrfd
                 {-1, 1.0}, {0, -2.0}, {1, 1.0}
             };
         }
+
+        namespace first_order
+        {
+            namespace forward_1
+            {
+                const std::unordered_map<int, double> weights = {
+                    {0, -1.0}, {1, 1.0}
+                };
+            }
+
+            namespace backward_1
+            {
+                const std::unordered_map<int, double> weights = {
+                    {0, 1.0}, {-1, -1.0}
+                };
+            }
+        }
     }
 }

@@ -20,6 +20,8 @@ public:
         enable_bc(Boundary::Right, { c_0, c_1 });
 
         set_variable_names({ "c_0 num", "c_1 num" });
+
+        Max_residual = 1.0e-14;
     }
 
     ~TestProblem()
@@ -54,19 +56,19 @@ private:
         }
     }
 
-    void get_d(const unsigned i,
-               const std::vector<double> &u,
+    void get_d(const unsigned t,
+               const unsigned i,
                std::vector<double> &d) const override
     {
         const double x = this->x(i);
         static constexpr double pi = std::acos(-1.0);
 
         d[c_0] = 1.0;
-        d[c_1] = 1.0 - 0.9*u[c_0];
+        d[c_1] = 1.0 - 0.9*u(t, c_0, i);
     }
 
-    void get_dd_dx(const unsigned i,
-                   const std::vector<double> &u,
+    void get_dd_dx(const unsigned t,
+                   const unsigned i,
                    std::vector<double> &dd_dx) const override
     {
         const double x = this->x(i);
