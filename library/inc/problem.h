@@ -30,6 +30,7 @@ namespace mjrfd
         const double time() const;
 
         virtual void output(std::ostream &out) const = 0;
+        virtual void output_exact(std::ostream &out) const = 0;
 
         void dump_res_and_jac(std::ostream &res_stream, std::ostream &jac_stream) const;
 

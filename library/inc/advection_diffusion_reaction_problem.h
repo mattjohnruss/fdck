@@ -34,6 +34,13 @@ namespace mjrfd
         /// Output the solution
         void output(std::ostream &out) const override;
 
+        /// Output the exact solution
+        void output_exact(std::ostream &out) const override;
+
+        virtual void exact_solution(const double time,
+                                    const double x,
+                                    std::vector<double> &sol) const;
+
         /// Calculate the residual vector
         void calculate_residual() override;
 
@@ -181,6 +188,44 @@ namespace mjrfd
                 out << u(0, var, i);
                 out << (var < (n_var_-1) ? ' ' : '\n');
             }
+        }
+    }
+
+    void AdvectionDiffusionReactionProblem::output_exact(std::ostream &out) const
+    {
+        out << "x ";
+
+        for(unsigned var = 0; var < n_var_; ++var)
+        {
+            out << '\"' << var_names_[var] << '\"';
+            out << (var < (n_var_-1) ? ' ' : '\n');
+        }
+
+        double x;
+        std::vector<double> sol(2);
+
+        for(unsigned i = 0; i < n_node_; ++i)
+        {
+            x = static_cast<double>(i)/static_cast<double>(n_node_-1);
+            out << x << ' ';
+
+            exact_solution(time(), x, sol);
+
+            for(unsigned var = 0; var < n_var_; ++var)
+            {
+                out << sol[var];
+                out << (var < (n_var_-1) ? ' ' : '\n');
+            }
+        }
+    }
+
+    void AdvectionDiffusionReactionProblem::exact_solution(const double t,
+                        const double x,
+                        std::vector<double> &sol) const
+    {
+        for(unsigned var = 0; var < n_var_; ++var)
+        {
+            sol[var] = 0.0;
         }
     }
 
