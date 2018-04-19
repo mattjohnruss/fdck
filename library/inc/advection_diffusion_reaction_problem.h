@@ -431,8 +431,16 @@ namespace mjrfd
         // Reserve the correct number of entries
         triplet_list.reserve(n_node_*n_var_*(15*n_var_ + 7));
 
+        //std::vector<double> d(n_var_);
+        //std::vector<double> dd_dx(n_var_);
+
         std::vector<double> d(n_var_);
-        std::vector<double> dd_dx(n_var_);
+        std::vector<double> d_plus(n_var_);
+        std::vector<double> d_minus(n_var_);
+
+        std::vector<double> dd_du(n_var_);
+        std::vector<double> dd_plus_du(n_var_);
+        std::vector<double> dd_minus_du(n_var_);
 
         // Get the left boundary condition coefficients
         std::vector<double> a1_left(n_var_);
@@ -468,8 +476,8 @@ namespace mjrfd
             // Node number i is passed in so D can explicitly depend on the
             // spatial coordinate
             // TODO update this to match residuals!
-            get_d(0, i, d);
-            get_dd_dx(0, i, dd_dx);
+            //get_d(0, i, d);
+            //get_dd_dx(0, i, dd_dx);
 
             // Get the reaction term and derivatives at the current node
             get_r(u_at_node, r);
@@ -524,6 +532,58 @@ namespace mjrfd
                             triplet_list.push_back( T(index, index+j, -d[var]*w*cn_theta_) );
                         }
                     }
+
+
+                    // TODO implement the exact jacobian for nested difference-based diffusion term
+                    // currently the following is totally wrong
+                    //get_d(0, i,   d);
+                    //get_d(0, i+1, d_plus);
+                    //get_d(0, i-1, d_minus);
+
+                    //get_dd_du(0, i,   dd_du);
+                    //get_dd_du(0, i+1, dd_minus_du);
+                    //get_dd_du(0, i-1, dd_plus_du);
+
+                    //// Here we do a nested central difference with step size
+                    //// dx/2 (which is where the factor of 4 comes from)
+                    //for(const auto& [j, w] : stencil::central_1::weights)
+                    //{
+                    //    double inner_0 = 0.0;
+                    //    double inner_1 = 0.0;
+
+                    //    for(const auto& [k, w2] : stencil::central_1::weights)
+                    //    {
+                    //        // This integer division is correct since j+k is
+                    //        // always +-2 or 0 (the +-1 from the individual
+                    //        // stencils either combine or cancel)
+                    //        inner_0 += w2*u(0, var, i + (j+k)/2);
+                    //        inner_1 += w2*u(1, var, i + (j+k)/2);
+                    //    }
+
+                    //    // linearly interpolate the diffusion coeff to the
+                    //    // mid-node locations
+                    //    const double s = j/2.0;
+                    //    double d_lerp_var = 0.0;
+
+                    //    // if the interpolation location is on the right,
+                    //    // interpolate between d and d_plus with location s
+                    //    // if it's on the left, go between d_minus and d with
+                    //    // location 1-s
+                    //    if(s > 0)
+                    //    {
+                    //        d_lerp_var = lerp(d[var], d_plus[var], s);
+                    //    }
+                    //    else
+                    //    {
+                    //        d_lerp_var = lerp(d_minus[var], d[var], -s);
+                    //    }
+
+                    //    if(d_lerp_var > 0.0)
+                    //    {
+                    //        triplet_list.push_back( T(index, index2, -4.0*d_lerp_var*w*(cn_theta_*inner_0 + (1.0-cn_theta_)*inner_1)) );
+                    //    }
+                    //}
+
 
                     // Advection (or chemotaxis etc)
                     double v_at_node = 0.0;
