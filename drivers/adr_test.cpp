@@ -1,6 +1,7 @@
 #include <advection_diffusion_reaction_problem.h>
 
 #include <fstream>
+#include <iomanip>
 
 using namespace mjrfd;
 
@@ -26,6 +27,17 @@ public:
 
     ~TestProblem()
     {
+    }
+
+    void exact_solution(const double time,
+                        const double x,
+                        std::vector<double> &sol) const override
+    {
+        using std::atan;
+        using std::sqrt;
+
+        sol[0] = 1.0 - x;
+        sol[1] = (exp((4.0*atan(sqrt(5.0/3.0)))/sqrt(15.0)) - exp((2.0*(atan(sqrt(5.0/3.0)) + atan(sqrt(5.0/3.0)*(-1.0 + 2.0*x))))/sqrt(15.0)))/(-1.0 + exp((4.0*atan(sqrt(5.0/3.0)))/sqrt(15.0)));
     }
 
 private:
@@ -64,24 +76,24 @@ private:
         static constexpr double pi = std::acos(-1.0);
 
         d[c_0] = 1.0;
-        d[c_1] = 1.0 - 0.9*u(t, c_0, i);
+        d[c_1] = 2.0 - 5.0*x*u(t, c_0, i);
     }
 
-    void get_dd_dx(const unsigned t,
-                   const unsigned i,
-                   std::vector<double> &dd_dx) const override
-    {
-        const double x = this->x(i);
-        static constexpr double pi = std::acos(-1.0);
+    //void get_dd_dx(const unsigned t,
+                   //const unsigned i,
+                   //std::vector<double> &dd_dx) const override
+    //{
+        //const double x = this->x(i);
+        //static constexpr double pi = std::acos(-1.0);
 
-        dd_dx[c_0] = 0.0;
+        //dd_dx[c_0] = 0.0;
 
-        dd_dx[c_1] = 0.0;
-        for(const auto& [j, w] : stencil_1_helper(i))
-        {
-            dd_dx[c_1] += -0.9*w*this->u(0, c_0, i+j)/dx_;
-        }
-    }
+        //dd_dx[c_1] = 0.0;
+        //for(const auto& [j, w] : stencil_1_helper(i))
+        //{
+            //dd_dx[c_1] += -0.9*w*this->u(0, c_0, i+j)/dx_;
+        //}
+    //}
 
     void get_v(const unsigned i,
                const unsigned var,
@@ -89,23 +101,10 @@ private:
     {
         v = 0.0;
 
-        //if(var == 0)
-        //{
-            ////v = 10*x(i);
-            ////v = 6.5;
-
-            //v = 0.0;
-
-            //// v_0 now depends on u_1!
-            //for(const auto& [j, w] : stencil::central_1::weights)
-            //{
-                //v += 10.0*w*u(0, 1, i+j)/dx_;
-            //}
-        //}
-        //else if(var == 1)
-        //{
-            //v = 1.5;
-        //}
+        if(var == c_1)
+        {
+            v = 1.0;
+        }
     }
 
     void get_dv_du(const unsigned i,
@@ -115,19 +114,6 @@ private:
                    double &dv_du) const override
     {
         dv_du = 0.0;
-
-        //// only contribution is from the case d(u_0)/d(u_1)
-        //if(var == 0 && var2 == 1)
-        //{
-            //// loop over the velocity stencil points
-            //for(const auto& [j, w] : stencil::central_1::weights)
-            //{
-                //if(i+j == i2)
-                //{
-                    //dv_du += 10.0*w/dx_;
-                //}
-            //}
-        //}
     }
 
     void get_r(const std::vector<double> &u,
@@ -135,8 +121,6 @@ private:
     {
         r[c_0] = 0.0;
         r[c_1] = 0.0;
-        //r[0] = -1.0*u[1];
-        //r[1] = 1.0*u[0];
     }
 
     void get_dr_du(const std::vector<double> &u,
@@ -188,7 +172,15 @@ int main(int argc, char **argv)
     problem.steady_solve();
     std::sprintf(filename, "output_steady.csv");
     outfile.open(filename);
+    outfile << std::setprecision(16);
     problem.output(outfile);
+    outfile.close();
+
+    // output the exact solution
+    std::sprintf(filename, "output_exact.csv");
+    outfile.open(filename);
+    outfile << std::setprecision(16);
+    problem.output_exact(outfile);
     outfile.close();
 
     std::cout << '\n';
