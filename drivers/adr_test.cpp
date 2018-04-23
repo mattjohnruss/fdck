@@ -29,19 +29,8 @@ public:
     {
     }
 
-    void exact_solution(const double time,
-                        const double x,
-                        std::vector<double> &sol) const override
-    {
-        using std::atan;
-        using std::sqrt;
-
-        sol[0] = 1.0 - x;
-        sol[1] = (exp((4.0*atan(sqrt(5.0/3.0)))/sqrt(15.0)) - exp((2.0*(atan(sqrt(5.0/3.0)) + atan(sqrt(5.0/3.0)*(-1.0 + 2.0*x))))/sqrt(15.0)))/(-1.0 + exp((4.0*atan(sqrt(5.0/3.0)))/sqrt(15.0)));
-    }
-
 private:
-    const std::unordered_map<int, double>& stencil_1_helper(unsigned i) const
+    const std::unordered_map<int, double>& stencil_1_helper(const unsigned i) const
     {
         if(i == 0)
             return stencil::forward_1::weights;
@@ -79,21 +68,18 @@ private:
         d[c_1] = 2.0 - 5.0*x*u(t, c_0, i);
     }
 
-    //void get_dd_dx(const unsigned t,
-                   //const unsigned i,
-                   //std::vector<double> &dd_dx) const override
-    //{
-        //const double x = this->x(i);
-        //static constexpr double pi = std::acos(-1.0);
+    void get_dd_du(const unsigned t,
+                   const unsigned i,
+                   std::vector<std::vector<double>> &dd_du) const override
+    {
+        const double x = this->x(i);
 
-        //dd_dx[c_0] = 0.0;
+        dd_du[c_0][c_0] = 0.0;
+        dd_du[c_0][c_1] = 0.0;
 
-        //dd_dx[c_1] = 0.0;
-        //for(const auto& [j, w] : stencil_1_helper(i))
-        //{
-            //dd_dx[c_1] += -0.9*w*this->u(0, c_0, i+j)/dx_;
-        //}
-    //}
+        dd_du[c_1][c_0] = -5.0*x;
+        dd_du[c_1][c_1] = 0.0;
+    }
 
     void get_v(const unsigned i,
                const unsigned var,
@@ -132,6 +118,23 @@ private:
         dr_du[c_1][c_1] = 0.0;
         dr_du[c_1][c_1] = 0.0;
     }
+
+    void exact_solution(const double time,
+                        const double x,
+                        std::vector<double> &sol) const override
+    {
+        using std::atan;
+        using std::sqrt;
+
+        sol[0] = 1.0 - x;
+        sol[1] = (exp((4.0*atan(sqrt(5.0/3.0)))/sqrt(15.0)) - exp((2.0*(atan(sqrt(5.0/3.0)) + atan(sqrt(5.0/3.0)*(-1.0 + 2.0*x))))/sqrt(15.0)))/(-1.0 + exp((4.0*atan(sqrt(5.0/3.0)))/sqrt(15.0)));
+
+        //using std::exp;
+        //using std::log;
+
+        //sol[0] = (exp(1.0) - exp(x))/(exp(1.0) - 1.0);
+        //sol[1] = 1.0 - log(1.0 + x)/log(2.0);
+    }
 };
 
 int main(int argc, char **argv)
@@ -145,32 +148,34 @@ int main(int argc, char **argv)
 
     TestProblem problem(n_node, 0.01);
 
-    problem.enable_fd_jacobian();
-
-    //problem.enable_dump_jacobian();
-    //problem.steady_solve();
-
-    //unsigned n_timestep = 100;
-
-    //problem.clear_solution();
-
-    //for(unsigned t = 0; t < n_timestep; ++t)
-    //{
-        //problem.unsteady_solve();
-    //}
-
-    //std::ofstream outfile("output.dat");
-    //problem.output(outfile);
-    //outfile.close();
-
     problem.enable_terse_logging();
 
     char filename[200];
     std::ofstream outfile;
 
-    // perform a steady solve and output it
+    // perform a steady solve using exact jacobian and output it
+    std::cout << "Solve using exact jacobian:\n";
+    problem.disable_fd_jacobian();
+    problem.enable_dump_jacobian("ex_");
+
     problem.steady_solve();
     std::sprintf(filename, "output_steady.csv");
+    outfile.open(filename);
+    outfile << std::setprecision(16);
+    problem.output(outfile);
+    outfile.close();
+
+    std::cout << std::endl;
+
+    // perform a steady solve using fd jacobian and output it
+    std::cout << "Solve using fd jacobian:\n";
+    problem.enable_fd_jacobian();
+    problem.enable_dump_jacobian("fd_");
+
+    problem.clear_solution();
+
+    problem.steady_solve();
+    std::sprintf(filename, "output_steady_fd.csv");
     outfile.open(filename);
     outfile << std::setprecision(16);
     problem.output(outfile);
