@@ -37,10 +37,6 @@ namespace mjrfd
         /// Output the exact solution
         void output_exact(std::ostream &out) const override;
 
-        virtual void exact_solution(const double time,
-                                    const double x,
-                                    std::vector<double> &sol) const;
-
         /// Calculate the residual vector
         void calculate_residual() override;
 
@@ -88,6 +84,10 @@ namespace mjrfd
         /// Get the derivatives of reactions wrt dofs
         virtual void get_dr_du(const std::vector<double> &u,
                                std::vector<std::vector<double>> &dr_du) const = 0;
+
+        virtual void exact_solution(const double time,
+                                    const double x,
+                                    std::vector<double> &sol) const;
 
     protected:
         const std::unordered_map<int, double>&
@@ -216,16 +216,6 @@ namespace mjrfd
                 out << sol[var];
                 out << (var < (n_var_-1) ? ' ' : '\n');
             }
-        }
-    }
-
-    void AdvectionDiffusionReactionProblem::exact_solution(const double t,
-                        const double x,
-                        std::vector<double> &sol) const
-    {
-        for(unsigned var = 0; var < n_var_; ++var)
-        {
-            sol[var] = 0.0;
         }
     }
 
@@ -684,13 +674,13 @@ namespace mjrfd
         var_names_ = var_names;
     }
 
-    void AdvectionDiffusionReactionProblem::get_dd_dx(const unsigned t,
-                                                      const unsigned i,
-                                                      std::vector<double> &dd_dx) const
+    void AdvectionDiffusionReactionProblem::exact_solution(const double t,
+                                                           const double x,
+                                                           std::vector<double> &sol) const
     {
         for(unsigned var = 0; var < n_var_; ++var)
         {
-            dd_dx[var] = 0.0;
+            sol[var] = 0.0;
         }
     }
 
