@@ -25,7 +25,8 @@ namespace mjrfd
         Jacobian_fd_step(1.0e-8),
         terse_logging_(false),
         use_fd_jacobian_(false),
-        dump_jacobian_(false)
+        dump_jacobian_(false),
+        jac_filename_prefix_("")
     {
         clear_solution();
     }
@@ -108,10 +109,12 @@ namespace mjrfd
                 {
                     char filename[100];
 
-                    std::snprintf(filename, 100, "res_t=%f_%u.dat", time_, count);
+                    std::snprintf(filename, 100, "%sres_t=%f_%u.dat",
+                                  jac_filename_prefix_.c_str(), time_, count);
                     std::ofstream res_file(filename);
 
-                    std::snprintf(filename, 100, "jac_t=%f_%u.dat", time_, count);
+                    std::snprintf(filename, 100, "%sjac_t=%f_%u.dat",
+                                  jac_filename_prefix_.c_str(), time_, count);
                     std::ofstream jac_file(filename);
 
                     dump_res_and_jac(res_file, jac_file);
@@ -272,8 +275,9 @@ namespace mjrfd
         use_fd_jacobian_ = false;
     }
 
-    void Problem::enable_dump_jacobian()
+    void Problem::enable_dump_jacobian(const std::string &filename_prefix)
     {
+        jac_filename_prefix_ = filename_prefix;
         dump_jacobian_ = true;
     }
 
@@ -325,7 +329,6 @@ namespace mjrfd
             // Set the column of the jacobian matrix
             dense_jacobian.col(i) =
                 (residual_plus - residual_minus)/(2.0*Jacobian_fd_step);
-
         }
 
         // Set the sparse jacobian from the dense one
