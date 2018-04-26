@@ -105,8 +105,8 @@ private:
         }
     }
 
-    void get_d(const unsigned i,
-               const std::vector<double> &u,
+    void get_d(const unsigned t,
+               const unsigned i,
                std::vector<double> &d) const override
     {
         d[c_u]   = 1.0;

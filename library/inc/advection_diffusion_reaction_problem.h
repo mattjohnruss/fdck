@@ -65,9 +65,10 @@ namespace mjrfd
         /// i, which means it cannot depend on derivatives of the variables etc
         /// This means we only need to pass node i to the derivatives, unlike
         /// dv_du which needs i and j
+        /// Defaults to zero
         virtual void get_dd_du(const unsigned t,
                                const unsigned i,
-                               std::vector<std::vector<double>> &dd_du) const = 0;
+                               std::vector<std::vector<double>> &dd_du) const;
 
         /// Get the vector of advection (or chemotaxis etc) velocities
         virtual void get_v(const unsigned i,
@@ -75,19 +76,21 @@ namespace mjrfd
                            double &v) const = 0;
 
         /// Get the derivatives of the advection (or chemotaxis etc) velocities wrt dofs
+        /// Defaults to zero
         virtual void get_dv_du(const unsigned i,
                                const unsigned var,
                                const unsigned i2,
                                const unsigned var2,
-                               double &dv_du) const = 0;
+                               double &dv_du) const;
 
         /// Get the vector of reactions
         virtual void get_r(const std::vector<double> &u,
                            std::vector<double> &r) const = 0;
         
         /// Get the derivatives of reactions wrt dofs
+        /// Defaults to zero
         virtual void get_dr_du(const std::vector<double> &u,
-                               std::vector<std::vector<double>> &dr_du) const = 0;
+                               std::vector<std::vector<double>> &dr_du) const;
 
         virtual void exact_solution(const double time,
                                     const double x,
@@ -662,6 +665,40 @@ namespace mjrfd
         for(unsigned var = 0; var < n_var_; ++var)
         {
             sol[var] = 0.0;
+        }
+    }
+
+    void AdvectionDiffusionReactionProblem::get_dd_du(const unsigned t,
+                                                      const unsigned i,
+                                                      std::vector<std::vector<double>> &dd_du) const
+    {
+        for(unsigned var = 0; var < n_var_; ++var)
+        {
+            for(unsigned var2 = 0; var2 < n_var_; ++var2)
+            {
+                dd_du[var][var2] = 0.0;
+            }
+        }
+    }
+
+    void AdvectionDiffusionReactionProblem::get_dv_du(const unsigned i,
+                                                      const unsigned var,
+                                                      const unsigned i2,
+                                                      const unsigned var2,
+                                                      double &dv_du) const
+    {
+        dv_du = 0.0;
+    }
+
+    void AdvectionDiffusionReactionProblem::get_dr_du(const std::vector<double> &u,
+                                                      std::vector<std::vector<double>> &dr_du) const
+    {
+        for(unsigned var = 0; var < n_var_; ++var)
+        {
+            for(unsigned var2 = 0; var2 < n_var_; ++var2)
+            {
+                dr_du[var][var2] = 0.0;
+            }
         }
     }
 
