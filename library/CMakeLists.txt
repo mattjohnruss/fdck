@@ -1,7 +1,7 @@
 file(GLOB LIBRARY_SRC src/*.cpp)
 file(GLOB LIBRARY_INC inc/*.h)
 
-add_library(library SHARED ${LIBRARY_SRC} ${LIBRARY_INC})
+add_library(library STATIC ${LIBRARY_SRC} ${LIBRARY_INC})
 
 target_include_directories(library PUBLIC inc)
 
