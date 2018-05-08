@@ -754,6 +754,10 @@ namespace mjrfd
             else if(i == n_node_-1)
                 return stencil::backward_1::weights;
         }
+
+        // This point is never reached but exit here just in case to remove a
+        // compiler warning
+        std::exit(1);
     }
 
     const double AdvectionDiffusionReactionProblem::x(const unsigned i) const
