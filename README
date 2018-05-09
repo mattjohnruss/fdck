@@ -11,7 +11,7 @@ For an optimised build use:
 <flags> = -DCMAKE_BUILD_TYPE=Release
 
 To cross-compile for Windows using mingw use:
-<flags> = -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ ..
+<flags> = -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++
 
 Note that link-time optimisation is disabled when cross-compiling since it seems to create executables that immediately crash.
 
