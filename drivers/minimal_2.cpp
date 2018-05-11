@@ -14,8 +14,8 @@ struct ChemokinesParams
 
 enum Variable
 {
-    c_u   = 0,
-    c_b   = 1,
+    c_u = 0,
+    c_b = 1,
 };
 
 class ChemokinesProblem1D : public AdvectionDiffusionReactionProblem
@@ -65,11 +65,11 @@ private:
     {
         if(b == Boundary::Left)
         {
-            a1[c_u]   = 1.0;       a2[c_u]   = 0.0; a3[c_u]   = 1.0;
+            a1[c_u] = 1.0; a2[c_u] = 0.0; a3[c_u] = 1.0;
         }
         if(b == Boundary::Right)
         {
-            a1[c_u]   = 1.0; a2[c_u]   = 0.0; a3[c_u]   = 0.0;
+            a1[c_u] = 1.0; a2[c_u] = 0.0; a3[c_u] = 0.0;
         }
     }
 
@@ -77,8 +77,8 @@ private:
                const unsigned i,
                std::vector<double> &d) const override
     {
-        d[c_u]   = 1.0;
-        d[c_b]   = 0.0;
+        d[c_u] = 1.0;
+        d[c_b] = 0.0;
     }
 
     void get_v(const unsigned i,
@@ -110,11 +110,11 @@ private:
     void get_dr_du(const std::vector<double> &u,
                    std::vector<std::vector<double>> &dr_du) const override
     {
-        dr_du[c_u][c_u]   = -p.alpha;
-        dr_du[c_u][c_b]   = p.beta;
+        dr_du[c_u][c_u] = -p.alpha;
+        dr_du[c_u][c_b] = p.beta;
 
-        dr_du[c_b][c_u]   = p.alpha;
-        dr_du[c_b][c_b]   = -p.beta;
+        dr_du[c_b][c_u] = p.alpha;
+        dr_du[c_b][c_b] = -p.beta;
     }
 };
 
@@ -144,9 +144,9 @@ int main(int argc, char **argv)
     ConfigFile cf(config_file);
     cf.print_all();
 
-    problem.p.pe_u       = cf.get<double>("pe_u");
-    problem.p.alpha      = cf.get<double>("alpha");
-    problem.p.beta       = cf.get<double>("beta");
+    problem.p.pe_u  = cf.get<double>("pe_u");
+    problem.p.alpha = cf.get<double>("alpha");
+    problem.p.beta  = cf.get<double>("beta");
 
     problem.enable_terse_logging();
 
@@ -195,4 +195,3 @@ int main(int argc, char **argv)
 
     std::cout << "\n\nReached t > t_max (" << t_max << ") after performing " << i-1 << " timesteps\n";
 }
-

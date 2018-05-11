@@ -74,7 +74,7 @@ private:
                const unsigned i,
                std::vector<double> &d) const override
     {
-        d[c_u]   = 1.0;
+        d[c_u] = 1.0;
     }
 
     void get_v(const unsigned i,
