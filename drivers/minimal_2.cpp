@@ -150,8 +150,6 @@ int main(int argc, char **argv)
 
     problem.enable_terse_logging();
 
-    //problem.enable_fd_jacobian();
-
     char filename[200];
     std::ofstream outfile;
 
@@ -172,6 +170,10 @@ int main(int argc, char **argv)
     outfile.close();
 
     unsigned i = 1;
+
+#ifdef _WIN32
+    std::cout.sync_with_stdio(false);
+#endif
 
     // timestepping loop
     while(problem.time() <= t_max)

@@ -157,6 +157,10 @@ int main(int argc, char **argv)
 
     unsigned i = 1;
 
+#ifdef _WIN32
+    std::cout.sync_with_stdio(false);
+#endif
+
     // timestepping loop
     while(problem.time() <= t_max)
     {
