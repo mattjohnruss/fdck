@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.9)
 
 project(fd_diff++ C CXX)
 
+message("Build type: ${CMAKE_BUILD_TYPE}")
+
 if(NOT CMAKE_CROSSCOMPILING)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif(NOT CMAKE_CROSSCOMPILING)
