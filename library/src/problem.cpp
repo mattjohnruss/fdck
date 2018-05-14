@@ -221,6 +221,11 @@ namespace mjrfd
         steady_ = false;
     }
 
+    double& Problem::time()
+    {
+        return time_;
+    }
+
     const double Problem::time() const
     {
         return time_;

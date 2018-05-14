@@ -27,6 +27,7 @@ namespace mjrfd
         virtual void make_steady();
         virtual void make_unsteady();
 
+        double& time();
         const double time() const;
 
         virtual void output(std::ostream &out) const = 0;

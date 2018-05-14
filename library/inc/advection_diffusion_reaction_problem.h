@@ -652,7 +652,7 @@ namespace mjrfd
         var_names_ = var_names;
     }
 
-    void AdvectionDiffusionReactionProblem::exact_solution(const double t,
+    void AdvectionDiffusionReactionProblem::exact_solution(const double time,
                                                            const double x,
                                                            std::vector<double> &sol) const
     {
