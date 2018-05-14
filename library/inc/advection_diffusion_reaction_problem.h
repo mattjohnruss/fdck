@@ -321,41 +321,40 @@ namespace mjrfd
 
                     // Here we do a nested central difference with step size
                     // dx/2 (which is where the factor of 4 comes from)
+                    // Loop over the outer stencil points
                     for(const auto& [j, w] : stencil::central_1::weights)
                     {
                         // linearly interpolate the diffusion coeff to the
                         // mid-node locations
-                        const double s = j/2.0;
                         double d_lerp_var = 0.0;
 
-                        // if the interpolation location is on the right,
-                        // interpolate between d and d_plus with location s
-                        // if it's on the left, go between d_minus and d with
-                        // location 1-s
-                        if(s > 0.0)
+                        // interpolate according to which side of the outer
+                        // stencil point the inner stencil point falls on
+                        if(j > 0)
                         {
-                            d_lerp_var = lerp(d[var], d_plus[var], s);
+                            d_lerp_var = 0.5*(d[var] + d_plus[var]);
                         }
                         else
                         {
-                            d_lerp_var = lerp(d_minus[var], d[var], -s);
+                            d_lerp_var = 0.5*(d_minus[var] + d[var]);
                         }
 
-                        double inner_0 = 0.0;
-                        double inner_1 = 0.0;
+                        double du_dx_0 = 0.0;
+                        double du_dx_1 = 0.0;
 
+                        // Loop over the inner stencil points
                         for(const auto& [k, w2] : stencil::central_1::weights)
                         {
                             // This integer division is correct since j+k is
                             // always +-2 or 0 (the +-1 from the individual
                             // stencils either combine or cancel)
-                            inner_0 += w2*u(0, var, i + (j+k)/2);
-                            inner_1 += w2*u(1, var, i + (j+k)/2);
+                            du_dx_0 += w2*u(0, var, i + (j+k)/2);
+                            du_dx_1 += w2*u(1, var, i + (j+k)/2);
                         }
 
                         if(d_lerp_var > 0.0)
                         {
-                            residual_(index) += -4.0*d_lerp_var*w*(cn_theta_*inner_0 + (1.0-cn_theta_)*inner_1);
+                            residual_(index) += -4.0*d_lerp_var*w*(cn_theta_*du_dx_0 + (1.0-cn_theta_)*du_dx_1);
                         }
                     }
 
@@ -505,22 +504,20 @@ namespace mjrfd
                     {
                         // linearly interpolate the diffusion coeff to the
                         // mid-node locations
-                        const double s = j/2.0;
                         double d_lerp_var = 0.0;
 
-                        // if the interpolation location is on the right,
-                        // interpolate between d and d_plus with location s
-                        // if it's on the left, go between d_minus and d with
-                        // location 1-s
-                        if(s > 0)
+                        // interpolate according to which side of the outer
+                        // stencil point the inner stencil point falls on
+                        if(j > 0)
                         {
-                            d_lerp_var = lerp(d[var], d_plus[var], s);
+                            d_lerp_var = 0.5*(d[var] + d_plus[var]);
                         }
                         else
                         {
-                            d_lerp_var = lerp(d_minus[var], d[var], -s);
+                            d_lerp_var = 0.5*(d_minus[var] + d[var]);
                         }
 
+                        // Loop over the inner stencil points
                         for(const auto& [k, w2] : stencil::central_1::weights)
                         {
                             // This integer division is correct since j+k is
@@ -528,7 +525,7 @@ namespace mjrfd
                             // stencils either combine or cancel)
 
                             // First term - add a jacobian entry for each of
-                            // the unknowns that appears in the nested stencils
+                            // the unknowns that appear in the nested stencils
                             if(d_lerp_var > 0.0)
                             {
                                 triplet_list.push_back( T(index, index+(j+k)/2, -4.0*d_lerp_var*w*w2*cn_theta_) );
@@ -538,22 +535,28 @@ namespace mjrfd
                             // diffusion coefficients
                             for(unsigned var2 = 0; var2 < n_var_; ++var2)
                             {
-                                const unsigned index2 = var2*n_node_ + i;
-
-                                double dd_du_lerp_var_var2 = 0.0;
-
-                                if(s > 0.0)
+                                if(std::abs(dd_du[var][var2]) > 0.0)
                                 {
-                                    dd_du_lerp_var_var2 = lerp(dd_du[var][var2], dd_plus_du[var][var2], s);
-                                }
-                                else
-                                {
-                                    dd_du_lerp_var_var2 = lerp(dd_minus_du[var][var2], dd_du[var][var2], -s);
+                                    const unsigned index2 = var2*n_node_ + i;
+
+                                    triplet_list.push_back( T(index, index2, -4.0*0.5*dd_du[var][var2]*w*w2*cn_theta_*u(0, var, i+(j+k)/2)) );
                                 }
 
-                                if(std::abs(dd_du_lerp_var_var2) > 0.0)
+                                const unsigned index2 = var2*n_node_ + i + j;
+
+                                if(j > 0)
                                 {
-                                   triplet_list.push_back( T(index, index2, -4.0*dd_du_lerp_var_var2*w*w2*cn_theta_*u(0, var, i+(j+k)/2)) );
+                                    if(std::abs(dd_plus_du[var][var2]) > 0.0)
+                                    {
+                                        triplet_list.push_back( T(index, index2, -4.0*0.5*dd_plus_du[var][var2]*w*w2*cn_theta_*u(0, var, i+(j+k)/2)) );
+                                    }
+                                }
+                                else // j < 0
+                                {
+                                    if(std::abs(dd_minus_du[var][var2]) > 0.0)
+                                    {
+                                        triplet_list.push_back( T(index, index2, -4.0*0.5*dd_minus_du[var][var2]*w*w2*cn_theta_*u(0, var, i+(j+k)/2)) );
+                                    }
                                 }
                             } // end of loop over var2
                         } // end of loop over inner stencil
