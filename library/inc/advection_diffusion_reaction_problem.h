@@ -110,15 +110,6 @@ namespace mjrfd
         const double dx_;
 
     private:
-        static const double lerp(const double v1,
-                                 const double v2,
-                                 const double s);
-
-        static void lerp(const std::vector<double> &v1,
-                         const std::vector<double> &v2,
-                         const double s,
-                         std::vector<double> &result);
-
         /// Crank-Nicolson theta
         double cn_theta_;
 
@@ -766,30 +757,5 @@ namespace mjrfd
     const double AdvectionDiffusionReactionProblem::x(const unsigned i) const
     {
         return static_cast<double>(i)/static_cast<double>(n_node_-1);
-    }
-
-    const double AdvectionDiffusionReactionProblem::lerp(
-        const double v1,
-        const double v2,
-        const double s)
-    {
-        return (1.0 - s)*v1 + s*v2;
-    }
-
-    void AdvectionDiffusionReactionProblem::lerp(
-        const std::vector<double> &v1,
-        const std::vector<double> &v2,
-        const double s,
-        std::vector<double> &result)
-    {
-        assert(v1.size() == v2.size());
-        assert(v1.size() == result.size());
-
-        unsigned n = v1.size();
-
-        for(unsigned i = 0; i < n; ++i)
-        {
-            result[i] = (1.0 - s)*v1[i] + s*v2[i];
-        }
     }
 }
