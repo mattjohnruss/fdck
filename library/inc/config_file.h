@@ -35,7 +35,14 @@ namespace mjrfd
         // Get the value associated with key from the parameters, interpreted
         // as templated type T. Must be specialised for each required type.
         template<class T>
-        const T get(const std::string &key);
+        const T get(const std::string &key)
+        {
+            // check the key is actually in the map
+            assert(params_.count(key) == 1);
+
+            // Call the actual conversion and return the result
+            return get_impl<T>(key);
+        }
 
         // Read the config file (or any istream) and parse its contents,
         // storing the params in a map
@@ -110,16 +117,26 @@ namespace mjrfd
                                    [](unsigned char c) { return std::isspace(c); }),
                     s.end());
         }
+
+        // Function to perform actual conversion to templated type - must be
+        // specialised for each type required
+        template<class T>
+        const T get_impl(const std::string &key);
     };
 
-    // Specialise get for double
+    // Specialise get_impl for double
     template<>
-    const double ConfigFile::get(const std::string &key)
+    const double ConfigFile::get_impl(const std::string &key)
     {
-        // check the key is actually in the map
-        assert(params_.count(key) == 1);
-
         // convert value to a double and return it
         return std::atof(params_[key].c_str());
+    }
+
+    // Specialise get_impl for bool
+    template<>
+    const bool ConfigFile::get_impl(const std::string &key)
+    {
+        // convert value to a bool and return it
+        return static_cast<bool>(std::atoi(params_[key].c_str()));
     }
 }
