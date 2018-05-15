@@ -1,6 +1,7 @@
 set clip two
 
 fn(i) = sprintf("output_%05i.csv", i)
+fn_exact(i) = sprintf("output_exact_%05i.csv", i)
 
 n_var = words(vars)
 
@@ -17,7 +18,13 @@ do for [i = 0:n] {
                  for [j = 1:n_var] exactf(x)                          w l dt 2 ti "exact"
         }
         else {
-            plot for [j = 1:n_var] fn(i)           u 1:1+word(vars,j) w l lw 2 ti columnheader
+            if(exist("exact_file")) {
+                plot for [j = 1:n_var] fn(i)           u 1:1+word(vars,j) w l lw 2 ti columnheader, \
+                     for [j = 1:n_var] fn_exact(i)     u 1:1+word(vars,j) w l lw 2 dt 2 ti columnheader
+            }
+            else {
+                plot for [j = 1:n_var] fn(i)           u 1:1+word(vars,j) w l lw 2 ti columnheader
+            }
         }
     }
 
