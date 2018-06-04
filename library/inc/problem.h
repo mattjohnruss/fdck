@@ -86,6 +86,9 @@ namespace mjrfd
         void enable_dump_jacobian(const std::string &filename_prefix = "");
         void disable_dump_jacobian();
 
+        void enable_exit_on_solve_fail();
+        void disable_exit_on_solve_fail();
+
         void clear_solution();
 
     protected:
@@ -125,6 +128,7 @@ namespace mjrfd
         bool terse_logging_;
         bool use_fd_jacobian_;
         bool dump_jacobian_;
+        bool exit_on_solve_fail_;
 
         std::string jac_filename_prefix_;
     };

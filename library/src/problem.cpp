@@ -26,6 +26,7 @@ namespace mjrfd
         terse_logging_(false),
         use_fd_jacobian_(false),
         dump_jacobian_(false),
+        exit_on_solve_fail_(false),
         jac_filename_prefix_("")
     {
         clear_solution();
@@ -158,9 +159,8 @@ namespace mjrfd
                           << Max_newton_iterations << ") "
                           << "has been exceeded\n";
 
-                // If we're doing a steady solve, keep going in case we want to
-                // timestep after it fails. Otherwise, exit
-                if(steady_ == false)
+                // Exit if the flag is set
+                if(exit_on_solve_fail_ == false)
                 {
                     std::cout << "Exiting\n";
                     std::exit(1);
@@ -299,6 +299,16 @@ namespace mjrfd
         }
     }
 
+    void Problem::enable_exit_on_solve_fail()
+    {
+        exit_on_solve_fail_ = true;
+    }
+
+    void Problem::disable_exit_on_solve_fail()
+    {
+        exit_on_solve_fail_ = false;
+    }
+
     // Default implementation which calculates the jacobian by
     // finite-differencing the residuals
     void Problem::calculate_jacobian()
@@ -352,6 +362,11 @@ namespace mjrfd
         if(linear_solver_.info() != Eigen::Success)
         {
             std::cerr << "Problem::linear_solve() - Compute failed!\n";
+
+            if(exit_on_solve_fail_ == true)
+            {
+                std::exit(1);
+            }
         }
 
         // get the update vector as a single array
