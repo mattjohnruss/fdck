@@ -397,6 +397,9 @@ int main(int argc, char **argv)
     problem.p.J_m_left   = cf.get<double>("J_m_left");
     problem.p.J_m_right  = cf.get<double>("J_m_right");
 
+    const bool do_steady_solve = cf.get<bool>("steady");
+    const bool do_time_evolution = cf.get<bool>("time_evo");
+
     problem.enable_terse_logging();
 
     //problem.enable_fd_jacobian();
@@ -404,43 +407,63 @@ int main(int argc, char **argv)
     char filename[200];
     std::ofstream outfile;
 
-    // perform a steady solve and output it
-    problem.steady_solve();
-    std::sprintf(filename, "output_steady.csv");
-    outfile.open(filename);
-    problem.output(outfile);
-    outfile.close();
-
-    // set initial conditions
-    problem.set_initial_conditions();
-
-    // output initial conditions
-    std::sprintf(filename, "output_%05i.csv", 0);
-    outfile.open(filename);
-    problem.output(outfile);
-    outfile.close();
-
-    unsigned i = 1;
-
-    // timestepping loop
-    while(problem.time() <= t_max)
+    if(do_steady_solve)
     {
-        // solve for current timestep
-        problem.unsteady_solve();
+        std::cout << "\nSteady solve:\n";
 
-        if(i % output_interval == 0)
-        {
-            // output current solution
-            //std::cout << "Outputting solution at time = " << problem.time() << '\n';
-            std::cout << ";\tOutputting";
-            std::sprintf(filename, "output_%05i.csv", i/output_interval);
-            outfile.open(filename);
-            problem.output(outfile);
-            outfile.close();
-        }
+        // set initial conditions - required since phi_i is sensitive to ICs even
+        // at steady state
+        problem.set_initial_conditions();
 
-        ++i;
+        // perform a steady solve and output it
+        problem.steady_solve();
+        std::sprintf(filename, "output_steady.csv");
+        outfile.open(filename);
+        problem.output(outfile);
+        outfile.close();
+
+        std::cout << '\n';
     }
 
-    std::cout << "\n\nReached t > t_max (" << t_max << ") after performing " << i-1 << " timesteps\n";
+    if(do_time_evolution)
+    {
+        std::cout << "\nTime evolution:";
+
+        problem.enable_exit_on_solve_fail();
+
+        // set initial conditions again
+        problem.set_initial_conditions();
+
+        // output initial conditions
+        std::sprintf(filename, "output_%05i.csv", 0);
+        outfile.open(filename);
+        problem.output(outfile);
+        outfile.close();
+
+        unsigned i = 1;
+
+        // timestepping loop
+        while(problem.time() <= t_max)
+        {
+            // solve for current timestep
+            problem.unsteady_solve();
+
+            if(i % output_interval == 0)
+            {
+                // output current solution
+                //std::cout << "Outputting solution at time = " << problem.time() << '\n';
+                std::cout << ";\tOutputting";
+                std::sprintf(filename, "output_%05i.csv", i/output_interval);
+                outfile.open(filename);
+                problem.output(outfile);
+                outfile.close();
+            }
+
+            ++i;
+        }
+
+        std::cout << "\n\nReached t > t_max (" << t_max << ") after performing " << i-1 << " timesteps\n";
+    }
+
+    return 0;
 }
