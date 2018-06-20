@@ -27,6 +27,8 @@ struct ChemokinesParams
     double phi_i_init;
     double R;
     double M;
+    double J_m_left;
+    double J_m_right;
 };
 
 enum Variable
@@ -91,17 +93,147 @@ private:
     {
         if(b == Boundary::Left)
         {
-            a1[c_u]   = 1.0;       a2[c_u]   = 0.0; a3[c_u]   = 1.0;
-            a1[c_s]   = 1.0;       a2[c_s]   = 0.0; a3[c_s]   = 0.0;
-            a1[phi_i] = 0.0;       a2[phi_i] = 1.0; a3[phi_i] = 0.0;
-            a1[phi_m] = -p.lambda; a2[phi_m] = 1.0; a3[phi_m] = 0.0;
+            double phi_m_left_coeff = 0;
+
+            for(auto var : { c_u, c_s, c_b })
+            {
+                double nu = 0.0;
+
+                if(var == c_u)
+                    nu = p.nu_u;
+                else if(var == c_b)
+                    nu = p.nu_b;
+                else if(var == c_s)
+                    nu = p.nu_s;
+
+                for(const auto& [j, w] : stencil::forward_1::weights)
+                {
+                    phi_m_left_coeff += w*nu*u(0, var, 0+j)*dx_;
+                }
+            }
+
+            a1[c_u]   = 1.0;              a2[c_u]   = 0.0;     a3[c_u]   = 1.0;
+            a1[c_s]   = 1.0;              a2[c_s]   = 0.0;     a3[c_s]   = 0.0;
+            a1[phi_i] = 0.0;              a2[phi_i] = 1.0;     a3[phi_i] = 0.0;
+            a1[phi_m] = phi_m_left_coeff; a2[phi_m] = -p.D_mu; a3[phi_m] = -p.J_m_left*u(0, phi_m, 0);
         }
         if(b == Boundary::Right)
         {
-            a1[c_u]   = 1.0; a2[c_u]   = 0.0; a3[c_u]   = 0.0;
-            a1[c_s]   = 1.0; a2[c_s]   = 0.0; a3[c_s]   = 0.0;
-            a1[phi_i] = 0.0; a2[phi_i] = 1.0; a3[phi_i] = 0.0;
-            a1[phi_m] = 0.0; a2[phi_m] = 1.0; a3[phi_m] = 0.0;
+            double phi_m_right_coeff = 0;
+
+            for(auto var : { c_u, c_s, c_b })
+            {
+                double nu = 0.0;
+
+                if(var == c_u)
+                    nu = p.nu_u;
+                else if(var == c_b)
+                    nu = p.nu_b;
+                else if(var == c_s)
+                    nu = p.nu_s;
+
+                for(const auto& [j, w] : stencil::backward_1::weights)
+                {
+                    phi_m_right_coeff += w*nu*u(0, var, (n_node_-1)+j)*dx_;
+                }
+            }
+
+            a1[c_u]   = 1.0;               a2[c_u]   = 0.0;     a3[c_u]   = 0.0;
+            a1[c_s]   = 1.0;               a2[c_s]   = 0.0;     a3[c_s]   = 0.0;
+            a1[phi_i] = 0.0;               a2[phi_i] = 1.0;     a3[phi_i] = 0.0;
+            a1[phi_m] = phi_m_right_coeff; a2[phi_m] = -p.D_mu; a3[phi_m] = p.J_m_right*u(0, phi_m, n_node_-1);
+        }
+    }
+
+    void get_dbc_du(Boundary b,
+                    const unsigned i2,
+                    std::vector<std::vector<double>> &da1_du,
+                    std::vector<std::vector<double>> &da2_du,
+                    std::vector<std::vector<double>> &da3_du) const
+    {
+        //first set all the derivatives to zero since this will the be case
+        //most for most entries
+
+        for(unsigned var = 0; var < n_var_; ++var)
+        {
+            std::fill(da1_du[var].begin(), da1_du[var].end(), 0.0);
+            std::fill(da2_du[var].begin(), da2_du[var].end(), 0.0);
+            std::fill(da3_du[var].begin(), da3_du[var].end(), 0.0);
+        }
+
+        if(b == Boundary::Left)
+        {
+            // a1[phi_m] terms
+
+            // loop over the variables we know that a1[phi_m] depends on
+            for(auto var2 : { c_u, c_s, c_b })
+            {
+                double nu = 0.0;
+
+                if(var2 == c_u)
+                    nu = p.nu_u;
+                else if(var2 == c_b)
+                    nu = p.nu_b;
+                else if(var2 == c_s)
+                    nu = p.nu_s;
+
+                for(const auto& [j, w] : stencil::forward_1::weights)
+                {
+                    // if the current stencil point is at the node we're
+                    // testing dependence on
+                    if(0+j == i2)
+                    {
+                        da1_du[phi_m][var2] = w*nu*dx_;
+
+                        // we can break since for a given i2, there will be at
+                        // most one matching stencil point
+                        break;
+                    }
+                }
+            }
+
+            // a3[phi_m] terms
+            if(i2 == 0)
+            {
+                da3_du[phi_m][phi_m] = -p.J_m_left;
+            }
+        }
+        if(b == Boundary::Right)
+        {
+            // a1[phi_m] terms
+
+            // loop over the variables we know that a1[phi_m] depends on
+            for(auto var2 : { c_u, c_s, c_b })
+            {
+                double nu = 0.0;
+
+                if(var2 == c_u)
+                    nu = p.nu_u;
+                else if(var2 == c_b)
+                    nu = p.nu_b;
+                else if(var2 == c_s)
+                    nu = p.nu_s;
+
+                for(const auto& [j, w] : stencil::backward_1::weights)
+                {
+                    // if the current stencil point is at the node we're
+                    // testing dependence on
+                    if((n_node_-1)+j == i2)
+                    {
+                        da1_du[phi_m][var2] = w*nu*dx_;
+
+                        // we can break since for a given i2, there will be at
+                        // most one matching stencil point
+                        break;
+                    }
+                }
+            }
+
+            // a3[phi_m] terms
+            if(i2 == (n_node_-1))
+            {
+                da3_du[phi_m][phi_m] = p.J_m_right;
+            }
         }
     }
 
@@ -262,6 +394,8 @@ int main(int argc, char **argv)
     problem.p.phi_i_init = cf.get<double>("phi_i_init");
     problem.p.R          = cf.get<double>("R");
     problem.p.M          = cf.get<double>("M");
+    problem.p.J_m_left   = cf.get<double>("J_m_left");
+    problem.p.J_m_right  = cf.get<double>("J_m_right");
 
     problem.enable_terse_logging();
 
