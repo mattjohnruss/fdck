@@ -318,42 +318,47 @@ namespace mjrfd
                     get_d(0, i+1, d_plus);
                     get_d(0, i-1, d_minus);
 
-                    // Here we do a nested central difference with step size
-                    // dx/2 (which is where the factor of 4 comes from)
-                    // Loop over the outer stencil points
-                    for(const auto& [j, w] : stencil::central_1::weights)
+                    // Only add diffusion terms if the coefficient is strictly positive
+                    // TODO possibly make a flag + helper functions to control this?
+                    if(d[var] > 0.0)
                     {
-                        // linearly interpolate the diffusion coeff to the
-                        // mid-node locations
-                        double d_lerp_var = 0.0;
-
-                        // interpolate according to which side of the outer
-                        // stencil point the inner stencil point falls on
-                        if(j > 0)
+                        // Here we do a nested central difference with step size
+                        // dx/2 (which is where the factor of 4 comes from)
+                        // Loop over the outer stencil points
+                        for(const auto& [j, w] : stencil::central_1::weights)
                         {
-                            d_lerp_var = 0.5*(d[var] + d_plus[var]);
-                        }
-                        else
-                        {
-                            d_lerp_var = 0.5*(d_minus[var] + d[var]);
-                        }
+                            // linearly interpolate the diffusion coeff to the
+                            // mid-node locations
+                            double d_lerp_var = 0.0;
 
-                        double du_dx_0 = 0.0;
-                        double du_dx_1 = 0.0;
+                            // interpolate according to which side of the outer
+                            // stencil point the inner stencil point falls on
+                            if(j > 0)
+                            {
+                                d_lerp_var = 0.5*(d[var] + d_plus[var]);
+                            }
+                            else
+                            {
+                                d_lerp_var = 0.5*(d_minus[var] + d[var]);
+                            }
 
-                        // Loop over the inner stencil points
-                        for(const auto& [k, w2] : stencil::central_1::weights)
-                        {
-                            // This integer division is correct since j+k is
-                            // always +-2 or 0 (the +-1 from the individual
-                            // stencils either combine or cancel)
-                            du_dx_0 += w2*u(0, var, i + (j+k)/2);
-                            du_dx_1 += w2*u(1, var, i + (j+k)/2);
-                        }
+                            double du_dx_0 = 0.0;
+                            double du_dx_1 = 0.0;
 
-                        if(d_lerp_var > 0.0)
-                        {
-                            residual_(index) += -4.0*d_lerp_var*w*(cn_theta_*du_dx_0 + (1.0-cn_theta_)*du_dx_1);
+                            // Loop over the inner stencil points
+                            for(const auto& [k, w2] : stencil::central_1::weights)
+                            {
+                                // This integer division is correct since j+k is
+                                // always +-2 or 0 (the +-1 from the individual
+                                // stencils either combine or cancel)
+                                du_dx_0 += w2*u(0, var, i + (j+k)/2);
+                                du_dx_1 += w2*u(1, var, i + (j+k)/2);
+                            }
+
+                            if(d_lerp_var > 0.0)
+                            {
+                                residual_(index) += -4.0*d_lerp_var*w*(cn_theta_*du_dx_0 + (1.0-cn_theta_)*du_dx_1);
+                            }
                         }
                     }
 
@@ -368,17 +373,22 @@ namespace mjrfd
                     // and previous timestep terms - must add time arg to get_v
                     // and use it here
 
-                    // Loop over the stencil points, using the upwind stencil helper,
-                    // and get the offset j (relative to i) and the weight w
-                    for(const auto& [j, w] : upwind_stencil_weights(i, v_at_node))
+                    // Only add advection terms if the velocity magnitude is strictly positive
+                    // TODO possibly make a flag + helper functions to control this?
+                    if(std::abs(v_at_node) > 0.0)
                     {
-                        // Get the velocity at the current stencil point
-                        get_v(i+j, var, v);
-
-                        // Sum the contributions from the stencil points
-                        if(std::abs(v) > 0.0)
+                        // Loop over the stencil points, using the upwind stencil helper,
+                        // and get the offset j (relative to i) and the weight w
+                        for(const auto& [j, w] : upwind_stencil_weights(i, v_at_node))
                         {
-                            residual_(index) += dx_*v*w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j));
+                            // Get the velocity at the current stencil point
+                            get_v(i+j, var, v);
+
+                            // Sum the contributions from the stencil points
+                            if(std::abs(v) > 0.0)
+                            {
+                                residual_(index) += dx_*v*w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j));
+                            }
                         }
                     }
 
