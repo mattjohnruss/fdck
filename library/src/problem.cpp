@@ -160,7 +160,7 @@ namespace mjrfd
                           << "has been exceeded\n";
 
                 // Exit if the flag is set
-                if(exit_on_solve_fail_ == false)
+                if(exit_on_solve_fail_ == true)
                 {
                     std::cout << "Exiting\n";
                     std::exit(1);
