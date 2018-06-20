@@ -407,31 +407,13 @@ int main(int argc, char **argv)
     char filename[200];
     std::ofstream outfile;
 
-    if(do_steady_solve)
-    {
-        std::cout << "\nSteady solve:\n";
-
-        // set initial conditions - required since phi_i is sensitive to ICs even
-        // at steady state
-        problem.set_initial_conditions();
-
-        // perform a steady solve and output it
-        problem.steady_solve();
-        std::sprintf(filename, "output_steady.csv");
-        outfile.open(filename);
-        problem.output(outfile);
-        outfile.close();
-
-        std::cout << '\n';
-    }
-
     if(do_time_evolution)
     {
         std::cout << "\nTime evolution:";
 
         problem.enable_exit_on_solve_fail();
 
-        // set initial conditions again
+        // set initial condition
         problem.set_initial_conditions();
 
         // output initial conditions
@@ -463,6 +445,26 @@ int main(int argc, char **argv)
         }
 
         std::cout << "\n\nReached t > t_max (" << t_max << ") after performing " << i-1 << " timesteps\n";
+    }
+
+    if(do_steady_solve)
+    {
+        std::cout << "\nSteady solve:\n";
+
+        problem.disable_exit_on_solve_fail();
+
+        // set initial conditions again - required since phi_i is sensitive to
+        // ICs even at steady state
+        problem.set_initial_conditions();
+
+        // perform a steady solve and output it
+        problem.steady_solve();
+        std::sprintf(filename, "output_steady.csv");
+        outfile.open(filename);
+        problem.output(outfile);
+        outfile.close();
+
+        std::cout << '\n';
     }
 
     return 0;
