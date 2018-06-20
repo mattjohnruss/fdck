@@ -55,6 +55,14 @@ namespace mjrfd
                             std::vector<double> &a2,
                             std::vector<double> &a3) const = 0;
 
+        /// Get the derivatives of the boundary condition coefficients wrt dofs
+        /// at node i2
+        virtual void get_dbc_du(Boundary b,
+                                const unsigned i2,
+                                std::vector<std::vector<double>> &da1_du,
+                                std::vector<std::vector<double>> &da2_du,
+                                std::vector<std::vector<double>> &da3_du) const;
+
         /// Get the vector of diffusivities
         virtual void get_d(const unsigned t,
                            const unsigned i,
@@ -415,6 +423,16 @@ namespace mjrfd
         std::vector<double> a3_right(n_var_);
         get_bc(Boundary::Right, a1_right, a2_right, a3_right);
 
+        // Get the left boundary condition coefficient derivatives
+        std::vector<std::vector<double>> da1_du_left(n_var_, std::vector<double>(n_var_));
+        std::vector<std::vector<double>> da2_du_left(n_var_, std::vector<double>(n_var_));
+        std::vector<std::vector<double>> da3_du_left(n_var_, std::vector<double>(n_var_));
+
+        // Get the right boundary condition coefficient derivatives
+        std::vector<std::vector<double>> da1_du_right(n_var_, std::vector<double>(n_var_));
+        std::vector<std::vector<double>> da2_du_right(n_var_, std::vector<double>(n_var_));
+        std::vector<std::vector<double>> da3_du_right(n_var_, std::vector<double>(n_var_));
+
         // Storage for the advection velocity at a node
         double v = 0.0;
         double dv_du = 0.0;
@@ -445,6 +463,7 @@ namespace mjrfd
 
                 if(i == 0 && left_bc_[var] == true)
                 {
+                    // First term
                     if(std::abs(a1_left[var]) > 0.0)
                     {
                         triplet_list.push_back( T(index, index, a1_left[var]*dx_*dx_) );
@@ -457,9 +476,57 @@ namespace mjrfd
                             triplet_list.push_back( T(index, index+j, w*a2_left[var]*dx_) );
                         }
                     }
+
+                    // Second term
+
+                    // Loop over the 3 nodes that the BC coeffs might depend
+                    // on. This covers const coeffs and coeffs that involve
+                    // first derivatives (forward differences) of other
+                    // variables. Can increase range if needed.
+
+                    // NOTE: i == 0 always here - use i rather than 0 to
+                    // increase similarity between inlet/outlet BC and bulk
+                    // equations
+                    for(unsigned k = 0; k <= 2; ++k)
+                    {
+                        const unsigned i2 = i+k;
+
+                        // Get the BC coeff derivatives wrt all vars at node i2
+                        get_dbc_du(Boundary::Left, i2,
+                                   da1_du_left, da2_du_left, da3_du_left);
+
+                        // Loop over the variables again
+                        for(unsigned var2 = 0; var2 < n_var_; ++var2)
+                        {
+                            const unsigned index2 = var2*n_node_ + i2;
+
+                            if(std::abs(da1_du_left[var][var2]) > 0.0)
+                            {
+                                triplet_list.push_back( T(index, index2, da1_du_left[var][var2]*u(0, var, i)*dx_*dx_) );
+                            }
+
+                            if(std::abs(da2_du_left[var][var2]) > 0.0)
+                            {
+                                double deriv = 0.0;
+
+                                for(const auto& [j, w] : stencil::forward_1::weights)
+                                {
+                                    deriv += w*u(0, var, i+j)*dx_;
+                                }
+
+                                triplet_list.push_back( T(index, index2, da2_du_left[var][var2]*deriv) );
+                            }
+
+                            if(std::abs(da3_du_left[var][var2]) > 0.0)
+                            {
+                                triplet_list.push_back( T(index, index2, -da3_du_left[var][var2]*dx_*dx_) );
+                            }
+                        }
+                    }
                 }
                 else if(i == n_node_-1 && right_bc_[var] == true)
                 {
+                    // First term
                     if(std::abs(a1_right[var]) > 0.0)
                     {
                         triplet_list.push_back( T(index, index, a1_right[var]*dx_*dx_) );
@@ -470,6 +537,44 @@ namespace mjrfd
                         for(const auto& [j, w] : stencil::backward_1::weights)
                         {
                             triplet_list.push_back( T(index, index+j, w*a2_right[var]*dx_) );
+                        }
+                    }
+
+                    // Second term
+                    for(int k = -2; k <= 0; ++k)
+                    {
+                        const unsigned i2 = i+k;
+
+                        // Get the BC coeff derivatives wrt all vars at node i2
+                        get_dbc_du(Boundary::Right, i2,
+                                   da1_du_right, da2_du_right, da3_du_right);
+
+                        // Loop over the variables again
+                        for(unsigned var2 = 0; var2 < n_var_; ++var2)
+                        {
+                            const unsigned index2 = var2*n_node_ + i2;
+
+                            if(std::abs(da1_du_right[var][var2]) > 0.0)
+                            {
+                                triplet_list.push_back( T(index, index2, da1_du_right[var][var2]*u(0, var, i)*dx_*dx_) );
+                            }
+
+                            if(std::abs(da2_du_right[var][var2]) > 0.0)
+                            {
+                                double deriv = 0.0;
+
+                                for(const auto& [j, w] : stencil::forward_1::weights)
+                                {
+                                    deriv += w*u(0, var, i+j)*dx_;
+                                }
+
+                                triplet_list.push_back( T(index, index2, da2_du_right[var][var2]*deriv) );
+                            }
+
+                            if(std::abs(da3_du_right[var][var2]) > 0.0)
+                            {
+                                triplet_list.push_back( T(index, index2, -da3_du_right[var][var2]*dx_*dx_) );
+                            }
                         }
                     }
                 }
@@ -659,6 +764,21 @@ namespace mjrfd
         for(unsigned var = 0; var < n_var_; ++var)
         {
             sol[var] = 0.0;
+        }
+    }
+
+    void AdvectionDiffusionReactionProblem::get_dbc_du(Boundary b,
+                    const unsigned i2,
+                    std::vector<std::vector<double>> &da1_du,
+                    std::vector<std::vector<double>> &da2_du,
+                    std::vector<std::vector<double>> &da3_du) const
+    {
+        for(unsigned var = 0; var < n_var_; ++var)
+        {
+            for(unsigned var2 = 0; var2 < n_var_; ++var2)
+            {
+                da1_du[var][var2] = 0.0;
+            }
         }
     }
 
