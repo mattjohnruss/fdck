@@ -23,7 +23,6 @@ struct ChemokinesParams
     double nu_u;
     double nu_b;
     double nu_s;
-    double lambda;
     double phi_i_init;
     double R;
     double M;
@@ -390,7 +389,6 @@ int main(int argc, char **argv)
     problem.p.nu_u       = cf.get<double>("nu_u");
     problem.p.nu_b       = cf.get<double>("nu_b");
     problem.p.nu_s       = cf.get<double>("nu_s");
-    problem.p.lambda     = cf.get<double>("lambda");
     problem.p.phi_i_init = cf.get<double>("phi_i_init");
     problem.p.R          = cf.get<double>("R");
     problem.p.M          = cf.get<double>("M");
