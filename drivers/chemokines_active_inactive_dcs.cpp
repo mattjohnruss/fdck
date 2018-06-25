@@ -364,9 +364,14 @@ int main(int argc, char **argv)
     const bool do_steady_solve = cf.get<bool>("steady");
     const bool do_time_evolution = cf.get<bool>("time_evo");
 
+    const bool fd_jacobian = cf.get<bool>("fd_jacobian");
+
     problem.enable_terse_logging();
 
-    //problem.enable_fd_jacobian();
+    if(fd_jacobian == true)
+    {
+        problem.enable_fd_jacobian();
+    }
 
     char filename[200];
     std::ofstream outfile;
