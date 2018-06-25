@@ -46,6 +46,9 @@ namespace mjrfd
         void enable_bc(Boundary b, const std::vector<unsigned> &vars);
         void disable_bc(Boundary b, const std::vector<unsigned> &vars);
 
+        void enable_spatial_terms(const std::vector<unsigned> &vars);
+        void disable_spatial_terms(const std::vector<unsigned> &vars);
+
         void set_variable_names(const std::vector<std::string> &var_names);
 
     private:
@@ -130,6 +133,8 @@ namespace mjrfd
         std::vector<bool> left_bc_;
         std::vector<bool> right_bc_;
 
+        std::vector<bool> spatial_terms_;
+
         std::vector<std::string> var_names_;
     };
 
@@ -145,6 +150,7 @@ namespace mjrfd
         time_factor_(1.0),
         left_bc_(n_var, false),
         right_bc_(n_var, false),
+        spatial_terms_(n_var, false),
         var_names_(n_var)
     {
         // Set the default variable names
@@ -301,38 +307,44 @@ namespace mjrfd
                     // Time derivatives
                     residual_(index) += time_factor_*dx_*dx_/dt_*(u(0, var, i) - u(1, var, i));
 
-                    // Diffusion
-
-                    // TODO same probably goes for diffusion as noted below for
-                    // velocities regarding old and new values and cn_theta
-
-                    // Get the diffusion coefficients at the current node and
-                    // the ones surrounding it so we can interpolate
-                    // TODO this is a bit inefficient because it gets the
-                    // coeffs for all variables every time
-
-                    // the i+-1 here is a bit hardcoded, but we know that these
-                    // indices will always be appropriate and in range since
-                    // we're using central differences in the outer loop below
-                    get_d(0, i,   d);
-                    get_d(0, i+1, d_plus);
-                    get_d(0, i-1, d_minus);
-
-                    // Only add diffusion terms if the coefficient is strictly positive
-                    // TODO possibly make a flag + helper functions to control this?
-                    if(d[var] > 0.0)
+                    // Add the spatial terms to the residual for this variable
+                    // if they are enabled
+                    if(spatial_terms_[var] == true)
                     {
-                        // Here we do a nested central difference with step size
-                        // dx/2 (which is where the factor of 4 comes from)
-                        // Loop over the outer stencil points
+                        // Diffusion
+
+                        // TODO same probably goes for diffusion as noted below for
+                        // velocities regarding old and new values and cn_theta
+
+                        // Get the diffusion coefficients at the current node and
+                        // the ones surrounding it so we can interpolate
+                        // TODO this is a bit inefficient because it gets the
+                        // coeffs for all variables every time
+
+                        // Double check that we haven't got to this point with
+                        // the first or last node, since the following would
+                        // explode
+                        assert(i != 0 && i != (n_node_-1));
+
+                        // the i+-1 here is a bit hardcoded, but we know that these
+                        // indices will always be appropriate and in range since
+                        // we're using central differences in the outer loop below
+                        get_d(0, i,   d);
+                        get_d(0, i+1, d_plus);
+                        get_d(0, i-1, d_minus);
+
+                        // Here we do a nested central difference with step
+                        // size dx/2 (which is where the factor of 4 comes
+                        // from) Loop over the outer stencil points
                         for(const auto& [j, w] : stencil::central_1::weights)
                         {
-                            // linearly interpolate the diffusion coeff to the
-                            // mid-node locations
+                            // linearly interpolate the diffusion coeff to
+                            // the mid-node locations
                             double d_lerp_var = 0.0;
 
-                            // interpolate according to which side of the outer
-                            // stencil point the inner stencil point falls on
+                            // interpolate according to which side of the
+                            // outer stencil point the inner stencil point
+                            // falls on
                             if(j > 0)
                             {
                                 d_lerp_var = 0.5*(d[var] + d_plus[var]);
@@ -348,43 +360,43 @@ namespace mjrfd
                             // Loop over the inner stencil points
                             for(const auto& [k, w2] : stencil::central_1::weights)
                             {
-                                // This integer division is correct since j+k is
-                                // always +-2 or 0 (the +-1 from the individual
-                                // stencils either combine or cancel)
+                                // This integer division is correct since
+                                // j+k is always +-2 or 0 (the +-1 from the
+                                // individual stencils either combine or
+                                // cancel)
                                 du_dx_0 += w2*u(0, var, i + (j+k)/2);
                                 du_dx_1 += w2*u(1, var, i + (j+k)/2);
                             }
 
+                            // Only add diffusion terms if the coefficient is strictly positive
                             if(d_lerp_var > 0.0)
                             {
                                 residual_(index) += -4.0*d_lerp_var*w*(cn_theta_*du_dx_0 + (1.0-cn_theta_)*du_dx_1);
                             }
                         }
-                    }
 
-                    // Advection (or chemotaxis etc)
+                        // Advection (or chemotaxis etc)
 
-                    // Get the velocity at the location of the target node
-                    double v_at_node = 0.0;
-                    get_v(i, var, v_at_node);
+                        // Get the velocity at the location of the target node
+                        double v_at_node = 0.0;
+                        get_v(i, var, v_at_node);
 
-                    // TODO when cn_theta != 1 the velocity residuals are
-                    // incorrect because we use the same v for both the current
-                    // and previous timestep terms - must add time arg to get_v
-                    // and use it here
+                        // TODO when cn_theta != 1 the velocity residuals are
+                        // incorrect because we use the same v for both the
+                        // current and previous timestep terms - must add time
+                        // arg to get_v and use it here
 
-                    // Only add advection terms if the velocity magnitude is strictly positive
-                    // TODO possibly make a flag + helper functions to control this?
-                    if(std::abs(v_at_node) > 0.0)
-                    {
-                        // Loop over the stencil points, using the upwind stencil helper,
-                        // and get the offset j (relative to i) and the weight w
+                        // Loop over the stencil points, using the upwind
+                        // stencil helper, and get the offset j (relative to i)
+                        // and the weight w
                         for(const auto& [j, w] : upwind_stencil_weights(i, v_at_node))
                         {
                             // Get the velocity at the current stencil point
                             get_v(i+j, var, v);
 
                             // Sum the contributions from the stencil points
+                            // Only add advection terms if the velocity
+                            // magnitude is strictly positive
                             if(std::abs(v) > 0.0)
                             {
                                 residual_(index) += dx_*v*w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j));
@@ -593,92 +605,102 @@ namespace mjrfd
                     // Time derivatives
                     triplet_list.push_back( T(index, index, time_factor_*dx_*dx_/dt_) );
 
-                    // Diffusion
-
-                    // Get the diffusion coeffs and their derivatives at the
-                    // required locations
-                    get_d(0, i,   d);
-                    get_d(0, i+1, d_plus);
-                    get_d(0, i-1, d_minus);
-
-                    get_dd_du(0, i,   dd_du);
-                    get_dd_du(0, i+1, dd_minus_du);
-                    get_dd_du(0, i-1, dd_plus_du);
-
-                    // Loop over the outer stencil points
-                    for(const auto& [j, w] : stencil::central_1::weights)
+                    // Add the spatial terms to the residual for this variable
+                    // if they are enabled
+                    if(spatial_terms_[var] == true)
                     {
-                        // linearly interpolate the diffusion coeff to the
-                        // mid-node locations
-                        double d_lerp_var = 0.0;
+                        // Diffusion
 
-                        // interpolate according to which side of the outer
-                        // stencil point the inner stencil point falls on
-                        if(j > 0)
-                        {
-                            d_lerp_var = 0.5*(d[var] + d_plus[var]);
-                        }
-                        else
-                        {
-                            d_lerp_var = 0.5*(d_minus[var] + d[var]);
-                        }
+                        // Get the diffusion coeffs and their derivatives at the
+                        // required locations
+                        get_d(0, i,   d);
+                        get_d(0, i+1, d_plus);
+                        get_d(0, i-1, d_minus);
 
-                        // Loop over the inner stencil points
-                        for(const auto& [k, w2] : stencil::central_1::weights)
-                        {
-                            // This integer division is correct since j+k is
-                            // always +-2 or 0 (the +-1 from the individual
-                            // stencils either combine or cancel)
+                        get_dd_du(0, i,   dd_du);
+                        get_dd_du(0, i+1, dd_minus_du);
+                        get_dd_du(0, i-1, dd_plus_du);
 
-                            // First term - add a jacobian entry for each of
-                            // the unknowns that appear in the nested stencils
-                            if(d_lerp_var > 0.0)
+                        // Loop over the outer stencil points
+                        for(const auto& [j, w] : stencil::central_1::weights)
+                        {
+                            // linearly interpolate the diffusion coeff to the
+                            // mid-node locations
+                            double d_lerp_var = 0.0;
+
+                            // interpolate according to which side of the outer
+                            // stencil point the inner stencil point falls on
+                            if(j > 0)
                             {
-                                triplet_list.push_back( T(index, index+(j+k)/2, -4.0*d_lerp_var*w*w2*cn_theta_) );
+                                d_lerp_var = 0.5*(d[var] + d_plus[var]);
+                            }
+                            else
+                            {
+                                d_lerp_var = 0.5*(d_minus[var] + d[var]);
                             }
 
-                            // Second term - terms with derivatives of the
-                            // diffusion coefficients
-                            for(unsigned var2 = 0; var2 < n_var_; ++var2)
+                            // Loop over the inner stencil points
+                            for(const auto& [k, w2] : stencil::central_1::weights)
                             {
-                                if(std::abs(dd_du[var][var2]) > 0.0)
-                                {
-                                    const unsigned index2 = var2*n_node_ + i;
+                                // This integer division is correct since j+k is
+                                // always +-2 or 0 (the +-1 from the individual
+                                // stencils either combine or cancel)
 
-                                    triplet_list.push_back( T(index, index2, -4.0*0.5*dd_du[var][var2]*w*w2*cn_theta_*u(0, var, i+(j+k)/2)) );
+                                // First term - add a jacobian entry for each of
+                                // the unknowns that appear in the nested stencils
+                                if(d_lerp_var > 0.0)
+                                {
+                                    triplet_list.push_back( T(index, index+(j+k)/2, -4.0*d_lerp_var*w*w2*cn_theta_) );
                                 }
 
-                                const unsigned index2 = var2*n_node_ + i + j;
-
-                                if(j > 0)
+                                // Second term - terms with derivatives of the
+                                // diffusion coefficients
+                                for(unsigned var2 = 0; var2 < n_var_; ++var2)
                                 {
-                                    if(std::abs(dd_plus_du[var][var2]) > 0.0)
+                                    if(std::abs(dd_du[var][var2]) > 0.0)
                                     {
-                                        triplet_list.push_back( T(index, index2, -4.0*0.5*dd_plus_du[var][var2]*w*w2*cn_theta_*u(0, var, i+(j+k)/2)) );
+                                        const unsigned index2 = var2*n_node_ + i;
+
+                                        triplet_list.push_back( T(index, index2, -4.0*0.5*dd_du[var][var2]*w*w2*cn_theta_*u(0, var, i+(j+k)/2)) );
                                     }
-                                }
-                                else // j < 0
-                                {
-                                    if(std::abs(dd_minus_du[var][var2]) > 0.0)
+
+                                    const unsigned index2 = var2*n_node_ + i + j;
+
+                                    if(j > 0)
                                     {
-                                        triplet_list.push_back( T(index, index2, -4.0*0.5*dd_minus_du[var][var2]*w*w2*cn_theta_*u(0, var, i+(j+k)/2)) );
+                                        if(std::abs(dd_plus_du[var][var2]) > 0.0)
+                                        {
+                                            triplet_list.push_back( T(index, index2, -4.0*0.5*dd_plus_du[var][var2]*w*w2*cn_theta_*u(0, var, i+(j+k)/2)) );
+                                        }
                                     }
-                                }
-                            } // end of loop over var2
-                        } // end of loop over inner stencil
-                    } // end of loop over outer stencil
+                                    else // j < 0
+                                    {
+                                        if(std::abs(dd_minus_du[var][var2]) > 0.0)
+                                        {
+                                            triplet_list.push_back( T(index, index2, -4.0*0.5*dd_minus_du[var][var2]*w*w2*cn_theta_*u(0, var, i+(j+k)/2)) );
+                                        }
+                                    }
+                                } // end of loop over var2
+                            } // end of loop over inner stencil
+                        } // end of loop over outer stencil
 
-                    // Advection (or chemotaxis etc)
-                    double v_at_node = 0.0;
-                    get_v(i, var, v_at_node);
+                        // Advection (or chemotaxis etc)
+                        double v_at_node = 0.0;
+                        get_v(i, var, v_at_node);
 
-                    for(const auto& [j, w] : upwind_stencil_weights(i, v_at_node))
-                    {
-                        get_v(i+j, var, v);
-
-                        if(std::abs(v) > 0.0)
+                        for(const auto& [j, w] : upwind_stencil_weights(i, v_at_node))
                         {
-                            triplet_list.push_back( T(index, index+j, dx_*w*cn_theta_*v) );
+                            get_v(i+j, var, v);
+
+                            // If the velocity is nonzero, add the term to the
+                            // jacobian. Note that dv_du may be != 0 even when
+                            // v == 0 (I think), so we always check it
+                            // separately. Even if this is wrong, it doesn't
+                            // hurt
+                            if(std::abs(v) > 0.0)
+                            {
+                                triplet_list.push_back( T(index, index+j, dx_*w*cn_theta_*v) );
+                            }
 
                             // Loop over the variables again
                             for(unsigned var2 = 0; var2 < n_var_; ++var2)
@@ -758,6 +780,22 @@ namespace mjrfd
             {
                 right_bc_[var] = false;
             }
+        }
+    }
+
+    void AdvectionDiffusionReactionProblem::enable_spatial_terms(const std::vector<unsigned> &vars)
+    {
+        for(auto &var : vars)
+        {
+            spatial_terms_[var] = true;
+        }
+    }
+
+    void AdvectionDiffusionReactionProblem::disable_spatial_terms(const std::vector<unsigned> &vars)
+    {
+        for(auto &var : vars)
+        {
+            spatial_terms_[var] = false;
         }
     }
 

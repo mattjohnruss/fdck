@@ -50,6 +50,8 @@ public:
         enable_bc(Boundary::Left,  { c_u, c_s, phi_i, phi_m });
         enable_bc(Boundary::Right, { c_u, c_s, phi_i, phi_m });
 
+        enable_spatial_terms({ c_u, c_s, phi_i, phi_m });
+
         set_variable_names({ "c_u", "c_b", "c_s", "phi_i", "phi_m" });
 
         Max_residual = 1.0e-14;
