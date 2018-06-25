@@ -143,8 +143,8 @@ private:
                     std::vector<std::vector<double>> &da2_du,
                     std::vector<std::vector<double>> &da3_du) const
     {
-        //first set all the derivatives to zero since this will the be case
-        //most for most entries
+        // first set all the derivatives to zero since this will the be case
+        // most for most entries
 
         for(unsigned var = 0; var < n_var_; ++var)
         {
