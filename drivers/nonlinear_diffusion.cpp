@@ -188,7 +188,7 @@ int main(int argc, char **argv)
 
     // set the initial time to a nonzero value so that we can impose the exact
     // solution and then perform time-evolution from there
-    problem.time() = 0.001;
+    problem.time() = 10.0*dt;
 
     // set initial conditions
     problem.set_initial_conditions();
