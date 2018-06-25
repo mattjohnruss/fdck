@@ -28,6 +28,8 @@ struct ChemokinesParams
     double M;
     double J_m_left;
     double J_m_right;
+    double chi_n;
+    double chi_a;
 };
 
 enum Variable
@@ -83,6 +85,29 @@ private:
             return stencil::backward_1::weights;
         else
             return stencil::central_1::weights;
+    }
+
+    static double hill(const double x, const double n, const double a)
+    {
+        return std::pow(x, n)/(std::pow(a, n) + std::pow(x, n));
+    }
+
+    // seems to be well-defined when n > 1, which should be true for this system
+    static double dhill_dx(const double x, const double n, const double a)
+    {
+        return (std::pow(a, n)*n*std::pow(x, n-1))/std::pow(std::pow(a, n) + std::pow(x, n), 2.0);
+    }
+
+    const double chi(const double c) const
+    {
+        //return hill(c, p.chi_n, p.chi_a);
+        return 1.0;
+    }
+
+    const double dchi_dc(const double c) const
+    {
+        //return dhill_dx(c, p.chi_n, p.chi_a);
+        return 0.0;
     }
 
     void get_bc(Boundary b,
@@ -189,12 +214,20 @@ private:
             v = p.pe_u;
         else if(var == phi_m)
         {
+            double dc_u_dx = 0.0;
+            double dc_b_dx = 0.0;
+            double dc_s_dx = 0.0;
+
             for(const auto& [j, w] : stencil_1_helper(i))
             {
-                v += w*p.nu_u*u(0, c_u, i+j)/dx_;
-                v += w*p.nu_b*u(0, c_b, i+j)/dx_;
-                v += w*p.nu_s*u(0, c_s, i+j)/dx_;
+                dc_u_dx += w*u(0, c_u, i+j)/dx_;
+                dc_b_dx += w*u(0, c_b, i+j)/dx_;
+                dc_s_dx += w*u(0, c_s, i+j)/dx_;
             }
+
+            v += p.nu_u*chi(u(0, c_u, i))*dc_u_dx;
+            v += p.nu_b*chi(u(0, c_b, i))*dc_b_dx;
+            v += p.nu_s*chi(u(0, c_s, i))*dc_s_dx;
         }
     }
 
@@ -219,16 +252,22 @@ private:
             else
                 std::cerr << "var2 is not any of the expected values!\n";
 
+            double dvar2_dx = 0.0;
+
             for(const auto& [j, w] : stencil_1_helper(i))
             {
                 if(i+j == i2)
                 {
                     // this condition will be true at most once per loop so we
-                    // can break
-                    dv_du = w*nu/dx_;
-                    break;
+                    // could break here, but we need to continue the loop to
+                    // calculate the derivative below
+                    dv_du += w*nu*chi(u(0, var2, i))/dx_;
                 }
+
+                dvar2_dx += w*u(0, var2, i+j)/dx_;
             }
+
+            dv_du += nu*dchi_dc(u(0, var2, i))*dvar2_dx;
         }
     }
 
@@ -324,6 +363,8 @@ int main(int argc, char **argv)
     problem.p.M          = cf.get<double>("M");
     problem.p.J_m_left   = cf.get<double>("J_m_left");
     problem.p.J_m_right  = cf.get<double>("J_m_right");
+    problem.p.chi_n      = cf.get<double>("chi_n");
+    problem.p.chi_a      = cf.get<double>("chi_a");
 
     const bool do_steady_solve = cf.get<bool>("steady");
     const bool do_time_evolution = cf.get<bool>("time_evo");
