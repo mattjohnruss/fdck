@@ -93,23 +93,7 @@ private:
         if(b == Boundary::Left)
         {
             double phi_m_left_coeff = 0;
-
-            for(auto var : { c_u, c_s, c_b })
-            {
-                double nu = 0.0;
-
-                if(var == c_u)
-                    nu = p.nu_u;
-                else if(var == c_b)
-                    nu = p.nu_b;
-                else if(var == c_s)
-                    nu = p.nu_s;
-
-                for(const auto& [j, w] : stencil::forward_1::weights)
-                {
-                    phi_m_left_coeff += w*nu*u(0, var, 0+j)*dx_;
-                }
-            }
+            get_v(0, phi_m, phi_m_left_coeff);
 
             a1[c_u]   = 1.0;              a2[c_u]   = 0.0;     a3[c_u]   = 1.0;
             a1[c_s]   = 1.0;              a2[c_s]   = 0.0;     a3[c_s]   = 0.0;
@@ -119,23 +103,7 @@ private:
         if(b == Boundary::Right)
         {
             double phi_m_right_coeff = 0;
-
-            for(auto var : { c_u, c_s, c_b })
-            {
-                double nu = 0.0;
-
-                if(var == c_u)
-                    nu = p.nu_u;
-                else if(var == c_b)
-                    nu = p.nu_b;
-                else if(var == c_s)
-                    nu = p.nu_s;
-
-                for(const auto& [j, w] : stencil::backward_1::weights)
-                {
-                    phi_m_right_coeff += w*nu*u(0, var, (n_node_-1)+j)*dx_;
-                }
-            }
+            get_v(n_node_-1, phi_m, phi_m_right_coeff);
 
             a1[c_u]   = 1.0;               a2[c_u]   = 0.0;     a3[c_u]   = 0.0;
             a1[c_s]   = 1.0;               a2[c_s]   = 0.0;     a3[c_s]   = 0.0;
@@ -167,28 +135,9 @@ private:
             // loop over the variables we know that a1[phi_m] depends on
             for(auto var2 : { c_u, c_s, c_b })
             {
-                double nu = 0.0;
-
-                if(var2 == c_u)
-                    nu = p.nu_u;
-                else if(var2 == c_b)
-                    nu = p.nu_b;
-                else if(var2 == c_s)
-                    nu = p.nu_s;
-
-                for(const auto& [j, w] : stencil::forward_1::weights)
-                {
-                    // if the current stencil point is at the node we're
-                    // testing dependence on
-                    if(0+j == i2)
-                    {
-                        da1_du[phi_m][var2] = w*nu*dx_;
-
-                        // we can break since for a given i2, there will be at
-                        // most one matching stencil point
-                        break;
-                    }
-                }
+                double dv_du_var2 = 0.0;
+                get_dv_du(0, phi_m, i2, var2, dv_du_var2);
+                da1_du[phi_m][var2] = dv_du_var2;
             }
 
             // a3[phi_m] terms
@@ -204,28 +153,9 @@ private:
             // loop over the variables we know that a1[phi_m] depends on
             for(auto var2 : { c_u, c_s, c_b })
             {
-                double nu = 0.0;
-
-                if(var2 == c_u)
-                    nu = p.nu_u;
-                else if(var2 == c_b)
-                    nu = p.nu_b;
-                else if(var2 == c_s)
-                    nu = p.nu_s;
-
-                for(const auto& [j, w] : stencil::backward_1::weights)
-                {
-                    // if the current stencil point is at the node we're
-                    // testing dependence on
-                    if((n_node_-1)+j == i2)
-                    {
-                        da1_du[phi_m][var2] = w*nu*dx_;
-
-                        // we can break since for a given i2, there will be at
-                        // most one matching stencil point
-                        break;
-                    }
-                }
+                double dv_du_var2 = 0.0;
+                get_dv_du(n_node_-1, phi_m, i2, var2, dv_du_var2);
+                da1_du[phi_m][var2] = dv_du_var2;
             }
 
             // a3[phi_m] terms
