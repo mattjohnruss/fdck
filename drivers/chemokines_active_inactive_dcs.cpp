@@ -182,6 +182,19 @@ private:
         d[c_s]   = p.D_su;
         d[phi_i] = p.D_iu;
         d[phi_m] = p.D_mu;
+        //d[phi_m] = p.D_mu*hill(u(0, c_u, i) + u(0, c_b, i) + u(0, c_s, i), 2.0, 1.0);
+    }
+
+    void get_dd_du(const unsigned t,
+                   const unsigned i,
+                   std::vector<std::vector<double>> &dd_du) const override
+    {
+        for(auto var : { c_u, c_b, c_s, phi_i, phi_m })
+        {
+            std::fill(dd_du[var].begin(), dd_du[var].end(), 0.0);
+        }
+
+        //dd_du[phi_m][phi_m] = p.D_mu*dhill_dx(u(0, c_u, i) + u(0, c_b, i) + u(0, c_s, i), 2.0, 1.0);
     }
 
     void get_v(const unsigned i,
