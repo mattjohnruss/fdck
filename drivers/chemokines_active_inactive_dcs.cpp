@@ -122,20 +122,20 @@ private:
             double phi_m_left_coeff = 0;
             get_v(0, phi_m, phi_m_left_coeff);
 
-            a1[c_u]   = 1.0;              a2[c_u]   = 0.0;     a3[c_u]   = 1.0;
-            a1[c_s]   = 1.0;              a2[c_s]   = 0.0;     a3[c_s]   = 0.0;
-            a1[phi_i] = 0.0;              a2[phi_i] = 1.0;     a3[phi_i] = 0.0;
-            a1[phi_m] = phi_m_left_coeff; a2[phi_m] = -p.D_mu; a3[phi_m] = -p.J_m_left*u(0, phi_m, 0);
+            a1[c_u]   = 1.0;                           a2[c_u]   = 0.0;     a3[c_u]   = 1.0;
+            a1[c_s]   = 1.0;                           a2[c_s]   = 0.0;     a3[c_s]   = 0.0;
+            a1[phi_i] = 0.0;                           a2[phi_i] = 1.0;     a3[phi_i] = 0.0;
+            a1[phi_m] = phi_m_left_coeff + p.J_m_left; a2[phi_m] = -p.D_mu; a3[phi_m] = 0.0;
         }
         if(b == Boundary::Right)
         {
             double phi_m_right_coeff = 0;
             get_v(n_node_-1, phi_m, phi_m_right_coeff);
 
-            a1[c_u]   = 1.0;               a2[c_u]   = 0.0;     a3[c_u]   = 0.0;
-            a1[c_s]   = 1.0;               a2[c_s]   = 0.0;     a3[c_s]   = 0.0;
-            a1[phi_i] = 0.0;               a2[phi_i] = 1.0;     a3[phi_i] = 0.0;
-            a1[phi_m] = phi_m_right_coeff; a2[phi_m] = -p.D_mu; a3[phi_m] = p.J_m_right*u(0, phi_m, n_node_-1);
+            a1[c_u]   = 1.0;                             a2[c_u]   = 0.0;     a3[c_u]   = 0.0;
+            a1[c_s]   = 1.0;                             a2[c_s]   = 0.0;     a3[c_s]   = 0.0;
+            a1[phi_i] = 0.0;                             a2[phi_i] = 1.0;     a3[phi_i] = 0.0;
+            a1[phi_m] = phi_m_right_coeff - p.J_m_right; a2[phi_m] = -p.D_mu; a3[phi_m] = 0.0;
         }
     }
 
@@ -155,41 +155,21 @@ private:
             std::fill(da3_du[var].begin(), da3_du[var].end(), 0.0);
         }
 
+        unsigned i = 0;
+
         if(b == Boundary::Left)
+            i = 0;
+        else if(b == Boundary::Right)
+            i = n_node_-1;
+
+        // a1[phi_m] terms
+
+        // loop over the variables we know that a1[phi_m] depends on
+        for(auto var2 : { c_u, c_s, c_b })
         {
-            // a1[phi_m] terms
-
-            // loop over the variables we know that a1[phi_m] depends on
-            for(auto var2 : { c_u, c_s, c_b })
-            {
-                double dv_du_var2 = 0.0;
-                get_dv_du(0, phi_m, i2, var2, dv_du_var2);
-                da1_du[phi_m][var2] = dv_du_var2;
-            }
-
-            // a3[phi_m] terms
-            if(i2 == 0)
-            {
-                da3_du[phi_m][phi_m] = -p.J_m_left;
-            }
-        }
-        if(b == Boundary::Right)
-        {
-            // a1[phi_m] terms
-
-            // loop over the variables we know that a1[phi_m] depends on
-            for(auto var2 : { c_u, c_s, c_b })
-            {
-                double dv_du_var2 = 0.0;
-                get_dv_du(n_node_-1, phi_m, i2, var2, dv_du_var2);
-                da1_du[phi_m][var2] = dv_du_var2;
-            }
-
-            // a3[phi_m] terms
-            if(i2 == (n_node_-1))
-            {
-                da3_du[phi_m][phi_m] = p.J_m_right;
-            }
+            double dv_du_var2 = 0.0;
+            get_dv_du(i, phi_m, i2, var2, dv_du_var2);
+            da1_du[phi_m][var2] = dv_du_var2;
         }
     }
 
