@@ -13,6 +13,7 @@ namespace mjrfd
         typedef Eigen::Triplet<double> T;
 
     public:
+        /// Enum for the two boundaries in the 1D problem
         enum class Boundary
         {
             Left,
@@ -27,8 +28,10 @@ namespace mjrfd
         /// Destructor
         virtual ~AdvectionDiffusionReactionProblem();
 
+        /// Make the problem steady by disabling time derivatives
         void make_steady() override;
 
+        /// Make the problem unsteady by enabling time derivatives
         void make_unsteady() override;
 
         /// Output the solution
@@ -43,12 +46,19 @@ namespace mjrfd
         /// Calculate the jacobian matrix
         void calculate_jacobian() override;
 
+        /// Enable boundary condition on boundary b for all variables in vars
         void enable_bc(Boundary b, const std::vector<unsigned> &vars);
+
+        /// Disable boundary condition on boundary b for all variables in vars
         void disable_bc(Boundary b, const std::vector<unsigned> &vars);
 
+        /// Enable spatial terms for all variables in vars
         void enable_spatial_terms(const std::vector<unsigned> &vars);
+
+        /// Disable spatial terms for all variables in vars
         void disable_spatial_terms(const std::vector<unsigned> &vars);
 
+        /// Set the variable names
         void set_variable_names(const std::vector<std::string> &var_names);
 
     private:
@@ -108,8 +118,16 @@ namespace mjrfd
                                     std::vector<double> &sol) const;
 
     protected:
+        /// Returns an upwinded stencil in the appropriate direction depending
+        /// on the sign of v; if node is near or on a boundary, return a central
+        /// or opposite direction stencil as appropriate
         const std::unordered_map<int, double>&
         upwind_stencil_weights(const unsigned i, const double v) const;
+
+        /// Returns a central difference stencil if node i is in the bulk, and
+        /// forward/backward stencils if i is on a boundary
+        const std::unordered_map<int, double>&
+        central_1_stencil_weights(unsigned i) const;
 
         /// Calculate the x coordinate from the node number i
         const double x(const unsigned i) const;
@@ -130,15 +148,24 @@ namespace mjrfd
         /// Time factor for switching between steady/unsteady solutions
         double time_factor_;
 
+        /// Vector of boolean flags for whether the left boundary condition is
+        /// enabled for each variable
         std::vector<bool> left_bc_;
+
+        /// Vector of boolean flags for whether the right boundary condition is
+        /// enabled for each variable
         std::vector<bool> right_bc_;
 
+        /// Vector of boolean flags for whether spatial terms are enabled for
+        /// each variable
         std::vector<bool> spatial_terms_;
 
+        /// Vector of "human-readable" variable names for each variable which
+        /// are used as column headers in the output files
         std::vector<std::string> var_names_;
     };
 
-    /// Contructor
+    /// Constructor
     AdvectionDiffusionReactionProblem::AdvectionDiffusionReactionProblem(
         const unsigned n_var,
         const unsigned n_node,
@@ -920,6 +947,19 @@ namespace mjrfd
         // This point is never reached but exit here just in case to remove a
         // compiler warning
         std::exit(1);
+    }
+
+    const std::unordered_map<int, double>&
+    AdvectionDiffusionReactionProblem::central_1_stencil_weights(unsigned i) const
+    {
+        assert(i >= 0 && i <= n_node_-1);
+
+        if(i == 0)
+            return stencil::forward_1::weights;
+        else if(i == n_node_-1)
+            return stencil::backward_1::weights;
+        else
+            return stencil::central_1::weights;
     }
 
     const double AdvectionDiffusionReactionProblem::x(const unsigned i) const
