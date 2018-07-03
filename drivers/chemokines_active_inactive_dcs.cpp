@@ -57,6 +57,7 @@ public:
         set_variable_names({ "c_u", "c_b", "c_s", "phi_i", "phi_m" });
 
         Max_residual = 1.0e-14;
+        Max_newton_iterations = 50;
     }
 
     ~ChemokinesProblem1D()
