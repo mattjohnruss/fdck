@@ -152,7 +152,7 @@ private:
                     const unsigned i2,
                     std::vector<std::vector<double>> &da1_du,
                     std::vector<std::vector<double>> &da2_du,
-                    std::vector<std::vector<double>> &da3_du) const
+                    std::vector<std::vector<double>> &da3_du) const override
     {
         // first set all the derivatives to zero since this will the be case
         // most for most entries
@@ -164,14 +164,14 @@ private:
             std::fill(da3_du[var].begin(), da3_du[var].end(), 0.0);
         }
 
+        // a1[phi_m] terms
+
         unsigned i = 0;
 
         if(b == Boundary::Left)
             i = 0;
         else if(b == Boundary::Right)
             i = n_node_-1;
-
-        // a1[phi_m] terms
 
         // loop over the variables we know that a1[phi_m] depends on
         for(auto var2 : { c_u, c_s, c_b })
