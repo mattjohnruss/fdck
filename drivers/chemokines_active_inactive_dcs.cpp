@@ -26,8 +26,10 @@ struct ChemokinesParams
     double phi_i_init;
     double R;
     double M;
-    double J_m_left;
-    double J_m_right;
+    double J_m_left_prop;
+    double J_m_right_prop;
+    double J_m_left_abs;
+    double J_m_right_abs;
     double chi_n;
     double chi_a;
 };
@@ -119,23 +121,23 @@ private:
     {
         if(b == Boundary::Left)
         {
-            double phi_m_left_coeff = 0;
-            get_v(0, phi_m, phi_m_left_coeff);
+            double v_phi_m_left = 0;
+            get_v(0, phi_m, v_phi_m_left);
 
-            a1[c_u]   = 1.0;                           a2[c_u]   = 0.0;     a3[c_u]   = 1.0;
-            a1[c_s]   = 1.0;                           a2[c_s]   = 0.0;     a3[c_s]   = 0.0;
-            a1[phi_i] = 0.0;                           a2[phi_i] = 1.0;     a3[phi_i] = 0.0;
-            a1[phi_m] = phi_m_left_coeff + p.J_m_left; a2[phi_m] = -p.D_mu; a3[phi_m] = 0.0;
+            a1[c_u]   = 1.0;                            a2[c_u]   = 0.0;     a3[c_u]   = 1.0;
+            a1[c_s]   = 1.0;                            a2[c_s]   = 0.0;     a3[c_s]   = 0.0;
+            a1[phi_i] = 0.0;                            a2[phi_i] = 1.0;     a3[phi_i] = 0.0;
+            a1[phi_m] = v_phi_m_left + p.J_m_left_prop; a2[phi_m] = -p.D_mu; a3[phi_m] = -p.J_m_left_abs;
         }
         if(b == Boundary::Right)
         {
-            double phi_m_right_coeff = 0;
-            get_v(n_node_-1, phi_m, phi_m_right_coeff);
+            double v_phi_m_right = 0;
+            get_v(n_node_-1, phi_m, v_phi_m_right);
 
-            a1[c_u]   = 1.0;                             a2[c_u]   = 0.0;     a3[c_u]   = 0.0;
-            a1[c_s]   = 1.0;                             a2[c_s]   = 0.0;     a3[c_s]   = 0.0;
-            a1[phi_i] = 0.0;                             a2[phi_i] = 1.0;     a3[phi_i] = 0.0;
-            a1[phi_m] = phi_m_right_coeff - p.J_m_right; a2[phi_m] = -p.D_mu; a3[phi_m] = 0.0;
+            a1[c_u]   = 1.0;                              a2[c_u]   = 0.0;     a3[c_u]   = 0.0;
+            a1[c_s]   = 1.0;                              a2[c_s]   = 0.0;     a3[c_s]   = 0.0;
+            a1[phi_i] = 0.0;                              a2[phi_i] = 1.0;     a3[phi_i] = 0.0;
+            a1[phi_m] = v_phi_m_right - p.J_m_right_prop; a2[phi_m] = -p.D_mu; a3[phi_m] = p.J_m_right_abs;
         }
     }
 
@@ -337,29 +339,31 @@ int main(int argc, char **argv)
     ConfigFile cf(config_file);
     cf.print_all();
 
-    problem.p.pe_u       = cf.get<double>("pe_u");
-    problem.p.alpha      = cf.get<double>("alpha");
-    problem.p.beta       = cf.get<double>("beta");
-    problem.p.gamma_ui   = cf.get<double>("gamma_ui");
-    problem.p.gamma_bi   = cf.get<double>("gamma_bi");
-    problem.p.gamma_um   = cf.get<double>("gamma_um");
-    problem.p.gamma_bm   = cf.get<double>("gamma_bm");
-    problem.p.q_u        = cf.get<double>("q_u");
-    problem.p.q_b        = cf.get<double>("q_b");
-    problem.p.q_s        = cf.get<double>("q_s");
-    problem.p.D_su       = cf.get<double>("D_su");
-    problem.p.D_iu       = cf.get<double>("D_iu");
-    problem.p.D_mu       = cf.get<double>("D_mu");
-    problem.p.nu_u       = cf.get<double>("nu_u");
-    problem.p.nu_b       = cf.get<double>("nu_b");
-    problem.p.nu_s       = cf.get<double>("nu_s");
-    problem.p.phi_i_init = cf.get<double>("phi_i_init");
-    problem.p.R          = cf.get<double>("R");
-    problem.p.M          = cf.get<double>("M");
-    problem.p.J_m_left   = cf.get<double>("J_m_left");
-    problem.p.J_m_right  = cf.get<double>("J_m_right");
-    problem.p.chi_n      = cf.get<double>("chi_n");
-    problem.p.chi_a      = cf.get<double>("chi_a");
+    problem.p.pe_u           = cf.get<double>("pe_u");
+    problem.p.alpha          = cf.get<double>("alpha");
+    problem.p.beta           = cf.get<double>("beta");
+    problem.p.gamma_ui       = cf.get<double>("gamma_ui");
+    problem.p.gamma_bi       = cf.get<double>("gamma_bi");
+    problem.p.gamma_um       = cf.get<double>("gamma_um");
+    problem.p.gamma_bm       = cf.get<double>("gamma_bm");
+    problem.p.q_u            = cf.get<double>("q_u");
+    problem.p.q_b            = cf.get<double>("q_b");
+    problem.p.q_s            = cf.get<double>("q_s");
+    problem.p.D_su           = cf.get<double>("D_su");
+    problem.p.D_iu           = cf.get<double>("D_iu");
+    problem.p.D_mu           = cf.get<double>("D_mu");
+    problem.p.nu_u           = cf.get<double>("nu_u");
+    problem.p.nu_b           = cf.get<double>("nu_b");
+    problem.p.nu_s           = cf.get<double>("nu_s");
+    problem.p.phi_i_init     = cf.get<double>("phi_i_init");
+    problem.p.R              = cf.get<double>("R");
+    problem.p.M              = cf.get<double>("M");
+    problem.p.J_m_left_prop  = cf.get<double>("J_m_left_prop");
+    problem.p.J_m_right_prop = cf.get<double>("J_m_right_prop");
+    problem.p.J_m_left_abs   = cf.get<double>("J_m_left_abs");
+    problem.p.J_m_right_abs  = cf.get<double>("J_m_right_abs");
+    problem.p.chi_n          = cf.get<double>("chi_n");
+    problem.p.chi_a          = cf.get<double>("chi_a");
 
     const bool do_steady_solve = cf.get<bool>("steady");
     const bool do_time_evolution = cf.get<bool>("time_evo");
