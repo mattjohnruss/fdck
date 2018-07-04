@@ -88,16 +88,6 @@ public:
     ChemokinesParams p;
 
 private:
-    const std::unordered_map<int, double>& stencil_1_helper(unsigned i) const
-    {
-        if(i == 0)
-            return stencil::forward_1::weights;
-        else if(i == n_node_-1)
-            return stencil::backward_1::weights;
-        else
-            return stencil::central_1::weights;
-    }
-
     static double hill(const double x, const double n, const double a)
     {
         return std::pow(x, n)/(std::pow(a, n) + std::pow(x, n));
@@ -222,7 +212,7 @@ private:
             double dc_b_dx = 0.0;
             double dc_s_dx = 0.0;
 
-            for(const auto& [j, w] : stencil_1_helper(i))
+            for(const auto& [j, w] : central_1_stencil_weights(i))
             {
                 dc_u_dx += w*u(0, c_u, i+j)/dx_;
                 dc_b_dx += w*u(0, c_b, i+j)/dx_;
@@ -258,7 +248,7 @@ private:
 
             double dvar2_dx = 0.0;
 
-            for(const auto& [j, w] : stencil_1_helper(i))
+            for(const auto& [j, w] : central_1_stencil_weights(i))
             {
                 if(i+j == i2)
                 {
