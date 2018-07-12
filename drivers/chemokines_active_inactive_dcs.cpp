@@ -87,7 +87,6 @@ public:
 
     ChemokinesParams p;
 
-private:
     static double hill(const double x, const double n, const double a)
     {
         return std::pow(x, n)/(std::pow(a, n) + std::pow(x, n));
@@ -99,6 +98,7 @@ private:
         return (std::pow(a, n)*n*std::pow(x, n-1))/std::pow(std::pow(a, n) + std::pow(x, n), 2.0);
     }
 
+private:
     const double chi(const double c) const
     {
         //return hill(c, p.chi_n, p.chi_a);
