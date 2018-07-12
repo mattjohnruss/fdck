@@ -116,6 +116,12 @@ namespace mjrfd
         virtual void calculate_residual() = 0;
         virtual void calculate_jacobian() = 0;
 
+        virtual void actions_before_timestep();
+        virtual void actions_after_timestep();
+
+        virtual void actions_before_solve();
+        virtual void actions_after_solve();
+
         double Max_residual;
         unsigned Max_newton_iterations;
         double Jacobian_fd_step;

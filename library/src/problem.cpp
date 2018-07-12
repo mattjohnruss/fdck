@@ -51,6 +51,8 @@ namespace mjrfd
         // counter for the number of Newton iterations
         unsigned count = 0;
 
+        actions_before_solve();
+
         // Newton method
         while(!stop)
         {
@@ -167,6 +169,8 @@ namespace mjrfd
                 }
             }
         }
+
+        actions_after_solve();
     }
 
     void Problem::steady_solve()
@@ -203,7 +207,9 @@ namespace mjrfd
             std::cout << "\nSolving at time = " << time_ << "\n\n";
         }
 
+        actions_before_timestep();
         Problem::solve();
+        actions_after_timestep();
     }
 
     const bool Problem::is_steady() const
@@ -353,6 +359,22 @@ namespace mjrfd
 
         // Restore the residuals to their previous state
         residual_ = residual_backup;
+    }
+
+    void Problem::actions_before_timestep()
+    {
+    }
+
+    void Problem::actions_after_timestep()
+    {
+    }
+
+    void Problem::actions_before_solve()
+    {
+    }
+
+    void Problem::actions_after_solve()
+    {
     }
 
     void Problem::linear_solve()
