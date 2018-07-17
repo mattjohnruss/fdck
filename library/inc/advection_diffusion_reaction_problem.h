@@ -58,6 +58,12 @@ namespace mjrfd
         /// Disable spatial terms for all variables in vars
         void disable_spatial_terms(const std::vector<unsigned> &vars);
 
+        /// Enable outputting the time in the first column of each file
+        void enable_output_time_column();
+
+        /// Enable outputting the time in the first column of each file
+        void disable_output_time_column();
+
         /// Set the variable names
         void set_variable_names(const std::vector<std::string> &var_names);
 
@@ -160,6 +166,10 @@ namespace mjrfd
         /// each variable
         std::vector<bool> spatial_terms_;
 
+        /// Bool for whether to put a column in each output file with the
+        /// current time
+        bool output_time_column_;
+
         /// Vector of "human-readable" variable names for each variable which
         /// are used as column headers in the output files
         std::vector<std::string> var_names_;
@@ -178,6 +188,7 @@ namespace mjrfd
         left_bc_(n_var, false),
         right_bc_(n_var, false),
         spatial_terms_(n_var, false),
+        output_time_column_(true),
         var_names_(n_var)
     {
         // Set the default variable names
@@ -210,6 +221,11 @@ namespace mjrfd
     /// Output the solution
     void AdvectionDiffusionReactionProblem::output(std::ostream &out) const
     {
+        if(output_time_column_ == true)
+        {
+            out << "t ";
+        }
+
         out << "x ";
 
         for(unsigned var = 0; var < n_var_; ++var)
@@ -220,6 +236,11 @@ namespace mjrfd
 
         for(unsigned i = 0; i < n_node_; ++i)
         {
+            if(output_time_column_ == true)
+            {
+                out << time() << ' ';
+            }
+
             out << static_cast<double>(i)/static_cast<double>(n_node_-1) << ' ';
 
             for(unsigned var = 0; var < n_var_; ++var)
@@ -232,6 +253,11 @@ namespace mjrfd
 
     void AdvectionDiffusionReactionProblem::output_exact(std::ostream &out) const
     {
+        if(output_time_column_ == true)
+        {
+            out << "t ";
+        }
+
         out << "x ";
 
         for(unsigned var = 0; var < n_var_; ++var)
@@ -245,6 +271,11 @@ namespace mjrfd
 
         for(unsigned i = 0; i < n_node_; ++i)
         {
+            if(output_time_column_ == true)
+            {
+                out << time() << ' ';
+            }
+
             x = static_cast<double>(i)/static_cast<double>(n_node_-1);
             out << x << ' ';
 
@@ -824,6 +855,16 @@ namespace mjrfd
         {
             spatial_terms_[var] = false;
         }
+    }
+
+    void AdvectionDiffusionReactionProblem::enable_output_time_column()
+    {
+        output_time_column_ = true;
+    }
+
+    void AdvectionDiffusionReactionProblem::disable_output_time_column()
+    {
+        output_time_column_ = false;
     }
 
     void AdvectionDiffusionReactionProblem::set_variable_names(const std::vector<std::string> &var_names)
