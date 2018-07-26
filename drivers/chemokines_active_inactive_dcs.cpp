@@ -26,6 +26,12 @@ struct ChemokinesParams
     double phi_i_init;
     double R;
     double M;
+    double M_a;
+    double M_b;
+    double t1;
+    double t2;
+    double t3;
+    double t4;
     double J_m_left_prop;
     double J_m_right_prop;
     double J_m_left_abs;
@@ -98,7 +104,29 @@ public:
         return (std::pow(a, n)*n*std::pow(x, n-1))/std::pow(std::pow(a, n) + std::pow(x, n), 2.0);
     }
 
+    static double cos_ramp_down(const double time)
+    {
+        assert(time >= 0.0 && time <= 1.0);
+
+        static constexpr double pi = std::acos(-1.0);
+        return 0.5*(1.0 + std::cos(pi*time));
+    }
+
+    static double cos_ramp_up(const double time)
+    {
+        assert(time >= 0.0 && time <= 1.0);
+
+        static constexpr double pi = std::acos(-1.0);
+        return 1.0 - 0.5*(1.0 + std::cos(pi*time));
+    }
+
 private:
+    void actions_before_timestep() override
+    {
+        // update the maturation parameter before solving for the new time
+        p.M = maturation_piecewise_ramp(p.M_a, p.M_b, p.t1, p.t2, p.t3, p.t4);
+    }
+
     const double chi(const double c) const
     {
         //return hill(c, p.chi_n, p.chi_a);
@@ -109,6 +137,29 @@ private:
     {
         //return dhill_dx(c, p.chi_n, p.chi_a);
         return 0.0;
+    }
+
+    double maturation_piecewise_ramp(const double a,  const double b,
+                                     const double t1, const double t2,
+                                     const double t3, const double t4) const
+    {
+        assert(t1 <= t2);
+        assert(t2 <= t3);
+        assert(t3 <= t4);
+
+        double m = 0.0;
+        double time = this->time();
+
+        if(time < t1 || time > t4)
+            m = a;
+        else if(time >= t1 && time <= t2)
+            m = a + (b - a)*cos_ramp_up((time - t1)/(t2 - t1));
+        else if(time > t2 && time < t3)
+            m = b;
+        else if(time >= t3 && time <= t4)
+            m = a + (b - a)*cos_ramp_down((time - t3)/(t4 - t3));
+
+        return m;
     }
 
     void get_bc(Boundary b,
@@ -354,7 +405,13 @@ int main(int argc, char **argv)
     problem.p.nu_s           = cf.get<double>("nu_s");
     problem.p.phi_i_init     = cf.get<double>("phi_i_init");
     problem.p.R              = cf.get<double>("R");
-    problem.p.M              = cf.get<double>("M");
+    problem.p.M_a            = cf.get<double>("M_a");
+    problem.p.M_b            = cf.get<double>("M_b");
+    problem.p.M              = problem.p.M_a;
+    problem.p.t1             = cf.get<double>("t1");
+    problem.p.t2             = cf.get<double>("t2");
+    problem.p.t3             = cf.get<double>("t3");
+    problem.p.t4             = cf.get<double>("t4");
     problem.p.J_m_left_prop  = cf.get<double>("J_m_left_prop");
     problem.p.J_m_right_prop = cf.get<double>("J_m_right_prop");
     problem.p.J_m_left_abs   = cf.get<double>("J_m_left_abs");
