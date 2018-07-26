@@ -64,10 +64,16 @@ public:
 
         Max_residual = 1.0e-14;
         Max_newton_iterations = 50;
+
+        trace_file_.open("trace.dat");
+        trace_header_ =
+            "t phi_m|_0 dphi_m_dx|_0 a1[phi_m] a2[phi_m] a3[phi_m] M res_0";
+        trace_file_ << trace_header_ << '\n';
     }
 
     ~ChemokinesProblem1D()
     {
+        trace_file_.close();
     }
 
     void set_initial_conditions()
@@ -121,10 +127,46 @@ public:
     }
 
 private:
+    std::string trace_header_;
+    std::ofstream trace_file_;
+
     void actions_before_timestep() override
     {
         // update the maturation parameter before solving for the new time
         p.M = maturation_piecewise_ramp(p.M_a, p.M_b, p.t1, p.t2, p.t3, p.t4);
+    }
+
+    void actions_after_solve() override
+    {
+        std::vector<double> a1(n_var_);
+        std::vector<double> a2(n_var_);
+        std::vector<double> a3(n_var_);
+
+        get_bc(Boundary::Left, a1, a2, a3);
+
+        double dphi_m_dx = 0.0;
+        for(auto& [j, w] : stencil::forward_1::weights)
+        {
+            dphi_m_dx += w*u(0, phi_m, 0+j)/dx_;
+        }
+
+        if(is_steady() == true)
+        {
+            // if we're doing a steady solve after timestepping, output the
+            // trace data to a new data block to keep gnuplot from plotting it
+            // on the unsteady data
+            trace_file_ << "\n\n" << trace_header_ << '\n';
+        }
+
+        trace_file_ << time() << " "
+                    << u(0, phi_m, 0) << " "
+                    << dphi_m_dx << " "
+                    << a1[phi_m] << " "
+                    << a2[phi_m] << " "
+                    << a3[phi_m] << " "
+                    << p.M << " "
+                    << residual_(0) << '\n'
+                    << std::flush;
     }
 
     const double chi(const double c) const
