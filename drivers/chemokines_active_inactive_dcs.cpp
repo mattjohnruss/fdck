@@ -189,23 +189,35 @@ private:
     {
         if(b == Boundary::Left)
         {
+            // get the phi_m advection velocity at the left boundary
             double v_phi_m_left = 0;
             get_v(0, phi_m, v_phi_m_left);
 
-            a1[c_u]   = 1.0;                            a2[c_u]   = 0.0;     a3[c_u]   = 1.0;
-            a1[c_s]   = 1.0;                            a2[c_s]   = 0.0;     a3[c_s]   = 0.0;
-            a1[phi_i] = 0.0;                            a2[phi_i] = 1.0;     a3[phi_i] = 0.0;
-            a1[phi_m] = v_phi_m_left + p.J_m_left_prop; a2[phi_m] = -p.D_mu; a3[phi_m] = -p.J_m_left_abs;
+            // get the phi_m diffusivity at the left boundary
+            // this gets all components of the diffusivity but oh well
+            std::vector<double> d_left(n_var_);
+            get_d(0, 0, d_left);
+
+            a1[c_u]   = 1.0;                            a2[c_u]   = 0.0;            a3[c_u]   = 1.0;
+            a1[c_s]   = 1.0;                            a2[c_s]   = 0.0;            a3[c_s]   = 0.0;
+            a1[phi_i] = 0.0;                            a2[phi_i] = 1.0;            a3[phi_i] = 0.0;
+            a1[phi_m] = v_phi_m_left + p.J_m_left_prop; a2[phi_m] = -d_left[phi_m]; a3[phi_m] = -p.J_m_left_abs;
         }
         if(b == Boundary::Right)
         {
+            // get the phi_m advection velocity at the left boundary
             double v_phi_m_right = 0;
             get_v(n_node_-1, phi_m, v_phi_m_right);
 
-            a1[c_u]   = 1.0;                              a2[c_u]   = 0.0;     a3[c_u]   = 0.0;
-            a1[c_s]   = 1.0;                              a2[c_s]   = 0.0;     a3[c_s]   = 0.0;
-            a1[phi_i] = 0.0;                              a2[phi_i] = 1.0;     a3[phi_i] = 0.0;
-            a1[phi_m] = v_phi_m_right - p.J_m_right_prop; a2[phi_m] = -p.D_mu; a3[phi_m] = p.J_m_right_abs;
+            // get the phi_m diffusivity at the right boundary
+            // this gets all components of the diffusivity but oh well
+            std::vector<double> d_right(n_var_);
+            get_d(0, n_node_-1, d_right);
+
+            a1[c_u]   = 1.0;                              a2[c_u]   = 0.0;             a3[c_u]   = 0.0;
+            a1[c_s]   = 1.0;                              a2[c_s]   = 0.0;             a3[c_s]   = 0.0;
+            a1[phi_i] = 0.0;                              a2[phi_i] = 1.0;             a3[phi_i] = 0.0;
+            a1[phi_m] = v_phi_m_right - p.J_m_right_prop; a2[phi_m] = -d_right[phi_m]; a3[phi_m] = p.J_m_right_abs;
         }
     }
 
@@ -225,8 +237,6 @@ private:
             std::fill(da3_du[var].begin(), da3_du[var].end(), 0.0);
         }
 
-        // a1[phi_m] terms
-
         unsigned i = 0;
 
         if(b == Boundary::Left)
@@ -234,12 +244,19 @@ private:
         else if(b == Boundary::Right)
             i = n_node_-1;
 
-        // loop over the variables we know that a1[phi_m] depends on
+        std::vector<std::vector<double>> dd_du(n_var_, std::vector<double>(n_var_));
+        get_dd_du(0, i, dd_du);
+
+        // loop over the variables we know that a1[phi_m], a2[phi_m] depend on
         for(auto var2 : { c_u, c_s, c_b })
         {
+            // terms from v_phi_m
             double dv_du_var2 = 0.0;
             get_dv_du(i, phi_m, i2, var2, dv_du_var2);
-            da1_du[phi_m][var2] = dv_du_var2;
+            da1_du[phi_m][var2] += dv_du_var2;
+
+            // terms from D_mu
+            da2_du[phi_m][var2] += -dd_du[phi_m][var2];
         }
     }
 
