@@ -139,4 +139,12 @@ namespace mjrfd
         // convert value to a bool and return it
         return static_cast<bool>(std::atoi(params_[key].c_str()));
     }
+
+    // Specialise get_impl for string
+    template<>
+    const std::string ConfigFile::get_impl(const std::string &key)
+    {
+        // convert value to a bool and return it
+        return params_[key];
+    }
 }
