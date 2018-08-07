@@ -1,7 +1,9 @@
 #include <advection_diffusion_reaction_problem.h>
 #include <config_file.h>
+#include <functions.h>
 
 #include <fstream>
+#include <memory>
 
 using namespace mjrfd;
 
@@ -19,7 +21,7 @@ struct ChemokinesParams
     double q_s;
     double D_su;
     double D_iu;
-    double D_mu;
+    std::unique_ptr<DifferentiableFunction> D_mu;
     double nu_u;
     double nu_b;
     double nu_s;
@@ -36,8 +38,7 @@ struct ChemokinesParams
     double J_m_right_prop;
     double J_m_left_abs;
     double J_m_right_abs;
-    double chi_n;
-    double chi_a;
+    std::unique_ptr<DifferentiableFunction> chi;
 };
 
 enum Variable
@@ -99,17 +100,6 @@ public:
 
     ChemokinesParams p;
 
-    static double hill(const double x, const double n, const double a)
-    {
-        return std::pow(x, n)/(std::pow(a, n) + std::pow(x, n));
-    }
-
-    // seems to be well-defined when n > 1, which should be true for this system
-    static double dhill_dx(const double x, const double n, const double a)
-    {
-        return (std::pow(a, n)*n*std::pow(x, n-1))/std::pow(std::pow(a, n) + std::pow(x, n), 2.0);
-    }
-
     static double cos_ramp_down(const double time)
     {
         assert(time >= 0.0 && time <= 1.0);
@@ -167,18 +157,6 @@ private:
                     << p.M << " "
                     << residual_(0) << '\n'
                     << std::flush;
-    }
-
-    const double chi(const double c) const
-    {
-        //return hill(c, p.chi_n, p.chi_a);
-        return 1.0;
-    }
-
-    const double dchi_dc(const double c) const
-    {
-        //return dhill_dx(c, p.chi_n, p.chi_a);
-        return 0.0;
     }
 
     double maturation_piecewise_ramp(const double a,  const double b,
@@ -273,8 +251,7 @@ private:
         d[c_b]   = 0.0;
         d[c_s]   = p.D_su;
         d[phi_i] = p.D_iu;
-        d[phi_m] = p.D_mu;
-        //d[phi_m] = p.D_mu*hill(u(0, c_u, i) + u(0, c_b, i) + u(0, c_s, i), 2.0, 1.0);
+        d[phi_m] = p.D_mu->value(u(t, c_b, i));
     }
 
     void get_dd_du(const unsigned t,
@@ -286,7 +263,7 @@ private:
             std::fill(dd_du[var].begin(), dd_du[var].end(), 0.0);
         }
 
-        //dd_du[phi_m][phi_m] = p.D_mu*dhill_dx(u(0, c_u, i) + u(0, c_b, i) + u(0, c_s, i), 2.0, 1.0);
+        dd_du[phi_m][phi_m] = p.D_mu->deriv(u(t, c_b, i));
     }
 
     void get_v(const unsigned i,
@@ -301,20 +278,20 @@ private:
             v = p.pe_u;
         else if(var == phi_m)
         {
-            double dc_u_dx = 0.0;
+            //double dc_u_dx = 0.0;
             double dc_b_dx = 0.0;
-            double dc_s_dx = 0.0;
+            //double dc_s_dx = 0.0;
 
             for(const auto& [j, w] : central_1_stencil_weights(i))
             {
-                dc_u_dx += w*u(0, c_u, i+j)/dx_;
+                //dc_u_dx += w*u(0, c_u, i+j)/dx_;
                 dc_b_dx += w*u(0, c_b, i+j)/dx_;
-                dc_s_dx += w*u(0, c_s, i+j)/dx_;
+                //dc_s_dx += w*u(0, c_s, i+j)/dx_;
             }
 
-            v += p.nu_u*chi(u(0, c_u, i))*dc_u_dx;
-            v += p.nu_b*chi(u(0, c_b, i))*dc_b_dx;
-            v += p.nu_s*chi(u(0, c_s, i))*dc_s_dx;
+            //v += p.nu_u*p.chi->value(u(0, c_u, i))*dc_u_dx;
+            v += p.nu_b*p.chi->value(u(0, c_b, i))*dc_b_dx;
+            //v += p.nu_s*p.chi->value(u(0, c_s, i))*dc_s_dx;
         }
     }
 
@@ -326,7 +303,8 @@ private:
     {
         dv_du = 0.0;
 
-        if(var == phi_m && (var2 == c_u || var2 == c_b || var2 == c_s))
+        //if(var == phi_m && (var2 == c_u || var2 == c_b || var2 == c_s))
+        if(var == phi_m && var2 == c_b)
         {
             double nu;
 
@@ -348,13 +326,13 @@ private:
                     // this condition will be true at most once per loop so we
                     // could break here, but we need to continue the loop to
                     // calculate the derivative below
-                    dv_du += w*nu*chi(u(0, var2, i))/dx_;
+                    dv_du += w*nu*p.chi->value(u(0, var2, i))/dx_;
                 }
 
                 dvar2_dx += w*u(0, var2, i+j)/dx_;
             }
 
-            dv_du += nu*dchi_dc(u(0, var2, i))*dvar2_dx;
+            dv_du += nu*p.chi->deriv(u(0, var2, i))*dvar2_dx;
         }
     }
 
@@ -441,7 +419,6 @@ int main(int argc, char **argv)
     problem.p.q_s            = cf.get<double>("q_s");
     problem.p.D_su           = cf.get<double>("D_su");
     problem.p.D_iu           = cf.get<double>("D_iu");
-    problem.p.D_mu           = cf.get<double>("D_mu");
     problem.p.nu_u           = cf.get<double>("nu_u");
     problem.p.nu_b           = cf.get<double>("nu_b");
     problem.p.nu_s           = cf.get<double>("nu_s");
@@ -458,8 +435,66 @@ int main(int argc, char **argv)
     problem.p.J_m_right_prop = cf.get<double>("J_m_right_prop");
     problem.p.J_m_left_abs   = cf.get<double>("J_m_left_abs");
     problem.p.J_m_right_abs  = cf.get<double>("J_m_right_abs");
-    problem.p.chi_n          = cf.get<double>("chi_n");
-    problem.p.chi_a          = cf.get<double>("chi_a");
+
+    // Construct the type of DifferentiableFunction in the config for chi
+    // the std::unique_ptr will destroy the object for us when it goes out of scope
+    std::string chi_type = cf.get<std::string>("chi");
+
+    if(chi_type == "constant")
+    {
+        // TODO remove
+        std::cout << "chi is constant with value " << cf.get<double>("chi_const_val") << '\n';
+
+        problem.p.chi =
+            std::make_unique<ConstantFunction>(cf.get<double>("chi_const_val"));
+    }
+    else if(chi_type == "hill")
+    {
+        // TODO remove
+        std::cout << "chi is hill with "
+                  << "a = " << cf.get<double>("chi_hill_a") << ", "
+                  << "n = " << cf.get<double>("chi_hill_n") << '\n';
+
+        problem.p.chi =
+            std::make_unique<HillFunction>(cf.get<double>("chi_hill_a"),
+                                           cf.get<double>("chi_hill_n"));
+    }
+    else
+    {
+        std::cerr << "unrecognised value of \"chi\" parameter:" << chi_type << '\n';
+        std::exit(1);
+    }
+
+    // Do a similar thing for D_mu
+    std::string D_mu_type = cf.get<std::string>("D_mu");
+
+    if(D_mu_type == "constant")
+    {
+        // TODO remove
+        std::cout << "D_mu is constant with value " << cf.get<double>("D_mu_const_val") << '\n';
+
+        problem.p.D_mu = std::make_unique<ConstantFunction>(cf.get<double>("D_mu_const_val"));
+    }
+    else if(D_mu_type == "hill")
+    {
+        // TODO remove
+        std::cout << "D_mu is hill with "
+                  << "a = "   << cf.get<double>("D_mu_hill_a") << ", "
+                  << "n = "   << cf.get<double>("D_mu_hill_n") << ", "
+                  << "min = " << cf.get<double>("D_mu_hill_min") << ", "
+                  << "max = " << cf.get<double>("D_mu_hill_max") << '\n';;
+
+        problem.p.D_mu =
+            std::make_unique<HillFunction>(cf.get<double>("D_mu_hill_a"),
+                                           cf.get<double>("D_mu_hill_n"),
+                                           cf.get<double>("D_mu_hill_min"),
+                                           cf.get<double>("D_mu_hill_max"));
+    }
+    else
+    {
+        std::cerr << "unrecognised value of \"D_mu\" parameter:" << D_mu_type << '\n';
+        std::exit(1);
+    }
 
     const bool do_steady_solve = cf.get<bool>("steady");
     const bool do_time_evolution = cf.get<bool>("time_evo");
@@ -524,7 +559,13 @@ int main(int argc, char **argv)
 
         // set initial conditions again - required since phi_i is sensitive to
         // ICs even at steady state
-        problem.set_initial_conditions();
+        // Only do this if we haven't timestepped - if we have been
+        // timestepping, we want to use the most recent solution as the initial
+        // guess for the steady solve, or it is much less likely to converge
+        if(do_time_evolution == false)
+        {
+            problem.set_initial_conditions();
+        }
 
         // perform a steady solve and output it
         problem.steady_solve();
