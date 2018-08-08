@@ -104,7 +104,7 @@ public:
     {
         assert(time >= 0.0 && time <= 1.0);
 
-        static constexpr double pi = std::acos(-1.0);
+        static const double pi = std::acos(-1.0);
         return 0.5*(1.0 + std::cos(pi*time));
     }
 
@@ -112,7 +112,7 @@ public:
     {
         assert(time >= 0.0 && time <= 1.0);
 
-        static constexpr double pi = std::acos(-1.0);
+        static const double pi = std::acos(-1.0);
         return 1.0 - 0.5*(1.0 + std::cos(pi*time));
     }
 
