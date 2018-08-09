@@ -400,7 +400,7 @@ private:
 
 int main(int argc, char **argv)
 {
-    if(argc != 5 && argc != 6)
+    if(argc < 5)
     {
         std::cerr << "Usage: " << argv[0]
                   << " config_file n_node dt t_max [ output_interval ]\n";
@@ -413,7 +413,7 @@ int main(int argc, char **argv)
 
     unsigned output_interval = 1;
 
-    if(argc == 6)
+    if(argc >= 6)
     {
         output_interval = std::atoi(argv[5]);
     }
@@ -421,7 +421,9 @@ int main(int argc, char **argv)
     ChemokinesProblem1D problem(n_node, dt);
 
     std::ifstream config_file(argv[1]);
-    Config cf(config_file);
+    Config cf;
+    cf.parse_config_file(config_file);
+    cf.parse_command_line(argc, argv);
     cf.print_all();
 
     problem.p.pe_u           = cf.get<double>("pe_u");
