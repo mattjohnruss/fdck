@@ -1,5 +1,5 @@
 #include <advection_diffusion_reaction_problem.h>
-#include <config_file.h>
+#include <config.h>
 
 #include <fstream>
 
@@ -187,7 +187,7 @@ int main(int argc, char **argv)
     ChemokinesProblem1D problem(n_node, dt);
 
     std::ifstream config_file(argv[1]);
-    ConfigFile cf(config_file);
+    Config cf(config_file);
     cf.print_all();
 
     problem.p.p_u     = cf.get<double>("p_u");

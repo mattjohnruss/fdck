@@ -1,5 +1,5 @@
 #include <finite_difference_problem.h>
-#include <config_file.h>
+#include <config.h>
 
 #include <iostream>
 #include <fstream>
@@ -701,7 +701,7 @@ int main(int argc, char **argv)
     ChemokinesProblem1D problem(n_node, dt);
 
     std::ifstream config_file(argv[1]);
-    ConfigFile cf(config_file);
+    Config cf(config_file);
 
     problem.p.p_u     = cf.get<double>("p_u");
     problem.p.alpha   = cf.get<double>("alpha");

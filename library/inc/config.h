@@ -1,12 +1,13 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
+#include <iomanip>
+#include <iostream>
 #include <istream>
-#include <map>
 #include <sstream>
 #include <string>
-#include <iostream>
-#include <iomanip>
+#include <unordered_map>
 
 namespace mjrfd
 {
@@ -14,21 +15,31 @@ namespace mjrfd
     // ini-style key-value pairs, ignoring whitespace within each line, e.g.:
     // a=2.4
     // b = 4.134
-    class ConfigFile
+    class Config
     {
     public:
-        // Default constructor takes an istream of the config file
-        ConfigFile(std::istream &is)
+        Config()
         {
-            read_and_parse(is);
+        }
+
+        // Constructor to immediately parse the command line arguments
+        Config(int argc, char **argv)
+        {
+            parse_command_line(argc, argv);
+        }
+
+        // Constructor to immediately parse an istream of the config file
+        Config(std::istream &is)
+        {
+            parse_config_file(is);
         }
 
         // Delete default copy constructor and assignment operator to prevent copying
-        ConfigFile(const ConfigFile &) = delete;
-        ConfigFile& operator=(const ConfigFile&) = delete;
+        Config(const Config &) = delete;
+        Config& operator=(const Config&) = delete;
 
         // Empty destructor
-        ~ConfigFile()
+        ~Config()
         {
         }
 
@@ -46,7 +57,7 @@ namespace mjrfd
 
         // Read the config file (or any istream) and parse its contents,
         // storing the params in a map
-        void read_and_parse(std::istream &is)
+        void parse_config_file(std::istream &is)
         {
             // storage for a line of the config file
             std::string line;
@@ -79,6 +90,50 @@ namespace mjrfd
                         params_[key] = value;
                     }
                 }
+            }
+        }
+
+        void parse_command_line(int argc, char **argv)
+        {
+            // Find the index of the first command line argument that starts with "--"
+            // Arguments without "--" can be used directly by the driver
+            // program and are ignored by the Config class
+            unsigned first_param_index = 0;
+            for(unsigned i = 1; i < argc; ++i)
+            {
+                std::string arg(argv[i]);
+                assert(arg.size() >= 2);
+
+                if(arg[0] == '-' && arg[1] == '-')
+                {
+                    first_param_index = i;
+                    break;
+                }
+            }
+
+            // return immediately if no command line arguments were found
+            if(first_param_index == 0)
+            {
+                return;
+            }
+
+            // we assume that every flag has an argument, so that the number of
+            // parameters to parse is argc/2 where argc is even
+            assert((argc - first_param_index)%2 == 0 && "Not every parameter has an argument!");
+
+            // loop over the supplied parameters
+            for(unsigned i = first_param_index; i < argc; i += 2)
+            {
+                // get the key and value as strings
+                std::string key = argv[i];
+                std::string value = argv[i+1];
+
+                // check if the parameter key starts with "--"
+                assert(key[0] == '-' && key[1] == '-' && "Each parameter must begin with \"--\"");
+
+                // add the (key,value) pair to the params_ map, ignoring the
+                // initial "--" of each key
+                params_[key.substr(2)] = value;
             }
         }
 
@@ -126,7 +181,7 @@ namespace mjrfd
 
     // Specialise get_impl for double
     template<>
-    const double ConfigFile::get_impl(const std::string &key)
+    const double Config::get_impl(const std::string &key)
     {
         // convert value to a double and return it
         return std::atof(params_[key].c_str());
@@ -134,7 +189,7 @@ namespace mjrfd
 
     // Specialise get_impl for bool
     template<>
-    const bool ConfigFile::get_impl(const std::string &key)
+    const bool Config::get_impl(const std::string &key)
     {
         // convert value to a bool and return it
         return static_cast<bool>(std::atoi(params_[key].c_str()));
@@ -142,7 +197,7 @@ namespace mjrfd
 
     // Specialise get_impl for string
     template<>
-    const std::string ConfigFile::get_impl(const std::string &key)
+    const std::string Config::get_impl(const std::string &key)
     {
         // convert value to a bool and return it
         return params_[key];
