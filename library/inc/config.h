@@ -102,9 +102,8 @@ namespace mjrfd
             for(unsigned i = 1; i < argc; ++i)
             {
                 std::string arg(argv[i]);
-                assert(arg.size() >= 2);
 
-                if(arg[0] == '-' && arg[1] == '-')
+                if(arg.size() >= 2 && arg[0] == '-' && arg[1] == '-')
                 {
                     first_param_index = i;
                     break;
