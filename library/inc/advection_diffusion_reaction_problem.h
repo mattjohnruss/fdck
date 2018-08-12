@@ -67,6 +67,10 @@ namespace mjrfd
         /// Set the variable names
         void set_variable_names(const std::vector<std::string> &var_names);
 
+        /// Calculate the spatial integral of a variable using trapizium rule
+        /// (for now)
+        double integrate_solution(const unsigned var) const;
+
     private:
         /// Get the coefficients a1, a2, a3 for the (Robin) boundary conditions
         virtual void get_bc(Boundary b,
@@ -871,6 +875,19 @@ namespace mjrfd
     {
         assert(var_names.size() == n_var_);
         var_names_ = var_names;
+    }
+
+    double AdvectionDiffusionReactionProblem::integrate_solution(const unsigned var) const
+    {
+        assert(var >= 0 && var <= n_var_-1);
+
+        double integral = 0.0;
+
+        integral += 0.5*dx_*u_[0](var*n_node_ + 0);
+        integral += (dx_*u_[0]).segment(var*n_node_ + 1, n_node_ - 2).sum();
+        integral += 0.5*dx_*u_[0](var*n_node_ + n_node_ - 1);
+
+        return integral;
     }
 
     void AdvectionDiffusionReactionProblem::exact_solution(const double time,
