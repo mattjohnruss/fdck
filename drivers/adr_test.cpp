@@ -20,6 +20,8 @@ public:
         enable_bc(Boundary::Left,  { c_0, c_1 });
         enable_bc(Boundary::Right, { c_0, c_1 });
 
+        enable_spatial_terms({ c_0, c_1 });
+
         set_variable_names({ "c_0 num", "c_1 num" });
 
         Max_residual = 1.0e-14;
@@ -30,16 +32,6 @@ public:
     }
 
 private:
-    const std::unordered_map<int, double>& stencil_1_helper(const unsigned i) const
-    {
-        if(i == 0)
-            return stencil::forward_1::weights;
-        else if(i == n_node_-1)
-            return stencil::backward_1::weights;
-        else
-            return stencil::central_1::weights;
-    }
-
     void get_bc(Boundary b,
                 std::vector<double> &a1,
                 std::vector<double> &a2,
@@ -156,7 +148,7 @@ int main(int argc, char **argv)
     // perform a steady solve using exact jacobian and output it
     std::cout << "Solve using exact jacobian:\n";
     problem.disable_fd_jacobian();
-    problem.enable_dump_jacobian("ex_");
+    //problem.enable_dump_jacobian("ex_");
 
     problem.steady_solve();
     std::sprintf(filename, "output_steady.csv");
@@ -167,10 +159,18 @@ int main(int argc, char **argv)
 
     std::cout << std::endl;
 
+    std::cout << "integral of c_0 = "
+              << problem.integrate_solution(c_0)
+              << '\n';
+
+    std::cout << "integral of c_1 = "
+              << problem.integrate_solution(c_1)
+              << '\n';
+
     // perform a steady solve using fd jacobian and output it
     std::cout << "Solve using fd jacobian:\n";
     problem.enable_fd_jacobian();
-    problem.enable_dump_jacobian("fd_");
+    //problem.enable_dump_jacobian("fd_");
 
     problem.clear_solution();
 
