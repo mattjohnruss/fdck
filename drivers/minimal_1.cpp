@@ -8,6 +8,7 @@ using namespace mjrfd;
 struct ChemokinesParams
 {
     double pe_u;
+    double bc_time_factor;
 };
 
 enum Variable
@@ -19,10 +20,27 @@ class ChemokinesProblem1D : public AdvectionDiffusionReactionProblem
 {
 public:
     ChemokinesProblem1D(const unsigned n_node, const double dt) :
-        AdvectionDiffusionReactionProblem(1, n_node, dt)
+        AdvectionDiffusionReactionProblem(1, n_node, dt),
+        inlet_poly_coeffs{ 0.076787020335399,
+                           0.254758928187113,
+                           1.195706261658923,
+                          -3.972963699044380,
+                           4.612795695646865,
+                          -1.882844223154888 },
+
+        outlet_poly_coeffs{ 0.023250104348371,
+                            0.089837404766442,
+                           -0.513577991056639,
+                            1.274529558134060,
+                           -0.250287771102272,
+                           -0.462170292297035 }
     {
         enable_bc(Boundary::Left,  { c_u });
         enable_bc(Boundary::Right, { c_u });
+
+        enable_spatial_terms({ c_u });
+
+        disable_output_time_column();
 
         set_variable_names({ "c_u" });
 
@@ -39,22 +57,37 @@ public:
         clear_solution();
 
         // Set c_u to 1.0 at the left-hand boundary
-        u(0, c_u, 0) = 1.0;
+        //u(0, c_u, 0) = 1.0;
+
+        // Set c_u to the BC functions evalutated at t = 0
+        u(c_u, 0)         = evaluate_polynomial(0.0, inlet_poly_coeffs);
+        u(c_u, n_node_-1) = evaluate_polynomial(0.0, outlet_poly_coeffs);
     }
 
     ChemokinesParams p;
 
-private:
-    const std::unordered_map<int, double>& stencil_1_helper(unsigned i) const
+    // Coeffs for the polynomial fits of the inlet/outlet BC functions
+    const std::vector<double> inlet_poly_coeffs;
+    const std::vector<double> outlet_poly_coeffs;
+
+    // Evaluate a polynomial with coeffs in ascending power order at x using
+    // Horner's method
+    static double evaluate_polynomial(const double x,
+                                      const std::vector<double> &coeffs)
     {
-        if(i == 0)
-            return stencil::forward_1::weights;
-        else if(i == n_node_-1)
-            return stencil::backward_1::weights;
-        else
-            return stencil::central_1::weights;
+        double result = 0.0;
+        unsigned n = coeffs.size();
+
+        for(int i = n-1; i >= 0; --i)
+        {
+            assert(i <= (n-1) && i >= 0);
+            result = result*x + coeffs[i];
+        }
+
+        return result;
     }
 
+private:
     void get_bc(Boundary b,
                 std::vector<double> &a1,
                 std::vector<double> &a2,
@@ -62,11 +95,15 @@ private:
     {
         if(b == Boundary::Left)
         {
-            a1[c_u] = 1.0; a2[c_u] = 0.0; a3[c_u] = 1.0;
+            a1[c_u] = 1.0;
+            a2[c_u] = 0.0;
+            a3[c_u] = evaluate_polynomial(p.bc_time_factor*time(), inlet_poly_coeffs);
         }
         if(b == Boundary::Right)
         {
-            a1[c_u] = 1.0; a2[c_u] = 0.0; a3[c_u] = 0.0;
+            a1[c_u] = 1.0;
+            a2[c_u] = 0.0;
+            a3[c_u] = evaluate_polynomial(p.bc_time_factor*time(), outlet_poly_coeffs);
         }
     }
 
@@ -132,7 +169,8 @@ int main(int argc, char **argv)
     Config cf(config_file);
     cf.print_all();
 
-    problem.p.pe_u = cf.get<double>("pe_u");
+    problem.p.pe_u           = cf.get<double>("pe_u");
+    problem.p.bc_time_factor = cf.get<double>("bc_time_factor");
 
     problem.enable_terse_logging();
 
