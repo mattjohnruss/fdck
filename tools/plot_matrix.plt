@@ -12,7 +12,7 @@ do for [i = 1:m-1] {
 unset key
 set size square
 #filename = "jac_t=0.100000_0.dat"
-load pal("parula")
+#load pal("parula")
 
 if(exists("ps")) {
     plot filename w p pt 5 ps ps palette

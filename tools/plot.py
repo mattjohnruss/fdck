@@ -42,7 +42,7 @@ ax.set_ylabel(r'$t$')
 
 im = ax.imshow(data[0:n_timesteps, :, 4], interpolation='none',
                origin='lower', extent=[x.min(), x.max(), t.min(), t.max()],
-               aspect=aspect_ratio)
+               aspect=aspect_ratio, cmap='inferno')
 
 # ax.set_xlabel(r'$t$')
 # ax.set_ylabel(r'$x$')

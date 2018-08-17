@@ -1,3 +1,9 @@
+if(exist("gif_output")) {
+    set term gif size 1280,720 animate delay 3
+    set output "animate.gif"
+    delay = 0.0
+}
+
 set clip two
 
 set key top right
