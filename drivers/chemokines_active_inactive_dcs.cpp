@@ -68,7 +68,7 @@ public:
 
         trace_file_.open("trace.dat");
         trace_header_ =
-            "t phi_m|_0 dphi_m_dx|_0 a1[phi_m] a2[phi_m] a3[phi_m] M res_0";
+            "t phi_m|_0 dphi_{m}\\\\_dx|_0 M total\\\\_c_u total\\\\_c_b total\\\\_c_s total\\\\_phi_i total\\\\_phi_m";
         trace_file_ << trace_header_ << '\n';
     }
 
@@ -151,11 +151,12 @@ private:
         trace_file_ << time() << " "
                     << u(0, phi_m, 0) << " "
                     << dphi_m_dx << " "
-                    << a1[phi_m] << " "
-                    << a2[phi_m] << " "
-                    << a3[phi_m] << " "
                     << p.M << " "
-                    << residual_(0) << '\n'
+                    << integrate_solution(c_u) << " "
+                    << integrate_solution(c_b) << " "
+                    << integrate_solution(c_s) << " "
+                    << integrate_solution(phi_i) << " "
+                    << integrate_solution(phi_m) << '\n'
                     << std::flush;
     }
 
@@ -472,11 +473,15 @@ int main(int argc, char **argv)
         // TODO remove
         std::cout << "chi is hill with "
                   << "a = " << cf.get<double>("chi_hill_a") << ", "
-                  << "n = " << cf.get<double>("chi_hill_n") << '\n';
+                  << "n = " << cf.get<double>("chi_hill_n") << ", "
+                  << "min = " << cf.get<double>("chi_hill_min") << ", "
+                  << "max = " << cf.get<double>("chi_hill_max") << '\n';;
 
         problem.p.chi =
             std::make_unique<HillFunction>(cf.get<double>("chi_hill_a"),
-                                           cf.get<double>("chi_hill_n"));
+                                           cf.get<double>("chi_hill_n"),
+                                           cf.get<double>("chi_hill_min"),
+                                           cf.get<double>("chi_hill_max"));
     }
     else
     {
