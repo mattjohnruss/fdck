@@ -126,7 +126,7 @@ private:
         p.M = maturation_piecewise_ramp(p.M_a, p.M_b, p.t1, p.t2, p.t3, p.t4);
     }
 
-    void actions_after_solve() override
+    void actions_after_timestep() override
     {
         std::vector<double> a1(n_var_);
         std::vector<double> a2(n_var_);
