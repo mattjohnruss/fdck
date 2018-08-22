@@ -38,6 +38,7 @@ struct ChemokinesParams
     double J_m_right_prop;
     double J_m_left_abs;
     double J_m_right_abs;
+    double J_i_right;
     std::unique_ptr<DifferentiableFunction> chi;
 };
 
@@ -217,7 +218,7 @@ private:
 
             a1[c_u]   = 1.0;                              a2[c_u]   = 0.0;             a3[c_u]   = 0.0;
             a1[c_s]   = 1.0;                              a2[c_s]   = 0.0;             a3[c_s]   = 0.0;
-            a1[phi_i] = 0.0;                              a2[phi_i] = 1.0;             a3[phi_i] = 0.0;
+            a1[phi_i] = 0.0;                              a2[phi_i] = 1.0;             a3[phi_i] = -p.J_i_right*p.M;
             a1[phi_m] = v_phi_m_right - p.J_m_right_prop; a2[phi_m] = -d_right[phi_m]; a3[phi_m] = p.J_m_right_abs;
         }
     }
@@ -455,6 +456,7 @@ int main(int argc, char **argv)
     problem.p.J_m_right_prop = cf.get<double>("J_m_right_prop");
     problem.p.J_m_left_abs   = cf.get<double>("J_m_left_abs");
     problem.p.J_m_right_abs  = cf.get<double>("J_m_right_abs");
+    problem.p.J_i_right      = cf.get<double>("J_i_right");
 
     // Construct the type of DifferentiableFunction in the config for chi
     // the std::unique_ptr will destroy the object for us when it goes out of scope
