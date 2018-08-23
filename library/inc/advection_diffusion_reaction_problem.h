@@ -21,8 +21,7 @@ namespace mjrfd
 
         /// Constructor
         AdvectionDiffusionReactionProblem(const unsigned n_var,
-                                          const unsigned n_node,
-                                          const double dt = 0.0);
+                                          const unsigned n_node);
 
         /// Destructor
         virtual ~AdvectionDiffusionReactionProblem();

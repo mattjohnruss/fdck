@@ -5,9 +5,8 @@ namespace mjrfd
     /// Constructor
     AdvectionDiffusionReactionProblem::AdvectionDiffusionReactionProblem(
         const unsigned n_var,
-        const unsigned n_node,
-        const double dt) :
-        Problem(n_var, n_node, dt),
+        const unsigned n_node) :
+        Problem(n_var, n_node),
         n_node_(n_node),
         dx_(1.0/(n_node-1)),
         cn_theta_(1.0),

@@ -7,8 +7,7 @@
 namespace mjrfd
 {
     Problem::Problem(const unsigned n_var,
-                     const unsigned n_dof_per_var,
-                     const double dt) :
+                     const unsigned n_dof_per_var) :
         n_dof_per_var_(n_dof_per_var),
         n_dof_(n_var*n_dof_per_var),
         n_var_(n_var),
@@ -18,7 +17,6 @@ namespace mjrfd
         residual_(n_dof_),
         jacobian_(n_dof_, n_dof_),
         time_(0.0),
-        dt_(dt),
         steady_(false),
         Max_residual(1.0e-8),
         Max_newton_iterations(20),
@@ -194,9 +192,10 @@ namespace mjrfd
         }
     }
 
-    void Problem::unsteady_solve()
+    void Problem::unsteady_solve(const double dt)
     {
-        time_ += dt_;
+        time_ += dt;
+        dt_ = dt;
 
         if(terse_logging_ == true)
         {

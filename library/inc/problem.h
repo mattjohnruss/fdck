@@ -14,14 +14,13 @@ namespace mjrfd
     {
     public:
         Problem(const unsigned n_var,
-                const unsigned n_dof_per_var,
-                const double dt = 0.0);
+                const unsigned n_dof_per_var);
 
         virtual ~Problem();
 
         void solve();
         void steady_solve();
-        void unsteady_solve();
+        void unsteady_solve(const double dt);
 
         const bool is_steady() const;
         virtual void make_steady();

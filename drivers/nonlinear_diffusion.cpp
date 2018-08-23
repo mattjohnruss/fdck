@@ -19,8 +19,8 @@ enum Variable
 class NonlinearDiffusionProblem1D : public AdvectionDiffusionReactionProblem
 {
 public:
-    NonlinearDiffusionProblem1D(const unsigned n_node, const double dt) :
-        AdvectionDiffusionReactionProblem(1, n_node, dt)
+    NonlinearDiffusionProblem1D(const unsigned n_node) :
+        AdvectionDiffusionReactionProblem(1, n_node)
     {
         enable_bc(Boundary::Left,  { c });
         enable_bc(Boundary::Right, { c });
@@ -160,7 +160,7 @@ int main(int argc, char **argv)
         output_interval = std::atoi(argv[5]);
     }
 
-    NonlinearDiffusionProblem1D problem(n_node, dt);
+    NonlinearDiffusionProblem1D problem(n_node);
 
     std::ifstream config_file(argv[1]);
     Config cf(config_file);
@@ -209,7 +209,7 @@ int main(int argc, char **argv)
     while(problem.time() <= t_max)
     {
         // solve for current timestep
-        problem.unsteady_solve();
+        problem.unsteady_solve(dt);
 
         if(i % output_interval == 0)
         {

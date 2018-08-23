@@ -54,8 +54,8 @@ enum Variable
 class ChemokinesProblem1D : public AdvectionDiffusionReactionProblem
 {
 public:
-    ChemokinesProblem1D(const unsigned n_node, const double dt) :
-        AdvectionDiffusionReactionProblem(5, n_node, dt)
+    ChemokinesProblem1D(const unsigned n_node) :
+        AdvectionDiffusionReactionProblem(5, n_node)
     {
         enable_bc(Boundary::Left,  { c_u, c_s, phi_i, phi_m });
         enable_bc(Boundary::Right, { c_u, c_s, phi_i, phi_m });
@@ -420,7 +420,7 @@ int main(int argc, char **argv)
         output_interval = std::atoi(argv[5]);
     }
 
-    ChemokinesProblem1D problem(n_node, dt);
+    ChemokinesProblem1D problem(n_node);
 
     std::ifstream config_file(argv[1]);
     Config cf;
@@ -558,7 +558,7 @@ int main(int argc, char **argv)
         while(problem.time() <= t_max)
         {
             // solve for current timestep
-            problem.unsteady_solve();
+            problem.unsteady_solve(dt);
 
             if(i % output_interval == 0)
             {
