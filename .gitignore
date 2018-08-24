@@ -2,4 +2,5 @@ build
 build-debug
 build-mingw
 build-reldebug
+results
 vendor/eigen
