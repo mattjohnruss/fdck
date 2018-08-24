@@ -2,6 +2,7 @@
 #include <config.h>
 
 #include <fstream>
+#include <iomanip>
 
 using namespace mjrfd;
 
