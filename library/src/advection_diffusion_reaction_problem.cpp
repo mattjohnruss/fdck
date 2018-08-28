@@ -5,10 +5,14 @@ namespace mjrfd
     /// Constructor
     AdvectionDiffusionReactionProblem::AdvectionDiffusionReactionProblem(
         const unsigned n_var,
-        const unsigned n_node) :
+        const unsigned n_node,
+        const double a,
+        const double b) :
         Problem(n_var, n_node),
         n_node_(n_node),
-        dx_(1.0/(n_node-1)),
+        a_(a),
+        b_(b),
+        dx_((b - a)/(n_node-1)),
         cn_theta_(1.0),
         time_factor_(1.0),
         left_bc_(n_var, false),
@@ -844,6 +848,6 @@ namespace mjrfd
 
     const double AdvectionDiffusionReactionProblem::x(const unsigned i) const
     {
-        return static_cast<double>(i)/static_cast<double>(n_node_-1);
+        return a_ + static_cast<double>(i)*dx_;
     }
 }

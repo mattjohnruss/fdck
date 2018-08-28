@@ -21,7 +21,9 @@ namespace mjrfd
 
         /// Constructor
         AdvectionDiffusionReactionProblem(const unsigned n_var,
-                                          const unsigned n_node);
+                                          const unsigned n_node,
+                                          const double a = 0.0,
+                                          const double b = 1.0);
 
         /// Destructor
         virtual ~AdvectionDiffusionReactionProblem();
@@ -142,6 +144,12 @@ namespace mjrfd
 
         /// The number of nodes
         const unsigned n_node_;
+
+        /// Location of left-hand boundary
+        const double a_;
+
+        /// Location of right-hand boundary
+        const double b_;
 
         /// Spatial step size
         const double dx_;
