@@ -9,6 +9,10 @@ namespace mjrfd
     public:
         virtual double value(const double c) const = 0;
         virtual double deriv(const double c) const = 0;
+
+        virtual ~DifferentiableFunction()
+        {
+        }
     };
 
     class ConstantFunction : public DifferentiableFunction
