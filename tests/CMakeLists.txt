@@ -3,8 +3,8 @@ find_package(Catch2 REQUIRED)
 add_library(tests_main tests_main.cpp)
 target_link_libraries(tests_main Catch2::Catch2)
 
-add_executable(test_blah test_blah.cpp)
-target_link_libraries(test_blah library tests_main)
+add_executable(test_config test_config.cpp)
+target_link_libraries(test_config library tests_main)
 
 #enable_testing()
 
