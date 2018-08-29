@@ -71,7 +71,7 @@ namespace mjrfd
                 out << time() << ' ';
             }
 
-            out << static_cast<double>(i)/static_cast<double>(n_node_-1) << ' ';
+            out << x(i) << ' ';
 
             for(unsigned var = 0; var < n_var_; ++var)
             {
@@ -106,7 +106,7 @@ namespace mjrfd
                 out << time() << ' ';
             }
 
-            x = static_cast<double>(i)/static_cast<double>(n_node_-1);
+            x = this->x(i);
             out << x << ' ';
 
             exact_solution(time(), x, sol);
