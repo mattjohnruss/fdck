@@ -50,9 +50,10 @@ namespace mjrfd
         /// Read and parse the command-line arguments adding the params to the
         /// map. Currently limited to simple "--key value" pairs of long-style
         /// options which always have values. Ignores items in argv until it
-        /// finds an argument starting with "--" (allows drivers to have custom
-        /// positional arguments without much hassle here), and then all
-        /// arguments are assumed to be of the above format
+        /// finds an argument starting with "--", but not just "-" to allow for
+        /// negative numbers, (allows drivers to have custom positional
+        /// arguments without much hassle here), and then all arguments are
+        /// assumed to be of the above format
         void parse_command_line(int argc, char **argv);
 
         /// Print all key-value pairs to stream out

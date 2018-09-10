@@ -57,7 +57,9 @@ namespace mjrfd
     {
         // Find the index of the first command line argument that starts with "--"
         // Arguments without "--" can be used directly by the driver
-        // program and are ignored by the Config class
+        // program and are ignored by the Config class. Note that an argument
+        // that starts with just "-" could be a negative number and is not
+        // caught here.
         unsigned first_param_index = 0;
         for(unsigned i = 1; i < argc; ++i)
         {
