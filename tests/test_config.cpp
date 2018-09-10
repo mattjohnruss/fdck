@@ -21,11 +21,12 @@ namespace mjrfd
             REQUIRE( config.get<bool>("b") == false );
             REQUIRE( config.get<bool>("c") == true );
             REQUIRE( config.get<std::string>("d") == "AString" );
+            REQUIRE( config.get_or<double>("e", 12.3) == 12.3 );
 
             SECTION( "Override configuration file with command line" )
             {
-                int argc = 3;
-                const char * const argv[] = { "test_config", "--a", "4.6" };
+                int argc = 5;
+                const char * const argv[] = { "test_config", "--a", "4.6", "--e", "15.21" };
 
                 config.parse_command_line(argc, const_cast<char **>(argv));
 
@@ -33,6 +34,7 @@ namespace mjrfd
                 REQUIRE( config.get<bool>("b") == false );
                 REQUIRE( config.get<bool>("c") == true );
                 REQUIRE( config.get<std::string>("d") == "AString" );
+                REQUIRE( config.get_or<double>("e", 12.3) == 15.21 );
             }
         }
 

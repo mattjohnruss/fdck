@@ -43,6 +43,24 @@ namespace mjrfd
             return get_impl<T>(key);
         }
 
+        /// Get the value associated with key from the parameters as with
+        /// get(), unless the key does not exist in which case the default
+        /// value def is returned
+        template<class T>
+        const T get_or(const std::string &key, const T &def)
+        {
+            unsigned count = params_.count(key);
+
+            if(count == 1)
+            {
+                return get_impl<T>(key);
+            }
+            else // count must be 0
+            {
+                return def;
+            }
+        }
+
         /// Read the config file (or any istream) and parse its contents,
         /// adding the params to the map
         void parse_config_file(std::istream &is);
