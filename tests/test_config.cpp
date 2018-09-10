@@ -8,7 +8,6 @@
 
 namespace mjrfd
 {
-
     TEST_CASE( "Configuration file and command line arguments", "[config]" )
     {
         mjrfd::Config config;
