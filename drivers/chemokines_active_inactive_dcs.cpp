@@ -462,7 +462,7 @@ int main(int argc, char **argv)
     // the std::unique_ptr will destroy the object for us when it goes out of scope
     std::string chi_type = cf.get<std::string>("chi");
 
-    if(chi_type == "constant")
+    if(chi_type == "constant" || chi_type == "const")
     {
         // TODO remove
         std::cout << "chi is constant with value " << cf.get<double>("chi_const_val") << '\n';
@@ -494,7 +494,7 @@ int main(int argc, char **argv)
     // Do a similar thing for D_mu
     std::string D_mu_type = cf.get<std::string>("D_mu");
 
-    if(D_mu_type == "constant")
+    if(D_mu_type == "constant" || D_mu_type == "const")
     {
         // TODO remove
         std::cout << "D_mu is constant with value " << cf.get<double>("D_mu_const_val") << '\n';
