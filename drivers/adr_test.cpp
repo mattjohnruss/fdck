@@ -3,6 +3,8 @@
 #include <fstream>
 #include <iomanip>
 
+#include <fenv.h>
+
 using namespace mjrfd;
 
 enum Variable
@@ -14,8 +16,8 @@ enum Variable
 class TestProblem : public AdvectionDiffusionReactionProblem
 {
 public:
-    TestProblem(const unsigned n_node, const double dt) :
-        AdvectionDiffusionReactionProblem(2, n_node, dt)
+    TestProblem(const unsigned n_node) :
+        AdvectionDiffusionReactionProblem(2, n_node)
     {
         enable_bc(Boundary::Left,  { c_0, c_1 });
         enable_bc(Boundary::Right, { c_0, c_1 });
@@ -54,7 +56,6 @@ private:
                std::vector<double> &d) const override
     {
         const double x = this->x(i);
-        static constexpr double pi = std::acos(-1.0);
 
         d[c_0] = 1.0;
         d[c_1] = 2.0 - 5.0*x*u(t, c_0, i);
@@ -116,21 +117,18 @@ private:
                         std::vector<double> &sol) const override
     {
         using std::atan;
+        using std::exp;
         using std::sqrt;
 
         sol[0] = 1.0 - x;
         sol[1] = (exp((4.0*atan(sqrt(5.0/3.0)))/sqrt(15.0)) - exp((2.0*(atan(sqrt(5.0/3.0)) + atan(sqrt(5.0/3.0)*(-1.0 + 2.0*x))))/sqrt(15.0)))/(-1.0 + exp((4.0*atan(sqrt(5.0/3.0)))/sqrt(15.0)));
-
-        //using std::exp;
-        //using std::log;
-
-        //sol[0] = (exp(1.0) - exp(x))/(exp(1.0) - 1.0);
-        //sol[1] = 1.0 - log(1.0 + x)/log(2.0);
     }
 };
 
 int main(int argc, char **argv)
 {
+    feenableexcept(FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW | FE_UNDERFLOW);
+
     unsigned n_node = 11;
 
     if(argc == 2)
@@ -138,7 +136,9 @@ int main(int argc, char **argv)
         n_node = std::atoi(argv[1]);
     }
 
-    TestProblem problem(n_node, 0.01);
+    //double dt = 0.01;
+
+    TestProblem problem(n_node);
 
     problem.enable_terse_logging();
 
@@ -181,6 +181,16 @@ int main(int argc, char **argv)
     problem.output(outfile);
     outfile.close();
 
+    std::cout << std::endl;
+
+    std::cout << "integral of c_0 = "
+              << problem.integrate_solution(c_0)
+              << '\n';
+
+    std::cout << "integral of c_1 = "
+              << problem.integrate_solution(c_1)
+              << '\n';
+
     // output the exact solution
     std::sprintf(filename, "output_exact.csv");
     outfile.open(filename);
@@ -208,7 +218,7 @@ int main(int argc, char **argv)
     //while(problem.time() <= t_max)
     //{
         //// solve for current timestep
-        //problem.unsteady_solve();
+        //problem.unsteady_solve(dt);
 
         //if(i % output_interval == 0)
         //{
