@@ -6,7 +6,7 @@ message("Build type: ${CMAKE_BUILD_TYPE}")
 
 if(CMAKE_CROSSCOMPILING)
     message("Cross compiling!")
-endif(CMAKE_CROSSCOMPILING)
+endif()
 
 include_directories(${fd_diff++_SOURCE_DIR}/inc)
 
@@ -24,9 +24,13 @@ if(NOT CMAKE_CROSSCOMPILING)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-    endif(CMAKE_BUILD_TYPE STREQUAL "Release")
-endif(NOT CMAKE_CROSSCOMPILING)
+        if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        else()
+            message("Compiling with Clang - disabling LTO!")
+        endif()
+    endif()
+endif()
 
 #set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -static")
 set(CMAKE_EXE_LINKER_FLAGS "-static")
