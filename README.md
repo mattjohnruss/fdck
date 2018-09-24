@@ -28,4 +28,4 @@ Then run
 make <options> <targets>
 ```
 
-where `<targets>` contains the list of drivers etc. to build (all by default), and `<options>` usually contains just `-jN`, to compile using N cpus. Add `VERBOSE=1` to `<options>` to see exactly which commands are run by `make` (this is a `cmake` specific option).
+where `<targets>` contains the list of drivers etc. to build (just the library and tests by default), and `<options>` usually contains just `-jN`, to compile using N cpus. Add `VERBOSE=1` to `<options>` to see exactly which commands are run by `make` (this is a `cmake` specific option).
