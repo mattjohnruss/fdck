@@ -14,7 +14,6 @@ namespace mjrfd
         b_(b),
         dx_((b - a)/(n_node-1)),
         cn_theta_(1.0),
-        time_factor_(1.0),
         left_bc_(n_var, false),
         right_bc_(n_var, false),
         spatial_terms_(n_var, false),
@@ -36,7 +35,6 @@ namespace mjrfd
     void AdvectionDiffusionReactionProblem::make_steady()
     {
         Problem::make_steady();
-        time_factor_ = 0.0;
         cn_theta_backup_ = cn_theta_;
         cn_theta_ = 1.0;
     }
@@ -44,7 +42,6 @@ namespace mjrfd
     void AdvectionDiffusionReactionProblem::make_unsteady()
     {
         Problem::make_unsteady();
-        time_factor_ = 1.0;
         cn_theta_ = cn_theta_backup_;
     }
 
@@ -193,7 +190,10 @@ namespace mjrfd
                 else
                 {
                     // Time derivatives
-                    residual_(index) += time_factor_*dx_*dx_/dt_*(u(0, var, i) - u(1, var, i));
+                    if(is_steady() == false)
+                    {
+                        residual_(index) += dx_*dx_/dt_*(u(0, var, i) - u(1, var, i));
+                    }
 
                     // Add the spatial terms to the residual for this variable
                     // if they are enabled
@@ -491,7 +491,10 @@ namespace mjrfd
                 else
                 {
                     // Time derivatives
-                    triplet_list.push_back( T(index, index, time_factor_*dx_*dx_/dt_) );
+                    if(is_steady() == false)
+                    {
+                        triplet_list.push_back( T(index, index, dx_*dx_/dt_) );
+                    }
 
                     // Add the spatial terms to the residual for this variable
                     // if they are enabled

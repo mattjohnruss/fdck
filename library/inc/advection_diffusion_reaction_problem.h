@@ -161,9 +161,6 @@ namespace mjrfd
         /// Backup for Crank-Nicolson theta
         double cn_theta_backup_;
 
-        /// Time factor for switching between steady/unsteady solutions
-        double time_factor_;
-
         /// Vector of boolean flags for whether the left boundary condition is
         /// enabled for each variable
         std::vector<bool> left_bc_;

@@ -17,6 +17,7 @@ namespace mjrfd
         residual_(n_dof_),
         jacobian_(n_dof_, n_dof_),
         time_(0.0),
+        dt_(0.01),
         steady_(false),
         Max_residual(1.0e-8),
         Max_newton_iterations(20),
