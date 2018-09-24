@@ -1,6 +1,4 @@
 build
-build-debug
-build-mingw
-build-reldebug
+build-*
 results
 vendor/eigen
