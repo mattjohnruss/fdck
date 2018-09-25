@@ -61,7 +61,7 @@ namespace mjrfd
         // that starts with just "-" could be a negative number and is not
         // caught here.
         unsigned first_param_index = 0;
-        for(unsigned i = 1; i < argc; ++i)
+        for(int i = 1; i < argc; ++i)
         {
             std::string arg(argv[i]);
 
@@ -83,7 +83,7 @@ namespace mjrfd
         assert((argc - first_param_index)%2 == 0 && "Not every parameter has an argument!");
 
         // loop over the supplied parameters
-        for(unsigned i = first_param_index; i < argc; i += 2)
+        for(int i = first_param_index; i < argc; i += 2)
         {
             // get the key and value as strings
             std::string key = argv[i];
@@ -130,7 +130,7 @@ namespace mjrfd
 
     /// Specialise get_impl for double
     template<>
-    const double Config::get_impl(const std::string &key)
+    double Config::get_impl(const std::string &key)
     {
         // convert value to a double and return it
         return std::atof(params_[key].c_str());
@@ -138,7 +138,7 @@ namespace mjrfd
 
     /// Specialise get_impl for bool
     template<>
-    const bool Config::get_impl(const std::string &key)
+    bool Config::get_impl(const std::string &key)
     {
         // convert value to a bool and return it
         return static_cast<bool>(std::atoi(params_[key].c_str()));
@@ -146,7 +146,7 @@ namespace mjrfd
 
     /// Specialise get_impl for string
     template<>
-    const std::string Config::get_impl(const std::string &key)
+    std::string Config::get_impl(const std::string &key)
     {
         // convert value to a bool and return it
         return params_[key];

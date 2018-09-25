@@ -604,7 +604,7 @@ namespace mjrfd
                                 {
                                     int i2 = i+j+k;
 
-                                    if(i2 < 0 || i2 >= n_node_)
+                                    if(i2 < 0 || i2 >= static_cast<int>(n_node_))
                                     {
                                         // if the index we're trying is out of
                                         // the possible range then skip it
@@ -719,8 +719,8 @@ namespace mjrfd
         return integral;
     }
 
-    void AdvectionDiffusionReactionProblem::exact_solution(const double time,
-                                                           const double x,
+    void AdvectionDiffusionReactionProblem::exact_solution(const double,
+                                                           const double,
                                                            std::vector<double> &sol) const
     {
         for(unsigned var = 0; var < n_var_; ++var)
@@ -729,8 +729,8 @@ namespace mjrfd
         }
     }
 
-    void AdvectionDiffusionReactionProblem::get_dbc_du(Boundary b,
-                    const unsigned i2,
+    void AdvectionDiffusionReactionProblem::get_dbc_du(Boundary,
+                    const unsigned,
                     std::vector<std::vector<double>> &da1_du,
                     std::vector<std::vector<double>> &da2_du,
                     std::vector<std::vector<double>> &da3_du) const
@@ -740,12 +740,14 @@ namespace mjrfd
             for(unsigned var2 = 0; var2 < n_var_; ++var2)
             {
                 da1_du[var][var2] = 0.0;
+                da2_du[var][var2] = 0.0;
+                da3_du[var][var2] = 0.0;
             }
         }
     }
 
-    void AdvectionDiffusionReactionProblem::get_dd_du(const unsigned t,
-                                                      const unsigned i,
+    void AdvectionDiffusionReactionProblem::get_dd_du(const unsigned,
+                                                      const unsigned,
                                                       std::vector<std::vector<double>> &dd_du) const
     {
         for(unsigned var = 0; var < n_var_; ++var)
@@ -757,16 +759,16 @@ namespace mjrfd
         }
     }
 
-    void AdvectionDiffusionReactionProblem::get_dv_du(const unsigned i,
-                                                      const unsigned var,
-                                                      const unsigned i2,
-                                                      const unsigned var2,
+    void AdvectionDiffusionReactionProblem::get_dv_du(const unsigned,
+                                                      const unsigned,
+                                                      const unsigned,
+                                                      const unsigned,
                                                       double &dv_du) const
     {
         dv_du = 0.0;
     }
 
-    void AdvectionDiffusionReactionProblem::get_dr_du(const std::vector<double> &u,
+    void AdvectionDiffusionReactionProblem::get_dr_du(const std::vector<double> &,
                                                       std::vector<std::vector<double>> &dr_du) const
     {
         for(unsigned var = 0; var < n_var_; ++var)
@@ -849,7 +851,7 @@ namespace mjrfd
             return stencil::central_1::weights;
     }
 
-    const double AdvectionDiffusionReactionProblem::x(const unsigned i) const
+    double AdvectionDiffusionReactionProblem::x(const unsigned i) const
     {
         return a_ + static_cast<double>(i)*dx_;
     }

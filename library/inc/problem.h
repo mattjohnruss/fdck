@@ -22,12 +22,12 @@ namespace mjrfd
         void steady_solve();
         void unsteady_solve(const double dt);
 
-        const bool is_steady() const;
+        bool is_steady() const;
         virtual void make_steady();
         virtual void make_unsteady();
 
         double& time();
-        const double time() const;
+        double time() const;
 
         virtual void output(std::ostream &out) const = 0;
         virtual void output_exact(std::ostream &out) const = 0;
@@ -35,7 +35,7 @@ namespace mjrfd
         void dump_res_and_jac(std::ostream &res_stream, std::ostream &jac_stream) const;
 
         template<class T>
-        const double u(const T variable, const unsigned i) const
+        double u(const T variable, const unsigned i) const
         {
             unsigned v = static_cast<unsigned>(variable);
             assert(v >= 0 && v < n_var_);
@@ -45,7 +45,7 @@ namespace mjrfd
         }
 
         template<class T>
-        const double u(const unsigned t, const T variable, const unsigned i) const
+        double u(const unsigned t, const T variable, const unsigned i) const
         {
             unsigned v = static_cast<unsigned>(variable);
             assert(t >= 0 && t < n_time_history_);

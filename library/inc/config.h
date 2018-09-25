@@ -34,7 +34,7 @@ namespace mjrfd
         /// Get the value associated with key from the parameters, interpreted
         /// as templated type T. Must be specialised for each required type.
         template<class T>
-        const T get(const std::string &key)
+        T get(const std::string &key)
         {
             // check the key is actually in the map
             assert(params_.count(key) == 1);
@@ -47,7 +47,7 @@ namespace mjrfd
         /// get(), unless the key does not exist in which case the default
         /// value def is returned
         template<class T>
-        const T get_or(const std::string &key, const T &def)
+        T get_or(const std::string &key, const T &def)
         {
             unsigned count = params_.count(key);
 
@@ -87,6 +87,6 @@ namespace mjrfd
         /// Function to perform actual conversion to templated type - must be
         /// specialised for each type required
         template<class T>
-        const T get_impl(const std::string &key);
+        T get_impl(const std::string &key);
     };
 }

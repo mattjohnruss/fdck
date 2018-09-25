@@ -140,7 +140,7 @@ namespace mjrfd
         central_1_stencil_weights(unsigned i) const;
 
         /// Calculate the x coordinate from the node number i
-        const double x(const unsigned i) const;
+        double x(const unsigned i) const;
 
         /// The number of nodes
         const unsigned n_node_;

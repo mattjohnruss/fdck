@@ -212,7 +212,7 @@ namespace mjrfd
         actions_after_timestep();
     }
 
-    const bool Problem::is_steady() const
+    bool Problem::is_steady() const
     {
         return steady_;
     }
@@ -232,7 +232,7 @@ namespace mjrfd
         return time_;
     }
 
-    const double Problem::time() const
+    double Problem::time() const
     {
         return time_;
     }
