@@ -10,8 +10,6 @@ endif()
 
 include_directories(${fd_diff++_SOURCE_DIR}/inc)
 
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static-libgcc")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -static-libgcc -static-libstdc++")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wextra -Wpedantic")
 
 # force RelWithDebInfo builds to use -O3 optimisation, which is what Release
@@ -32,7 +30,6 @@ if(NOT CMAKE_CROSSCOMPILING)
     endif()
 endif()
 
-#set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -static")
 set(CMAKE_EXE_LINKER_FLAGS "-static")
 
 add_subdirectory(library)
