@@ -10,6 +10,11 @@ namespace mjrfd
         virtual double value(const double c) const = 0;
         virtual double deriv(const double c) const = 0;
 
+        double operator()(const double c) const
+        {
+            return value(c);
+        }
+
         virtual ~DifferentiableFunction()
         {
         }
@@ -23,12 +28,12 @@ namespace mjrfd
         {
         }
 
-        double value(const double c) const override
+        double value(const double) const override
         {
             return value_;
         }
 
-        double deriv(const double c) const override
+        double deriv(const double) const override
         {
             return 0.0;
         }
