@@ -1,7 +1,6 @@
 #include <config.h>
 
 #include <algorithm>
-#include <cassert>
 #include <iomanip>
 #include <sstream>
 
