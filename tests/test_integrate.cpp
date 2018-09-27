@@ -9,6 +9,15 @@ namespace mjrfd
     {
         using utilities::integrate_trapezium;
 
+        SECTION( "Array of function values" )
+        {
+            double dx = 0.15;
+            Eigen::VectorXd v(8);
+            v << 0.2, 0.5, 0.6, 0.9, 1.6, 3.1, 2.7, 2.4;
+
+            REQUIRE( integrate_trapezium(v, dx) == Approx(1.605) );
+        }
+
         SECTION( "Define functions with lambdas" )
         {
             SECTION( "Constant function" )

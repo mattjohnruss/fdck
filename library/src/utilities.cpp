@@ -18,5 +18,10 @@ namespace mjrfd
 
             return integral;
         }
+
+        double l2_norm(const Eigen::VectorXd &v, const double dx)
+        {
+            return std::sqrt(integrate_trapezium(v.array().square(), dx));
+        }
     }
 }
