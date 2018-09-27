@@ -3,8 +3,16 @@ find_package(Catch2 REQUIRED)
 add_library(tests_main tests_main.cpp)
 target_link_libraries(tests_main Catch2::Catch2)
 
-add_executable(test_config test_config.cpp)
-target_link_libraries(test_config library tests_main)
+file(GLOB TESTS_SRC RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test_*.cpp)
+
+message("Scanning for tests:")
+
+foreach(test_src ${TESTS_SRC})
+    string(REPLACE ".cpp" "" test ${test_src})
+    message("Found test \"${test}\"")
+    add_executable(${test} ${test_src})
+    target_link_libraries(${test} PUBLIC library tests_main)
+endforeach()
 
 #enable_testing()
 

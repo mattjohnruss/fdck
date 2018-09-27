@@ -1,4 +1,5 @@
 #include <advection_diffusion_reaction_problem.h>
+#include <utilities.h>
 
 namespace mjrfd
 {
@@ -710,13 +711,7 @@ namespace mjrfd
     {
         assert(var >= 0 && var <= n_var_-1);
 
-        double integral = 0.0;
-
-        integral += 0.5*dx_*u_[0](var*n_node_ + 0);
-        integral += (dx_*u_[0]).segment(var*n_node_ + 1, n_node_ - 2).sum();
-        integral += 0.5*dx_*u_[0](var*n_node_ + n_node_ - 1);
-
-        return integral;
+        return utilities::integrate_trapezium(u_[0].segment(var*n_node_, n_node_), dx_);
     }
 
     void AdvectionDiffusionReactionProblem::exact_solution(const double,
