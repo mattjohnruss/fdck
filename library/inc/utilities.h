@@ -35,5 +35,17 @@ namespace mjrfd
 
             return integrate_trapezium(v, dx);
         }
+
+        double l2_norm(const Eigen::VectorXd &v, const double dx);
+
+        template<class F>
+        double l2_norm(const F &f,
+                       const double a,
+                       const double b,
+                       const unsigned n)
+        {
+            auto f_sq = [&](double x) { return std::pow(f(x), 2); };
+            return std::sqrt(integrate_trapezium(f_sq, a, b, n));
+        }
     }
 }

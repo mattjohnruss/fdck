@@ -1,4 +1,5 @@
 #include <advection_diffusion_reaction_problem.h>
+#include <utilities.h>
 
 #include <catch2/catch.hpp>
 
@@ -76,6 +77,25 @@ public:
         return std::abs((u - exact_u[0])/exact_u[0]);
     }
 
+    double l2_error() const
+    {
+        Eigen::VectorXd exact_solution(n_node_);
+        Eigen::VectorXd num_solution(n_node_);
+
+        for(unsigned i = 0; i < n_node_; ++i)
+        {
+            double x = this->x(i);
+            std::vector<double> sol(1);
+
+            this->exact_solution(0.0, x, sol);
+            exact_solution(i) = sol[0];
+
+            num_solution(i) = u(0, c, i);
+        }
+
+        return utilities::l2_norm(num_solution - exact_solution, dx_);
+    }
+
     AdvectionDiffusionParams p;
 
 private:
@@ -140,5 +160,7 @@ namespace mjrfd
         {
             CHECK( problem.absolute_error_with_exact_solution(i) <= 1.0e-8 );
         }
+
+        CHECK( problem.l2_error() <= 1.0e-8 );
     }
 }
