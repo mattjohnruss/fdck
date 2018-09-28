@@ -714,6 +714,16 @@ namespace mjrfd
         return utilities::integrate_trapezium(u_[0].segment(var*n_node_, n_node_), dx_);
     }
 
+    double AdvectionDiffusionReactionProblem::a() const
+    {
+        return a_;
+    }
+
+    double AdvectionDiffusionReactionProblem::b() const
+    {
+        return b_;
+    }
+
     void AdvectionDiffusionReactionProblem::exact_solution(const double,
                                                            const double,
                                                            std::vector<double> &sol) const

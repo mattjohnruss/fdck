@@ -71,6 +71,12 @@ namespace mjrfd
         /// (for now)
         double integrate_solution(const unsigned var) const;
 
+        /// Get the location of left-hand boundary
+        double a() const;
+
+        /// Get the location of right-hand boundary
+        double b() const;
+
     private:
         /// Get the coefficients a1, a2, a3 for the (Robin) boundary conditions
         virtual void get_bc(Boundary b,
