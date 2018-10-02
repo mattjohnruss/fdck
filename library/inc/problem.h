@@ -111,9 +111,8 @@ namespace mjrfd
 
         bool steady_;
 
-        // TODO rewrite so that these accept a vector/matrix/vector of triplets etc by reference
-        virtual void calculate_residual() = 0;
-        virtual void calculate_jacobian() = 0;
+        virtual void calculate_residual(Eigen::VectorXd &residual) = 0;
+        virtual void calculate_jacobian(Eigen::SparseMatrix<double> &jacobian);
 
         virtual void actions_before_timestep();
         virtual void actions_after_timestep();

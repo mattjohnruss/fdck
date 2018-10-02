@@ -118,10 +118,10 @@ namespace mjrfd
     }
 
     /// Calculate the residual vector
-    void AdvectionDiffusionReactionProblem::calculate_residual()
+    void AdvectionDiffusionReactionProblem::calculate_residual(Eigen::VectorXd &residual)
     {
         // Set the residuals to zero
-        residual_.setZero();
+        residual.setZero();
 
         // Storage for the diffusion coefficients
         std::vector<double> d(n_var_);
@@ -172,20 +172,20 @@ namespace mjrfd
                 // Boundary conditions
                 if(i == 0 && left_bc_[var] == true)
                 {
-                    residual_(index) += (a1_left[var]*u(0, var, i) - a3_left[var])*dx_*dx_;
+                    residual(index) += (a1_left[var]*u(0, var, i) - a3_left[var])*dx_*dx_;
 
                     for(const auto& [j, w] : stencil::forward_1::weights)
                     {
-                        residual_(index) += w*a2_left[var]*u(0, var, i+j)*dx_;
+                        residual(index) += w*a2_left[var]*u(0, var, i+j)*dx_;
                     }
                 }
                 else if(i == n_node_-1 && right_bc_[var] == true)
                 {
-                    residual_(index) += (a1_right[var]*u(0, var, i) - a3_right[var])*dx_*dx_;
+                    residual(index) += (a1_right[var]*u(0, var, i) - a3_right[var])*dx_*dx_;
 
                     for(const auto& [j, w] : stencil::backward_1::weights)
                     {
-                        residual_(index) += w*a2_right[var]*u(0, var, i+j)*dx_;
+                        residual(index) += w*a2_right[var]*u(0, var, i+j)*dx_;
                     }
                 }
                 else
@@ -193,7 +193,7 @@ namespace mjrfd
                     // Time derivatives
                     if(is_steady() == false)
                     {
-                        residual_(index) += dx_*dx_/dt_*(u(0, var, i) - u(1, var, i));
+                        residual(index) += dx_*dx_/dt_*(u(0, var, i) - u(1, var, i));
                     }
 
                     // Add the spatial terms to the residual for this variable
@@ -260,7 +260,7 @@ namespace mjrfd
                             // Only add diffusion terms if the coefficient is strictly positive
                             if(d_lerp_var > 0.0)
                             {
-                                residual_(index) += -4.0*d_lerp_var*w*(cn_theta_*du_dx_0 + (1.0-cn_theta_)*du_dx_1);
+                                residual(index) += -4.0*d_lerp_var*w*(cn_theta_*du_dx_0 + (1.0-cn_theta_)*du_dx_1);
                             }
                         }
 
@@ -288,22 +288,23 @@ namespace mjrfd
                             // magnitude is strictly positive
                             if(std::abs(v) > 0.0)
                             {
-                                residual_(index) += dx_*v*w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j));
+                                residual(index) += dx_*v*w*(cn_theta_*u(0, var, i+j) + (1.0-cn_theta_)*u(1, var, i+j));
                             }
                         }
                     }
 
                     // Reaction
-                    residual_(index) += -dx_*dx_*(cn_theta_*r[var] + (1.0-cn_theta_)*r_old[var]);
+                    residual(index) += -dx_*dx_*(cn_theta_*r[var] + (1.0-cn_theta_)*r_old[var]);
                 }
             }
         }
     }
 
     /// Calculate the jacobian matrix
-    void AdvectionDiffusionReactionProblem::calculate_jacobian()
+    void AdvectionDiffusionReactionProblem::calculate_jacobian(
+        Eigen::SparseMatrix<double> &jacobian)
     {
-        jacobian_.setZero();
+        jacobian.setZero();
 
         // Vector of triplets for constructing the sparse jacobian matrix
         std::vector<T> triplet_list;
@@ -641,8 +642,8 @@ namespace mjrfd
             }
         }
 
-        jacobian_.setFromTriplets(triplet_list.begin(), triplet_list.end());
-        jacobian_.makeCompressed();
+        jacobian.setFromTriplets(triplet_list.begin(), triplet_list.end());
+        jacobian.makeCompressed();
     }
 
     void AdvectionDiffusionReactionProblem::enable_bc(Boundary b, const std::vector<unsigned> &vars)

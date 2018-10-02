@@ -41,10 +41,10 @@ namespace mjrfd
         void output_exact(std::ostream &out) const override;
 
         /// Calculate the residual vector
-        void calculate_residual() override;
+        void calculate_residual(Eigen::VectorXd &residual) override;
 
         /// Calculate the jacobian matrix
-        void calculate_jacobian() override;
+        void calculate_jacobian(Eigen::SparseMatrix<double> &jacobian) override;
 
         /// Enable boundary condition on boundary b for all variables in vars
         void enable_bc(Boundary b, const std::vector<unsigned> &vars);

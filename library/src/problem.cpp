@@ -56,7 +56,7 @@ namespace mjrfd
         while(!stop)
         {
             // calculate the residuals for the current state
-            calculate_residual();
+            calculate_residual(residual_);
 
             // find the l^\infty norm of the residual vector
             //double max_residual = residual_.lpNorm<Eigen::Infinity>();
@@ -90,11 +90,11 @@ namespace mjrfd
                 // calculate the jacobian for the current state
                 if(use_fd_jacobian_ == true)
                 {
-                    Problem::calculate_jacobian();
+                    Problem::calculate_jacobian(jacobian_);
                 }
                 else
                 {
-                    calculate_jacobian();
+                    calculate_jacobian(jacobian_);
                 }
 
                 if(terse_logging_ == true)
@@ -297,14 +297,6 @@ namespace mjrfd
         dump_jacobian_ = false;
     }
 
-    void Problem::clear_solution()
-    {
-        for(unsigned t = 0; t < n_time_history_; ++t)
-        {
-            u_[t].setZero();
-        }
-    }
-
     void Problem::enable_exit_on_solve_fail()
     {
         exit_on_solve_fail_ = true;
@@ -315,19 +307,24 @@ namespace mjrfd
         exit_on_solve_fail_ = false;
     }
 
+    void Problem::clear_solution()
+    {
+        for(unsigned t = 0; t < n_time_history_; ++t)
+        {
+            u_[t].setZero();
+        }
+    }
+
     // Default implementation which calculates the jacobian by
     // finite-differencing the residuals
-    void Problem::calculate_jacobian()
+    void Problem::calculate_jacobian(Eigen::SparseMatrix<double> &jacobian)
     {
         // Storage for the dense jacobian matrix
         Eigen::MatrixXd dense_jacobian(n_dof_, n_dof_);
 
-        // Backup the residuals before doing anything
-        Eigen::VectorXd residual_backup = residual_;
-
         // Storage for the residuals after incrementing/decrementing a dof
-        Eigen::VectorXd residual_plus(residual_.size());
-        Eigen::VectorXd residual_minus(residual_.size());
+        Eigen::VectorXd residual_plus(n_dof_);
+        Eigen::VectorXd residual_minus(n_dof_);
 
         // Derivative wrt dof i
         for(unsigned i = 0; i < n_dof_; ++i)
@@ -337,14 +334,12 @@ namespace mjrfd
 
             // Calculate plus residual
             u_[0](i) += Jacobian_fd_step;
-            calculate_residual();
-            residual_plus = residual_;
+            calculate_residual(residual_plus);
             u_[0](i) = u_i_backup;
 
             // Calculate minus residual
             u_[0](i) -= Jacobian_fd_step;
-            calculate_residual();
-            residual_minus = residual_;
+            calculate_residual(residual_minus);
             u_[0](i) = u_i_backup;
 
             // Set the column of the jacobian matrix
@@ -354,11 +349,8 @@ namespace mjrfd
 
         // Set the sparse jacobian from the dense one
         // TODO check the tolerance for throwing away terms close to zero
-        jacobian_ = dense_jacobian.sparseView();
-        jacobian_.makeCompressed();
-
-        // Restore the residuals to their previous state
-        residual_ = residual_backup;
+        jacobian = dense_jacobian.sparseView();
+        jacobian.makeCompressed();
     }
 
     void Problem::actions_before_timestep()
