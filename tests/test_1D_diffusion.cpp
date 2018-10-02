@@ -25,8 +25,8 @@ struct AdvectionDiffusionParams
 class AdvectionDiffusionTestProblem : public AdvectionDiffusionReactionProblem
 {
 public:
-    AdvectionDiffusionTestProblem(const unsigned n_node) :
-        AdvectionDiffusionReactionProblem(1, n_node)
+    AdvectionDiffusionTestProblem(const unsigned n_node, const double a, const double b) :
+        AdvectionDiffusionReactionProblem(1, n_node, a, b)
     {
         enable_bc(Boundary::Left,  { c });
         enable_bc(Boundary::Right, { c });
@@ -139,9 +139,9 @@ private:
                         std::vector<double> &sol) const override
     {
         if(std::abs(p.Pe) <= 1.0e-16)
-            sol[c] = 1.0 - x;
+            sol[c] = (x - b())/(a() - b());
         else
-            sol[c] = (std::exp(p.Pe*x) - std::exp(p.Pe))/(1.0 - std::exp(p.Pe));
+            sol[c] = (std::exp(p.Pe*x) - std::exp(p.Pe*b()))/(std::exp(p.Pe*a()) - std::exp(p.Pe*b()));
     }
 };
 
@@ -149,16 +149,16 @@ namespace mjrfd
 {
     TEST_CASE( "Simple diffusion with Dirichlet BCs", "[diffusion]" )
     {
-        const unsigned n_node = 10001;
+        const unsigned n_node = 1001;
 
-        AdvectionDiffusionTestProblem problem(n_node);
+        AdvectionDiffusionTestProblem problem(n_node, 2.0, 3.0);
         problem.p.Pe = 0.2;
 
         problem.steady_solve();
 
         for(unsigned i = 0; i < n_node; ++i)
         {
-            CHECK( problem.absolute_error_with_exact_solution(i) <= 1.0e-8 );
+            CHECK( problem.absolute_error_with_exact_solution(i) <= 1.0e-9 );
         }
 
         CHECK( problem.l2_error() <= 1.0e-8 );
