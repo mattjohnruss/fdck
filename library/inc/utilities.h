@@ -47,5 +47,9 @@ namespace mjrfd
             auto f_sq = [&](double x) { return std::pow(f(x), 2); };
             return std::sqrt(integrate_trapezium(f_sq, a, b, n));
         }
+
+        // Evaluate a polynomial with coeffs in ascending power order at x using
+        // Horner's method
+        double evaluate_polynomial(const double x, const std::vector<double> &coeffs);
     }
 }

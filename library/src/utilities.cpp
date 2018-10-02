@@ -23,5 +23,19 @@ namespace mjrfd
         {
             return std::sqrt(integrate_trapezium(v.array().square(), dx));
         }
+
+        double evaluate_polynomial(const double x, const std::vector<double> &coeffs)
+        {
+            double result = 0.0;
+            unsigned n = coeffs.size();
+
+            for(int i = n-1; i >= 0; --i)
+            {
+                assert(i <= (n-1) && i >= 0);
+                result = result*x + coeffs[i];
+            }
+
+            return result;
+        }
     }
 }
