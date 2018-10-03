@@ -378,14 +378,14 @@ namespace mjrfd
                     // First term
                     if(std::abs(a1_left[var]) > 0.0)
                     {
-                        triplet_list.push_back( T(index, index, a1_left[var]*dx_*dx_) );
+                        triplet_list.emplace_back(index, index, a1_left[var]*dx_*dx_);
                     }
 
                     if(std::abs(a2_left[var]) > 0.0)
                     {
                         for(const auto& [j, w] : stencil::forward_1::weights)
                         {
-                            triplet_list.push_back( T(index, index+j, w*a2_left[var]*dx_) );
+                            triplet_list.emplace_back(index, index+j, w*a2_left[var]*dx_);
                         }
                     }
 
@@ -414,7 +414,7 @@ namespace mjrfd
 
                             if(std::abs(da1_du_left[var][var2]) > 0.0)
                             {
-                                triplet_list.push_back( T(index, index2, da1_du_left[var][var2]*u(0, var, i)*dx_*dx_) );
+                                triplet_list.emplace_back(index, index2, da1_du_left[var][var2]*u(0, var, i)*dx_*dx_);
                             }
 
                             if(std::abs(da2_du_left[var][var2]) > 0.0)
@@ -426,12 +426,12 @@ namespace mjrfd
                                     deriv += w*u(0, var, i+j)*dx_;
                                 }
 
-                                triplet_list.push_back( T(index, index2, da2_du_left[var][var2]*deriv) );
+                                triplet_list.emplace_back(index, index2, da2_du_left[var][var2]*deriv);
                             }
 
                             if(std::abs(da3_du_left[var][var2]) > 0.0)
                             {
-                                triplet_list.push_back( T(index, index2, -da3_du_left[var][var2]*dx_*dx_) );
+                                triplet_list.emplace_back(index, index2, -da3_du_left[var][var2]*dx_*dx_);
                             }
                         }
                     }
@@ -441,14 +441,14 @@ namespace mjrfd
                     // First term
                     if(std::abs(a1_right[var]) > 0.0)
                     {
-                        triplet_list.push_back( T(index, index, a1_right[var]*dx_*dx_) );
+                        triplet_list.emplace_back(index, index, a1_right[var]*dx_*dx_);
                     }
 
                     if(std::abs(a2_right[var]) > 0.0)
                     {
                         for(const auto& [j, w] : stencil::backward_1::weights)
                         {
-                            triplet_list.push_back( T(index, index+j, w*a2_right[var]*dx_) );
+                            triplet_list.emplace_back(index, index+j, w*a2_right[var]*dx_);
                         }
                     }
 
@@ -468,7 +468,7 @@ namespace mjrfd
 
                             if(std::abs(da1_du_right[var][var2]) > 0.0)
                             {
-                                triplet_list.push_back( T(index, index2, da1_du_right[var][var2]*u(0, var, i)*dx_*dx_) );
+                                triplet_list.emplace_back(index, index2, da1_du_right[var][var2]*u(0, var, i)*dx_*dx_);
                             }
 
                             if(std::abs(da2_du_right[var][var2]) > 0.0)
@@ -480,12 +480,12 @@ namespace mjrfd
                                     deriv += w*u(0, var, i+j)*dx_;
                                 }
 
-                                triplet_list.push_back( T(index, index2, da2_du_right[var][var2]*deriv) );
+                                triplet_list.emplace_back(index, index2, da2_du_right[var][var2]*deriv);
                             }
 
                             if(std::abs(da3_du_right[var][var2]) > 0.0)
                             {
-                                triplet_list.push_back( T(index, index2, -da3_du_right[var][var2]*dx_*dx_) );
+                                triplet_list.emplace_back(index, index2, -da3_du_right[var][var2]*dx_*dx_);
                             }
                         }
                     }
@@ -495,7 +495,7 @@ namespace mjrfd
                     // Time derivatives
                     if(is_steady() == false)
                     {
-                        triplet_list.push_back( T(index, index, dx_*dx_/dt_) );
+                        triplet_list.emplace_back(index, index, dx_*dx_/dt_);
                     }
 
                     // Add the spatial terms to the residual for this variable
@@ -543,7 +543,7 @@ namespace mjrfd
                                 // the unknowns that appear in the nested stencils
                                 if(d_lerp_var > 0.0)
                                 {
-                                    triplet_list.push_back( T(index, index+(j+k)/2, -4.0*d_lerp_var*w*w2*cn_theta_) );
+                                    triplet_list.emplace_back(index, index+(j+k)/2, -4.0*d_lerp_var*w*w2*cn_theta_);
                                 }
 
                                 // Second term - terms with derivatives of the
@@ -554,7 +554,7 @@ namespace mjrfd
                                     {
                                         const unsigned index2 = var2*n_node_ + i;
 
-                                        triplet_list.push_back( T(index, index2, -4.0*0.5*dd_du[var][var2]*w*w2*cn_theta_*u(0, var, i+(j+k)/2)) );
+                                        triplet_list.emplace_back(index, index2, -4.0*0.5*dd_du[var][var2]*w*w2*cn_theta_*u(0, var, i+(j+k)/2));
                                     }
 
                                     const unsigned index2 = var2*n_node_ + i + j;
@@ -563,14 +563,14 @@ namespace mjrfd
                                     {
                                         if(std::abs(dd_plus_du[var][var2]) > 0.0)
                                         {
-                                            triplet_list.push_back( T(index, index2, -4.0*0.5*dd_plus_du[var][var2]*w*w2*cn_theta_*u(0, var, i+(j+k)/2)) );
+                                            triplet_list.emplace_back(index, index2, -4.0*0.5*dd_plus_du[var][var2]*w*w2*cn_theta_*u(0, var, i+(j+k)/2));
                                         }
                                     }
                                     else // j < 0
                                     {
                                         if(std::abs(dd_minus_du[var][var2]) > 0.0)
                                         {
-                                            triplet_list.push_back( T(index, index2, -4.0*0.5*dd_minus_du[var][var2]*w*w2*cn_theta_*u(0, var, i+(j+k)/2)) );
+                                            triplet_list.emplace_back(index, index2, -4.0*0.5*dd_minus_du[var][var2]*w*w2*cn_theta_*u(0, var, i+(j+k)/2));
                                         }
                                     }
                                 } // end of loop over var2
@@ -592,7 +592,7 @@ namespace mjrfd
                             // hurt
                             if(std::abs(v) > 0.0)
                             {
-                                triplet_list.push_back( T(index, index+j, dx_*w*cn_theta_*v) );
+                                triplet_list.emplace_back(index, index+j, dx_*w*cn_theta_*v);
                             }
 
                             // Loop over the variables again
@@ -619,7 +619,7 @@ namespace mjrfd
 
                                     if(std::abs(dv_du) > 0.0)
                                     {
-                                        triplet_list.push_back( T(index, index2, dx_*w*cn_theta_*u(0, var, i+j)*dv_du) );
+                                        triplet_list.emplace_back(index, index2, dx_*w*cn_theta_*u(0, var, i+j)*dv_du);
                                     }
                                 }
                             }
@@ -635,7 +635,7 @@ namespace mjrfd
 
                         if(std::abs(dr_du[var][var2]) > 0.0)
                         {
-                            triplet_list.push_back( T(index, index2, -dx_*dx_*cn_theta_*dr_du[var][var2]) );
+                            triplet_list.emplace_back(index, index2, -dx_*dx_*cn_theta_*dr_du[var][var2]);
                         }
                     }
                 }
