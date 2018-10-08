@@ -26,7 +26,7 @@ class AdvectionDiffusionTestProblem : public AdvectionDiffusionReactionProblem
 {
 public:
     AdvectionDiffusionTestProblem(const unsigned n_node, const double a, const double b) :
-        AdvectionDiffusionReactionProblem(1, n_node, a, b)
+        AdvectionDiffusionReactionProblem(1, n_node, 0, a, b)
     {
         enable_bc(Boundary::Left,  { c });
         enable_bc(Boundary::Right, { c });
