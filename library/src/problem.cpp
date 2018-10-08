@@ -57,7 +57,8 @@ namespace mjrfd
         // Newton method
         while(!stop)
         {
-            // calculate the residuals for the current state
+            // clear then calculate the residuals for the current state
+            residual_.setZero();
             calculate_residual(residual_);
 
             // find the l^\infty norm of the residual vector
@@ -368,6 +369,10 @@ namespace mjrfd
         // Storage for the residuals after incrementing/decrementing a dof
         Eigen::VectorXd residual_plus(n_dof_);
         Eigen::VectorXd residual_minus(n_dof_);
+
+        // Set them to zero before passing to calculate_residual(...)
+        residual_minus.setZero();
+        residual_plus.setZero();
 
         // Derivative wrt dof i
         for(unsigned i = 0; i < n_dof_; ++i)

@@ -122,9 +122,6 @@ namespace mjrfd
     void AdvectionDiffusionReactionProblem::calculate_residual(
         Eigen::VectorXd &residual) const
     {
-        // Set the residuals to zero
-        residual.setZero();
-
         // Storage for the diffusion coefficients
         std::vector<double> d(n_var_);
         std::vector<double> d_plus(n_var_);
