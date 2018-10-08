@@ -9,8 +9,6 @@ namespace mjrfd
 {
     class AdvectionDiffusionReactionProblem : public Problem
     {
-        typedef Eigen::Triplet<double> T;
-
     public:
         /// Enum for the two boundaries in the 1D problem
         enum class Boundary
@@ -22,6 +20,7 @@ namespace mjrfd
         /// Constructor
         AdvectionDiffusionReactionProblem(const unsigned n_var,
                                           const unsigned n_node,
+                                          const unsigned n_aux_dof = 0,
                                           const double a = 0.0,
                                           const double b = 1.0);
 
@@ -41,10 +40,10 @@ namespace mjrfd
         void output_exact(std::ostream &out) const override;
 
         /// Calculate the residual vector
-        void calculate_residual(Eigen::VectorXd &residual) override;
+        virtual void calculate_residual(Eigen::VectorXd &residual) const override;
 
         /// Calculate the jacobian matrix
-        void calculate_jacobian(Eigen::SparseMatrix<double> &jacobian) override;
+        virtual void calculate_jacobian(std::vector<Triplet> &triplet_list) const override;
 
         /// Enable boundary condition on boundary b for all variables in vars
         void enable_bc(Boundary b, const std::vector<unsigned> &vars);

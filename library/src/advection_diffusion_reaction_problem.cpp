@@ -7,9 +7,10 @@ namespace mjrfd
     AdvectionDiffusionReactionProblem::AdvectionDiffusionReactionProblem(
         const unsigned n_var,
         const unsigned n_node,
+        const unsigned n_aux_dof,
         const double a,
         const double b) :
-        Problem(n_var, n_node),
+        Problem(n_var, n_node, n_aux_dof),
         n_node_(n_node),
         a_(a),
         b_(b),
@@ -118,7 +119,8 @@ namespace mjrfd
     }
 
     /// Calculate the residual vector
-    void AdvectionDiffusionReactionProblem::calculate_residual(Eigen::VectorXd &residual)
+    void AdvectionDiffusionReactionProblem::calculate_residual(
+        Eigen::VectorXd &residual) const
     {
         // Set the residuals to zero
         residual.setZero();
@@ -302,13 +304,8 @@ namespace mjrfd
 
     /// Calculate the jacobian matrix
     void AdvectionDiffusionReactionProblem::calculate_jacobian(
-        Eigen::SparseMatrix<double> &jacobian)
+        std::vector<Triplet> &triplet_list) const
     {
-        jacobian.setZero();
-
-        // Vector of triplets for constructing the sparse jacobian matrix
-        std::vector<T> triplet_list;
-
         // TODO check this! It appears to be ~6x the actual number of entries
         // Reserve the correct number of entries
         triplet_list.reserve(n_node_*n_var_*(15*n_var_ + 7));
@@ -641,9 +638,6 @@ namespace mjrfd
                 }
             }
         }
-
-        jacobian.setFromTriplets(triplet_list.begin(), triplet_list.end());
-        jacobian.makeCompressed();
     }
 
     void AdvectionDiffusionReactionProblem::enable_bc(Boundary b, const std::vector<unsigned> &vars)

@@ -7,10 +7,12 @@
 namespace mjrfd
 {
     Problem::Problem(const unsigned n_var,
-                     const unsigned n_dof_per_var) :
+                     const unsigned n_dof_per_var,
+                     const unsigned n_aux_dof) :
         n_dof_per_var_(n_dof_per_var),
-        n_dof_(n_var*n_dof_per_var),
+        n_dof_(n_var*n_dof_per_var + n_aux_dof),
         n_var_(n_var),
+        n_aux_dof_(n_aux_dof),
         n_time_history_(2),
         u_(n_time_history_, Eigen::VectorXd(n_dof_)),
         du_(Eigen::VectorXd(n_dof_)),
@@ -90,11 +92,14 @@ namespace mjrfd
                 // calculate the jacobian for the current state
                 if(use_fd_jacobian_ == true)
                 {
-                    Problem::calculate_jacobian(jacobian_);
+                    calculate_jacobian_fd(jacobian_);
                 }
                 else
                 {
-                    calculate_jacobian(jacobian_);
+                    std::vector<Triplet> triplet_list;
+                    calculate_jacobian(triplet_list);
+                    jacobian_.setFromTriplets(triplet_list.begin(), triplet_list.end());
+                    jacobian_.makeCompressed();
                 }
 
                 if(terse_logging_ == true)
@@ -266,6 +271,40 @@ namespace mjrfd
         //jac_stream << Eigen::MatrixXd(jacobian_).format(plain_fmt);
     }
 
+    double Problem::u_aux(const unsigned t, const unsigned i) const
+    {
+        assert(t >= 0 && t < n_time_history_);
+        assert(i >= 0 && i < n_aux_dof_);
+
+        unsigned n_nodal_dof = n_var_*n_dof_per_var_;
+        return u_[t](n_nodal_dof + i);
+    }
+
+    double Problem::u_aux(const unsigned i) const
+    {
+        assert(i >= 0 && i < n_aux_dof_);
+
+        unsigned n_nodal_dof = n_var_*n_dof_per_var_;
+        return u_[0](n_nodal_dof + i);
+    }
+
+    double& Problem::u_aux(const unsigned t, const unsigned i)
+    {
+        assert(t >= 0 && t < n_time_history_);
+        assert(i >= 0 && i < n_aux_dof_);
+
+        unsigned n_nodal_dof = n_var_*n_dof_per_var_;
+        return u_[t](n_nodal_dof + i);
+    }
+
+    double& Problem::u_aux(const unsigned i)
+    {
+        assert(i >= 0 && i < n_aux_dof_);
+
+        unsigned n_nodal_dof = n_var_*n_dof_per_var_;
+        return u_[0](n_nodal_dof + i);
+    }
+
     void Problem::enable_terse_logging()
     {
         terse_logging_ = true;
@@ -315,9 +354,13 @@ namespace mjrfd
         }
     }
 
+    void Problem::calculate_jacobian(std::vector<Triplet> &) const
+    {
+    }
+
     // Default implementation which calculates the jacobian by
     // finite-differencing the residuals
-    void Problem::calculate_jacobian(Eigen::SparseMatrix<double> &jacobian)
+    void Problem::calculate_jacobian_fd(Eigen::SparseMatrix<double> &jacobian)
     {
         // Storage for the dense jacobian matrix
         Eigen::MatrixXd dense_jacobian(n_dof_, n_dof_);

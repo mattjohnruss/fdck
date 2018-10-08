@@ -13,8 +13,11 @@ namespace mjrfd
     class Problem
     {
     public:
+        typedef Eigen::Triplet<double> Triplet;
+
         Problem(const unsigned n_var,
-                const unsigned n_dof_per_var);
+                const unsigned n_dof_per_var,
+                const unsigned n_aux_dof = 0);
 
         virtual ~Problem();
 
@@ -76,6 +79,12 @@ namespace mjrfd
             return u_[t](v*n_dof_per_var_ + i);
         }
 
+        double u_aux(const unsigned t, const unsigned i) const;
+        double u_aux(const unsigned i) const;
+
+        double& u_aux(const unsigned t, const unsigned i);
+        double& u_aux(const unsigned i);
+
         void enable_terse_logging();
         void disable_terse_logging();
 
@@ -94,6 +103,7 @@ namespace mjrfd
         const unsigned n_dof_per_var_;
         const unsigned n_dof_;
         const unsigned n_var_;
+        const unsigned n_aux_dof_;
 
         const unsigned n_time_history_;
 
@@ -111,8 +121,10 @@ namespace mjrfd
 
         bool steady_;
 
-        virtual void calculate_residual(Eigen::VectorXd &residual) = 0;
-        virtual void calculate_jacobian(Eigen::SparseMatrix<double> &jacobian);
+        virtual void calculate_residual(Eigen::VectorXd &residual) const = 0;
+        virtual void calculate_jacobian(std::vector<Triplet> &triplet_list) const;
+
+        void calculate_jacobian_fd(Eigen::SparseMatrix<double> &jacobian);
 
         virtual void actions_before_timestep();
         virtual void actions_after_timestep();
