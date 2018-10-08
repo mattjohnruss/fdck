@@ -2,3 +2,5 @@ build
 build-*
 results
 vendor/eigen
+CMakeLists.txt.user
+vim_session
