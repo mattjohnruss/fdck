@@ -200,8 +200,8 @@ namespace mjrfd
 
     void Problem::unsteady_solve(const double dt)
     {
-        time_ += dt;
         dt_ = dt;
+        time_ += dt;
 
         if(terse_logging_ == true)
         {
