@@ -716,6 +716,17 @@ namespace mjrfd
         return b_;
     }
 
+    unsigned AdvectionDiffusionReactionProblem::nodal_dof_index(unsigned var,
+                                                                unsigned i) const
+    {
+        return var*n_node_ + i;
+    }
+
+    unsigned AdvectionDiffusionReactionProblem::aux_dof_index(unsigned i) const
+    {
+        return n_var_*n_dof_per_var_ + i;
+    }
+
     void AdvectionDiffusionReactionProblem::exact_solution(const double,
                                                            const double,
                                                            std::vector<double> &sol) const

@@ -76,6 +76,12 @@ namespace mjrfd
         /// Get the location of right-hand boundary
         double b() const;
 
+        /// Get the index of the i-th nodal dof for variable var
+        unsigned nodal_dof_index(unsigned var, unsigned i) const;
+
+        /// Get the index of the i-th auxiliary dof
+        unsigned aux_dof_index(unsigned i) const;
+
     private:
         /// Get the coefficients a1, a2, a3 for the (Robin) boundary conditions
         virtual void get_bc(Boundary b,
