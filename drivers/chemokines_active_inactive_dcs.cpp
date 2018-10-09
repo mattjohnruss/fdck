@@ -40,6 +40,9 @@ struct ChemokinesParams
     double J_m_right_abs;
     double J_i_right;
     std::unique_ptr<DifferentiableFunction> chi;
+    double p;
+    double s;
+    double L;
 };
 
 enum Variable
@@ -51,11 +54,16 @@ enum Variable
     phi_m = 4
 };
 
+enum AuxVariable
+{
+    c_u_0 = 0
+};
+
 class ChemokinesProblem1D : public AdvectionDiffusionReactionProblem
 {
 public:
     ChemokinesProblem1D(const unsigned n_node) :
-        AdvectionDiffusionReactionProblem(5, n_node)
+        AdvectionDiffusionReactionProblem(5, n_node, 1)
     {
         enable_bc(Boundary::Left,  { c_u, c_s, phi_i, phi_m });
         enable_bc(Boundary::Right, { c_u, c_s, phi_i, phi_m });
@@ -69,7 +77,7 @@ public:
 
         trace_file_.open("trace.dat");
         trace_header_ =
-            "t phi_m|_0 dphi_{m}\\\\_dx|_0 M total\\\\_c_u total\\\\_c_b total\\\\_c_s total\\\\_phi_i total\\\\_phi_m";
+            "t phi_m|_0 dphi_{m}\\\\_dx|_0 M total\\\\_c_u total\\\\_c_b total\\\\_c_s total\\\\_phi_i total\\\\_phi_m c_u_0";
         trace_file_ << trace_header_ << '\n';
     }
 
@@ -117,17 +125,7 @@ public:
         return 1.0 - 0.5*(1.0 + std::cos(pi*time));
     }
 
-private:
-    std::string trace_header_;
-    std::ofstream trace_file_;
-
-    void actions_before_timestep() override
-    {
-        // update the maturation parameter before solving for the new time
-        p.M = maturation_piecewise_ramp(p.M_a, p.M_b, p.t1, p.t2, p.t3, p.t4);
-    }
-
-    void actions_after_timestep() override
+    void trace()
     {
         std::vector<double> a1(n_var_);
         std::vector<double> a2(n_var_);
@@ -157,8 +155,24 @@ private:
                     << integrate_solution(c_b) << " "
                     << integrate_solution(c_s) << " "
                     << integrate_solution(phi_i) << " "
-                    << integrate_solution(phi_m) << '\n'
+                    << integrate_solution(phi_m) << " "
+                    << u_aux(c_u_0) << '\n'
                     << std::flush;
+    }
+
+private:
+    std::string trace_header_;
+    std::ofstream trace_file_;
+
+    void actions_before_timestep() override
+    {
+        // update the maturation parameter before solving for the new time
+        p.M = maturation_piecewise_ramp(p.M_a, p.M_b, p.t1, p.t2, p.t3, p.t4);
+    }
+
+    void actions_after_timestep() override
+    {
+        trace();
     }
 
     double maturation_piecewise_ramp(const double a,  const double b,
@@ -200,7 +214,7 @@ private:
             std::vector<double> d_left(n_var_);
             get_d(0, 0, d_left);
 
-            a1[c_u]   = 1.0;                            a2[c_u]   = 0.0;            a3[c_u]   = 1.0;
+            a1[c_u]   = 1.0;                            a2[c_u]   = 0.0;            a3[c_u]   = u_aux(c_u_0);
             a1[c_s]   = 1.0;                            a2[c_s]   = 0.0;            a3[c_s]   = 0.0;
             a1[phi_i] = 0.0;                            a2[phi_i] = 1.0;            a3[phi_i] = 0.0;
             a1[phi_m] = v_phi_m_left + p.J_m_left_prop; a2[phi_m] = -d_left[phi_m]; a3[phi_m] = -p.J_m_left_abs;
@@ -398,6 +412,21 @@ private:
         dr_du[phi_m][phi_i] = p.M;
         dr_du[phi_m][phi_m] = 0.0;
     }
+
+    void calculate_residual(Eigen::VectorXd &residual) const override
+    {
+        AdvectionDiffusionReactionProblem::calculate_residual(residual);
+        residual(aux_dof_index(c_u_0)) += (u_aux(0, c_u_0) - u_aux(1, c_u_0)) - dt_*(p.p*p.L*u(0, phi_m, 0) - p.s*p.L*u_aux(0, c_u_0));
+    }
+
+    void calculate_jacobian(std::vector<Triplet> &triplet_list) const override
+    {
+        AdvectionDiffusionReactionProblem::calculate_jacobian(triplet_list);
+        triplet_list.emplace_back(aux_dof_index(c_u_0), aux_dof_index(c_u_0), 1.0 - dt_*(-p.s*p.L));
+        triplet_list.emplace_back(aux_dof_index(c_u_0), nodal_dof_index(phi_m, 0), -dt_*(p.p*p.L));
+
+        triplet_list.emplace_back(nodal_dof_index(c_u, 0), aux_dof_index(c_u_0), -1.0*dx_*dx_);
+    }
 };
 
 int main(int argc, char **argv)
@@ -457,6 +486,9 @@ int main(int argc, char **argv)
     problem.p.J_m_left_abs   = cf.get<double>("J_m_left_abs");
     problem.p.J_m_right_abs  = cf.get<double>("J_m_right_abs");
     problem.p.J_i_right      = cf.get<double>("J_i_right");
+    problem.p.p              = cf.get<double>("p");
+    problem.p.s              = cf.get<double>("s");
+    problem.p.L              = cf.get<double>("L");
 
     // Construct the type of DifferentiableFunction in the config for chi
     // the std::unique_ptr will destroy the object for us when it goes out of scope
@@ -551,6 +583,8 @@ int main(int argc, char **argv)
         outfile.open(filename);
         problem.output(outfile);
         outfile.close();
+
+        problem.trace();
 
         unsigned i = 1;
 
