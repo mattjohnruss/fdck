@@ -1,0 +1,6 @@
+[submodule "vendor/eigen"]
+	path = vendor/eigen
+	url = https://github.com/eigenteam/eigen-git-mirror
+[submodule "vendor/catch2"]
+	path = vendor/catch2
+	url = https://github.com/catchorg/Catch2.git
