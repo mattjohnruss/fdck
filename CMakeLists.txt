@@ -2,10 +2,16 @@ cmake_minimum_required(VERSION 3.9)
 
 project(fd_diff++ C CXX)
 
-message("Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Platform ID (CXX): ${CMAKE_CXX_PLATFORM_ID}")
+
+if(EMSCRIPTEN)
+    set(CMAKE_EXECUTABLE_SUFFIX ".html")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --shell-file shell_minimal.html")
+endif()
 
 if(CMAKE_CROSSCOMPILING)
-    message("Cross compiling!")
+    message(STATUS "Cross compiling!")
 endif()
 
 include_directories(${fd_diff++_SOURCE_DIR}/inc)
@@ -25,7 +31,7 @@ if(NOT CMAKE_CROSSCOMPILING)
         if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
             set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
         else()
-            message("Compiling with Clang - disabling LTO!")
+            message(STATUS "Compiling with Clang - disabling LTO!")
         endif()
     endif()
 endif()

@@ -5,6 +5,7 @@ add_library(library STATIC ${LIBRARY_SRC} ${LIBRARY_INC})
 
 target_include_directories(library PUBLIC inc)
 
+message(STATUS "Looking for Eigen")
 if(EXISTS ${fd_diff++_SOURCE_DIR}/vendor/eigen)
     target_include_directories(library PUBLIC ${fd_diff++_SOURCE_DIR}/vendor/eigen)
     message("Using bundled Eigen at ${fd_diff++_SOURCE_DIR}/vendor/eigen")

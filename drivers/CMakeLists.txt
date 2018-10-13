@@ -1,6 +1,6 @@
 file(GLOB DRIVERS_SRC RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
 
-message("Scanning for drivers:")
+message(STATUS "Scanning for drivers:")
 
 foreach(driver_src ${DRIVERS_SRC})
     string(REPLACE ".cpp" "" driver ${driver_src})
