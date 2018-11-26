@@ -4,3 +4,4 @@ results
 vendor/eigen
 CMakeLists.txt.user
 vim_session
+compile_commands.json

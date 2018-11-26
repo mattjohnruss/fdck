@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.9)
 
 project(fd_diff++ C CXX)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Platform ID (CXX): ${CMAKE_CXX_PLATFORM_ID}")
 
