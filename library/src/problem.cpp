@@ -370,23 +370,21 @@ namespace mjrfd
         Eigen::VectorXd residual_plus(n_dof_);
         Eigen::VectorXd residual_minus(n_dof_);
 
-        // Set them to zero before passing to calculate_residual(...)
-        residual_minus.setZero();
-        residual_plus.setZero();
-
         // Derivative wrt dof i
         for(unsigned i = 0; i < n_dof_; ++i)
         {
             // Backup the i-th dof
             double u_i_backup = u_[0](i);
 
-            // Calculate plus residual
+            // Calculate plus residual, setting to zero first
             u_[0](i) += Jacobian_fd_step;
+            residual_plus.setZero();
             calculate_residual(residual_plus);
             u_[0](i) = u_i_backup;
 
-            // Calculate minus residual
+            // Calculate minus residual, setting to zero first
             u_[0](i) -= Jacobian_fd_step;
+            residual_minus.setZero();
             calculate_residual(residual_minus);
             u_[0](i) = u_i_backup;
 
