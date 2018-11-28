@@ -42,10 +42,10 @@ struct ChemokinesParams
     double t2;
     double t3;
     double t4;
-    double J_m_left_prop;
-    double J_m_right_prop;
-    double J_m_left_abs;
-    double J_m_right_abs;
+    double J_phi_c_b_left_prop;
+    double J_phi_c_b_right_prop;
+    double J_phi_c_b_left_abs;
+    double J_phi_c_b_right_abs;
     double J_i_right;
     std::unique_ptr<DifferentiableFunction> chi;
     double p;
@@ -232,7 +232,7 @@ private:
             a1[phi_i]   = 0.0;
             a1[phi_m]   = 0.0;
             a1[phi_c_u] = 0.0;
-            a1[phi_c_b] = v_phi_c_b_left + p.J_m_left_prop;
+            a1[phi_c_b] = v_phi_c_b_left + p.J_phi_c_b_left_prop;
 
             a2[c_u]     = 0.0;
             a2[c_s]     = 0.0;
@@ -246,7 +246,7 @@ private:
             a3[phi_i]   = 0.0;
             a3[phi_m]   = 0.0;
             a3[phi_c_u] = 0.0;
-            a3[phi_c_b] = -p.J_m_left_abs;
+            a3[phi_c_b] = -p.J_phi_c_b_left_abs;
         }
         if(b == Boundary::Right)
         {
@@ -263,7 +263,7 @@ private:
             a1[phi_i]   = 0.0;
             a1[phi_m]   = 0.0;
             a1[phi_c_u] = 0.0;
-            a1[phi_c_b] = v_phi_c_b_right - p.J_m_right_prop;
+            a1[phi_c_b] = v_phi_c_b_right - p.J_phi_c_b_right_prop;
 
             a2[c_u]     = 0.0;
             a2[c_s]     = 0.0;
@@ -277,7 +277,7 @@ private:
             a3[phi_i]   = p.J_i_right*p.M;
             a3[phi_m]   = 0.0;
             a3[phi_c_u] = 0.0;
-            a3[phi_c_b] = p.J_m_right_abs;
+            a3[phi_c_b] = p.J_phi_c_b_right_abs;
         }
     }
 
@@ -532,54 +532,55 @@ int main(int argc, char **argv)
     cf.parse_command_line(argc, argv);
     cf.print_all();
 
-    problem.p.pe_u           = cf.get<double>("pe_u");
+    problem.p.pe_u = cf.get<double>("pe_u");
 
-    problem.p.alpha_1        = cf.get<double>("alpha_1");
-    problem.p.beta_1         = cf.get<double>("beta_1");
-    problem.p.alpha_2        = cf.get<double>("alpha_2");
-    problem.p.beta_2         = cf.get<double>("beta_2");
-    problem.p.alpha_3        = cf.get<double>("alpha_3");
-    problem.p.beta_3         = cf.get<double>("beta_3");
-    problem.p.alpha_4        = cf.get<double>("alpha_4");
-    problem.p.beta_4         = cf.get<double>("beta_4");
+    problem.p.alpha_1 = cf.get<double>("alpha_1");
+    problem.p.beta_1  = cf.get<double>("beta_1");
+    problem.p.alpha_2 = cf.get<double>("alpha_2");
+    problem.p.beta_2  = cf.get<double>("beta_2");
+    problem.p.alpha_3 = cf.get<double>("alpha_3");
+    problem.p.beta_3  = cf.get<double>("beta_3");
+    problem.p.alpha_4 = cf.get<double>("alpha_4");
+    problem.p.beta_4  = cf.get<double>("beta_4");
 
-    problem.p.gamma_ui       = cf.get<double>("gamma_ui");
-    problem.p.gamma_bi       = cf.get<double>("gamma_bi");
-    problem.p.gamma_um       = cf.get<double>("gamma_um");
-    problem.p.gamma_bm       = cf.get<double>("gamma_bm");
+    problem.p.gamma_ui = cf.get<double>("gamma_ui");
+    problem.p.gamma_bi = cf.get<double>("gamma_bi");
+    problem.p.gamma_um = cf.get<double>("gamma_um");
+    problem.p.gamma_bm = cf.get<double>("gamma_bm");
 
-    problem.p.q_u            = cf.get<double>("q_u");
-    problem.p.q_b            = cf.get<double>("q_b");
-    problem.p.q_s            = cf.get<double>("q_s");
+    problem.p.q_u = cf.get<double>("q_u");
+    problem.p.q_b = cf.get<double>("q_b");
+    problem.p.q_s = cf.get<double>("q_s");
 
-    problem.p.D_su           = cf.get<double>("D_su");
-    problem.p.D_iu           = cf.get<double>("D_iu");
+    problem.p.D_su = cf.get<double>("D_su");
+    problem.p.D_iu = cf.get<double>("D_iu");
     // D_mu is a DifferentiableFunction
-    problem.p.D_phi_c_u_u    = cf.get<double>("D_phi_c_u_u");
-    problem.p.D_phi_c_b_u    = cf.get<double>("D_phi_c_b_u");
+    problem.p.D_phi_c_u_u = cf.get<double>("D_phi_c_u_u");
+    problem.p.D_phi_c_b_u = cf.get<double>("D_phi_c_b_u");
 
-    problem.p.nu_b           = cf.get<double>("nu_b");
+    problem.p.nu_b = cf.get<double>("nu_b");
 
-    problem.p.phi_i_init     = cf.get<double>("phi_i_init");
+    problem.p.phi_i_init = cf.get<double>("phi_i_init");
 
-    problem.p.R              = cf.get<double>("R");
-    problem.p.M_a            = cf.get<double>("M_a");
-    problem.p.M_b            = cf.get<double>("M_b");
-    problem.p.M              = problem.p.M_a;
+    problem.p.R   = cf.get<double>("R");
+    problem.p.M_a = cf.get<double>("M_a");
+    problem.p.M_b = cf.get<double>("M_b");
+    problem.p.M   = problem.p.M_a;
 
-    problem.p.t1             = cf.get<double>("t1");
-    problem.p.t2             = cf.get<double>("t2");
-    problem.p.t3             = cf.get<double>("t3");
-    problem.p.t4             = cf.get<double>("t4");
+    problem.p.t1 = cf.get<double>("t1");
+    problem.p.t2 = cf.get<double>("t2");
+    problem.p.t3 = cf.get<double>("t3");
+    problem.p.t4 = cf.get<double>("t4");
 
-    problem.p.J_m_left_prop  = cf.get<double>("J_m_left_prop");
-    problem.p.J_m_right_prop = cf.get<double>("J_m_right_prop");
-    problem.p.J_m_left_abs   = cf.get<double>("J_m_left_abs");
-    problem.p.J_m_right_abs  = cf.get<double>("J_m_right_abs");
-    problem.p.J_i_right      = cf.get<double>("J_i_right");
-    problem.p.p              = cf.get<double>("p");
-    problem.p.s              = cf.get<double>("s");
-    problem.p.L              = cf.get<double>("L");
+    problem.p.J_phi_c_b_left_prop  = cf.get<double>("J_phi_c_b_left_prop");
+    problem.p.J_phi_c_b_right_prop = cf.get<double>("J_phi_c_b_right_prop");
+    problem.p.J_phi_c_b_left_abs   = cf.get<double>("J_phi_c_b_left_abs");
+    problem.p.J_phi_c_b_right_abs  = cf.get<double>("J_phi_c_b_right_abs");
+    problem.p.J_i_right            = cf.get<double>("J_i_right");
+
+    problem.p.p = cf.get<double>("p");
+    problem.p.s = cf.get<double>("s");
+    problem.p.L = cf.get<double>("L");
 
     problem.p.phi_i_max_over_c_0 = cf.get<double>("phi_i_max_over_c_0");
 
