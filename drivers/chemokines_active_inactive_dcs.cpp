@@ -105,6 +105,9 @@ public:
             //u(0, c_u, i) = 0.5 + 0.5*std::cos(M_PI*x(i));
             u(0, c_u, i) = 1.0 - x(i);
         }
+
+        // Set c_u_0 to zero
+        u_aux(c_u_0) = 0.0;
     }
 
     ChemokinesParams p;
