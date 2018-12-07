@@ -91,19 +91,10 @@ public:
         // Set everything to zero
         clear_solution();
 
-        // Set c_u to 1.0 at the left-hand boundary
-        //u(0, c_u, 0) = 1.0;
-
         // Set phi_i to its uniform initial density
         for(unsigned i = 0; i < n_node_; ++i)
         {
             u(0, phi_i, i) = p.phi_i_init;
-        }
-
-        for(unsigned i = 0; i < n_node_; ++i)
-        {
-            //u(0, c_u, i) = 0.5 + 0.5*std::cos(M_PI*x(i));
-            u(0, c_u, i) = 1.0 - x(i);
         }
 
         // Set c_u_0 to zero
