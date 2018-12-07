@@ -48,9 +48,8 @@ struct ChemokinesParams
     double J_phi_c_b_right_abs;
     double J_i_right;
     std::unique_ptr<DifferentiableFunction> chi;
-    double p;
-    double s;
-    double L;
+    double P;
+    double S;
     double phi_i_max_over_c_0;
 };
 
@@ -491,14 +490,14 @@ private:
     void calculate_residual(Eigen::VectorXd &residual) const override
     {
         AdvectionDiffusionReactionProblem::calculate_residual(residual);
-        residual(aux_dof_index(c_u_0)) += (u_aux(0, c_u_0) - u_aux(1, c_u_0)) - dt_*(p.p*p.L*u(0, phi_m, 0) - p.s*p.L*u_aux(0, c_u_0));
+        residual(aux_dof_index(c_u_0)) += (u_aux(0, c_u_0) - u_aux(1, c_u_0)) - dt_*(p.phi_i_max_over_c_0*p.P*u(0, phi_m, 0) - p.S*u_aux(0, c_u_0));
     }
 
     void calculate_jacobian(std::vector<Triplet> &triplet_list) const override
     {
         AdvectionDiffusionReactionProblem::calculate_jacobian(triplet_list);
-        triplet_list.emplace_back(aux_dof_index(c_u_0), aux_dof_index(c_u_0), 1.0 - dt_*(-p.s*p.L));
-        triplet_list.emplace_back(aux_dof_index(c_u_0), nodal_dof_index(phi_m, 0), -dt_*(p.p*p.L));
+        triplet_list.emplace_back(aux_dof_index(c_u_0), aux_dof_index(c_u_0), 1.0 - dt_*(-p.S));
+        triplet_list.emplace_back(aux_dof_index(c_u_0), nodal_dof_index(phi_m, 0), -dt_*(p.phi_i_max_over_c_0*p.P));
 
         triplet_list.emplace_back(nodal_dof_index(c_u, 0), aux_dof_index(c_u_0), -1.0*dx_*dx_);
     }
@@ -578,9 +577,8 @@ int main(int argc, char **argv)
     problem.p.J_phi_c_b_right_abs  = cf.get<double>("J_phi_c_b_right_abs");
     problem.p.J_i_right            = cf.get<double>("J_i_right");
 
-    problem.p.p = cf.get<double>("p");
-    problem.p.s = cf.get<double>("s");
-    problem.p.L = cf.get<double>("L");
+    problem.p.P = cf.get<double>("P");
+    problem.p.S = cf.get<double>("S");
 
     problem.p.phi_i_max_over_c_0 = cf.get<double>("phi_i_max_over_c_0");
 
