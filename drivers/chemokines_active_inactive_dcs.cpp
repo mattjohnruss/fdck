@@ -583,7 +583,7 @@ int main(int argc, char **argv)
         unsigned i = 1;
 
         // timestepping loop
-        while(problem.time() <= t_max)
+        while(problem.time() < t_max)
         {
             // solve for current timestep
             problem.unsteady_solve(dt);
