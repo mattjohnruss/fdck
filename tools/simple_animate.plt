@@ -1,9 +1,12 @@
-load pal("parula_lines")
+load "parula_lines.pal"
 
 if(exist("gif_output")) {
     set term gif size 1920,1080 animate delay 3
     set output "animate.gif"
     delay = 0.0
+}
+else {
+    set term qt noraise
 }
 
 set clip two
