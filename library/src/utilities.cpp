@@ -31,7 +31,7 @@ namespace mjrfd
 
             for(int i = n-1; i >= 0; --i)
             {
-                assert(i <= (n-1) && i >= 0);
+                assert(static_cast<unsigned>(i) <= (n-1) && i >= 0);
                 result = result*x + coeffs[i];
             }
 

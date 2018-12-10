@@ -701,7 +701,7 @@ namespace mjrfd
 
     double AdvectionDiffusionReactionProblem::integrate_solution(const unsigned var) const
     {
-        assert(var >= 0 && var <= n_var_-1);
+        assert(var <= n_var_-1);
 
         return utilities::integrate_trapezium(u_[0].segment(var*n_node_, n_node_), dx_);
     }
@@ -792,7 +792,7 @@ namespace mjrfd
     AdvectionDiffusionReactionProblem::upwind_stencil_weights(const unsigned i,
                                                               const double v) const
     {
-        assert(i >= 0 && i <= n_node_-1);
+        assert(i <= n_node_-1);
 
         //if(v > 2.0)
         //{
@@ -849,7 +849,7 @@ namespace mjrfd
     const std::unordered_map<int, double>&
     AdvectionDiffusionReactionProblem::central_1_stencil_weights(unsigned i) const
     {
-        assert(i >= 0 && i <= n_node_-1);
+        assert(i <= n_node_-1);
 
         if(i == 0)
             return stencil::forward_1::weights;

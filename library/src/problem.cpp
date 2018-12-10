@@ -274,8 +274,8 @@ namespace mjrfd
 
     double Problem::u_aux(const unsigned t, const unsigned i) const
     {
-        assert(t >= 0 && t < n_time_history_);
-        assert(i >= 0 && i < n_aux_dof_);
+        assert(t < n_time_history_);
+        assert(i < n_aux_dof_);
 
         unsigned n_nodal_dof = n_var_*n_dof_per_var_;
         return u_[t](n_nodal_dof + i);
@@ -283,7 +283,7 @@ namespace mjrfd
 
     double Problem::u_aux(const unsigned i) const
     {
-        assert(i >= 0 && i < n_aux_dof_);
+        assert(i < n_aux_dof_);
 
         unsigned n_nodal_dof = n_var_*n_dof_per_var_;
         return u_[0](n_nodal_dof + i);
@@ -291,8 +291,8 @@ namespace mjrfd
 
     double& Problem::u_aux(const unsigned t, const unsigned i)
     {
-        assert(t >= 0 && t < n_time_history_);
-        assert(i >= 0 && i < n_aux_dof_);
+        assert(t < n_time_history_);
+        assert(i < n_aux_dof_);
 
         unsigned n_nodal_dof = n_var_*n_dof_per_var_;
         return u_[t](n_nodal_dof + i);
@@ -300,7 +300,7 @@ namespace mjrfd
 
     double& Problem::u_aux(const unsigned i)
     {
-        assert(i >= 0 && i < n_aux_dof_);
+        assert(i < n_aux_dof_);
 
         unsigned n_nodal_dof = n_var_*n_dof_per_var_;
         return u_[0](n_nodal_dof + i);
