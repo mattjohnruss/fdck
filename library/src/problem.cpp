@@ -1,4 +1,5 @@
 #include <problem.h>
+#include <log.h>
 
 #include <iostream>
 #include <iomanip>
@@ -31,6 +32,8 @@ namespace mjrfd
         jac_filename_prefix_("")
     {
         clear_solution();
+
+        log::enable_labels();
     }
 
     Problem::~Problem()
@@ -54,6 +57,10 @@ namespace mjrfd
 
         actions_before_solve();
 
+        // keep the max residual before solving as we output after solving when
+        // terse logging in enabled
+        double max_residual_before_solve = 0;
+
         // Newton method
         while(!stop)
         {
@@ -75,15 +82,14 @@ namespace mjrfd
                 }
             }
 
-            if(terse_logging_ == true && count == 0)
-            {
-                std::cout << "Max res = " << max_residual << ";\t[";
-            }
+            if(count == 0)
+                max_residual_before_solve = max_residual;
 
             if(terse_logging_ == false)
             {
-                std::cout << "Maximum residual (" << max_residual_index << "): "
-                          << max_residual << '\n';
+                MJRFD_LIB_INFO("Maximum residual ({}): {}",
+                               max_residual_index,
+                               max_residual);
             }
 
             // test if the current max residual is greater than the threshold
@@ -103,14 +109,10 @@ namespace mjrfd
                     jacobian_.makeCompressed();
                 }
 
-                if(terse_logging_ == true)
+                if(terse_logging_ == false)
                 {
-                    std::cout << "x";
-                }
-                else
-                {
-                    std::cout << "Exceeds " << Max_residual
-                              << ": performing Newton iteration\n";
+                    MJRFD_LIB_INFO("Exceeds {}: performing Newton iteration",
+                                   Max_residual);
                 }
 
                 if(dump_jacobian_ == true)
@@ -147,14 +149,39 @@ namespace mjrfd
 
                 if(terse_logging_ == true)
                 {
-                    std::cout << "];\tMax res = " << max_residual;
+                    if(steady_)
+                    {
+                        MJRFD_LIB_INFO("Max res = {}\t[{:x<{}}]\tMax res = {}",
+                                       max_residual_before_solve,
+                                       "",
+                                       count,
+                                       max_residual);
+                    }
+                    else
+                    {
+                        MJRFD_LIB_INFO("Time = {}\tMax res = {}\t[{:x<{}}]\tMax res = {}",
+                                       time_,
+                                       max_residual_before_solve,
+                                       "",
+                                       count,
+                                       max_residual);
+                    }
                 }
                 else
                 {
-                    std::cout << "Newton method converged (with maximum residual "
-                              << max_residual << ")"
-                              << " in " << count << " "
-                              << ((count == 1) ? "iteration" : "iterations") << '\n';
+                    if(count == 1)
+                    {
+                        MJRFD_LIB_INFO("Newton method converged "
+                                       "(with maximum residual {}) "
+                                       "in {} iteration", max_residual, count);
+                    }
+                    else
+                    {
+                        MJRFD_LIB_INFO("Newton method converged "
+                                       "(with maximum residual {}) "
+                                       "in {} iterations", max_residual, count);
+                    }
+
                 }
             }
 
@@ -162,14 +189,13 @@ namespace mjrfd
             {
                 // the maximum number of newton steps has been exceeded so stop
                 stop = true;
-                std::cout << "\nThe maximum number of Newton iterations ("
-                          << Max_newton_iterations << ") "
-                          << "has been exceeded\n";
+                MJRFD_LIB_ERROR("The maximum number of Newton iterations "
+                                "({}) has been exceeded", Max_newton_iterations);
 
                 // Exit if the flag is set
                 if(exit_on_solve_fail_ == true)
                 {
-                    std::cout << "Exiting\n";
+                    MJRFD_LIB_FATAL("Exiting");
                     std::exit(1);
                 }
             }
@@ -204,13 +230,12 @@ namespace mjrfd
         dt_ = dt;
         time_ += dt;
 
-        if(terse_logging_ == true)
+        // only output time here if using verbose logging
+        // for terse logging, it's output on the same line as the solve info,
+        // so it's done in solve()
+        if(terse_logging_ == false)
         {
-            std::cout << "\nTime = " << time_ << ";\t";
-        }
-        else
-        {
-            std::cout << "\nSolving at time = " << time_ << "\n\n";
+            MJRFD_LIB_INFO("Solving at time = {}", time_);
         }
 
         actions_before_timestep();
@@ -265,7 +290,7 @@ namespace mjrfd
         // if there isn't an entry in the bottom right-hand corner, output a zero
         if(jacobian_.rows() != n_dof_ || jacobian_.cols() != n_dof_)
         {
-            std::cout << "Problem::dump_res_and_jac - outputting zero\n";
+            MJRFD_LIB_INFO("Problem::dump_res_and_jac - outputting zero");
             jac_stream << n_dof_-1 << " " << n_dof_-1 << " 0.0\n";
         }
 
@@ -421,10 +446,11 @@ namespace mjrfd
 
         if(linear_solver_.info() != Eigen::Success)
         {
-            std::cerr << "Problem::linear_solve() - Compute failed!\n";
+            MJRFD_LIB_ERROR("Problem::linear_solve() - Compute failed!");
 
             if(exit_on_solve_fail_ == true)
             {
+                MJRFD_LIB_FATAL("Exiting");
                 std::exit(1);
             }
         }

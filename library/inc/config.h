@@ -74,8 +74,8 @@ namespace mjrfd
         /// assumed to be of the above format
         void parse_command_line(int argc, char **argv);
 
-        /// Print all key-value pairs to stream out
-        void print_all(std::ostream &out = std::cout) const;
+        /// Print all key-value pairs to the default config_logger
+        void print_all() const;
 
     private:
         /// Map parameter names to values

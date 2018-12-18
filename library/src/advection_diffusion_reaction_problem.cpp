@@ -1,5 +1,6 @@
 #include <advection_diffusion_reaction_problem.h>
 #include <utilities.h>
+#include <log.h>
 
 namespace mjrfd
 {

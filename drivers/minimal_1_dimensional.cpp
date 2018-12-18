@@ -1,6 +1,7 @@
 #include <advection_diffusion_reaction_problem.h>
 #include <config.h>
 #include <utilities.h>
+#include <log.h>
 
 #include <fstream>
 
@@ -237,8 +238,7 @@ int main(int argc, char **argv)
         if(i % output_interval == 0)
         {
             // output current solution
-            //std::cout << "Outputting solution at time = " << problem.time() << '\n';
-            std::cout << ";\tOutputting";
+            MJRFD_TRACE("Outputting");
             std::sprintf(filename, "output_%05i.csv", i/output_interval);
             outfile.open(filename);
             problem.output(outfile);
@@ -248,5 +248,5 @@ int main(int argc, char **argv)
         ++i;
     }
 
-    std::cout << "\n\nReached t > t_max (" << t_max << ") after performing " << i-1 << " timesteps\n";
+    MJRFD_INFO("Reached t > t_max ({}) after performing {} timesteps", t_max, i-1);
 }

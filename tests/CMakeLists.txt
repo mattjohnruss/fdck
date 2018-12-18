@@ -5,11 +5,8 @@ if(EXISTS ${fd_diff++_SOURCE_DIR}/vendor/catch2)
     target_include_directories(tests_main PUBLIC ${fd_diff++_SOURCE_DIR}/vendor/catch2/single_include)
     message("Using bundled Catch2 at ${fd_diff++_SOURCE_DIR}/vendor/catch2")
 else()
-    find_package(Catch2 REQUIRED)
-    message("Using system Catch2")
+    message(FATAL_ERROR "Catch2 not found in vendor/catch2")
 endif()
-
-#target_link_libraries(tests_main)
 
 file(GLOB TESTS_SRC RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test_*.cpp)
 

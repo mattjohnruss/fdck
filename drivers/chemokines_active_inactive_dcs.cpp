@@ -1,6 +1,7 @@
 #include <advection_diffusion_reaction_problem.h>
 #include <config.h>
 #include <functions.h>
+#include <log.h>
 
 #include <fstream>
 #include <memory>
@@ -342,7 +343,7 @@ private:
             else if(var2 == c_s)
                 nu = p.nu_s;
             else
-                std::cerr << "var2 is not any of the expected values!\n";
+                MJRFD_ERROR("var2 is not any of the expected values!");
 
             double dvar2_dx = 0.0;
 
@@ -491,7 +492,7 @@ int main(int argc, char **argv)
     if(chi_type == "constant" || chi_type == "const")
     {
         // TODO remove
-        std::cout << "chi is constant with value " << cf.get<double>("chi_const_val") << '\n';
+        MJRFD_INFO("chi is constant with value {}", cf.get<double>("chi_const_val"));
 
         problem.p.chi =
             std::make_unique<ConstantFunction>(cf.get<double>("chi_const_val"));
@@ -499,11 +500,11 @@ int main(int argc, char **argv)
     else if(chi_type == "hill")
     {
         // TODO remove
-        std::cout << "chi is hill with "
-                  << "a = " << cf.get<double>("chi_hill_a") << ", "
-                  << "n = " << cf.get<double>("chi_hill_n") << ", "
-                  << "min = " << cf.get<double>("chi_hill_min") << ", "
-                  << "max = " << cf.get<double>("chi_hill_max") << '\n';;
+        MJRFD_INFO("chi is hill with a = {}, n = {}, min = {}, max = {}",
+                   cf.get<double>("chi_hill_a"),
+                   cf.get<double>("chi_hill_n"),
+                   cf.get<double>("chi_hill_min"),
+                   cf.get<double>("chi_hill_max"));
 
         problem.p.chi =
             std::make_unique<HillFunction>(cf.get<double>("chi_hill_a"),
@@ -513,7 +514,7 @@ int main(int argc, char **argv)
     }
     else
     {
-        std::cerr << "unrecognised value of \"chi\" parameter:" << chi_type << '\n';
+        MJRFD_FATAL("unrecognised value of \"chi\" parameter: {}", chi_type);
         std::exit(1);
     }
 
@@ -523,18 +524,18 @@ int main(int argc, char **argv)
     if(D_mu_type == "constant" || D_mu_type == "const")
     {
         // TODO remove
-        std::cout << "D_mu is constant with value " << cf.get<double>("D_mu_const_val") << '\n';
+        MJRFD_INFO("D_mu is constant with value {}", cf.get<double>("D_mu_const_val"));
 
         problem.p.D_mu = std::make_unique<ConstantFunction>(cf.get<double>("D_mu_const_val"));
     }
     else if(D_mu_type == "hill")
     {
         // TODO remove
-        std::cout << "D_mu is hill with "
-                  << "a = "   << cf.get<double>("D_mu_hill_a") << ", "
-                  << "n = "   << cf.get<double>("D_mu_hill_n") << ", "
-                  << "min = " << cf.get<double>("D_mu_hill_min") << ", "
-                  << "max = " << cf.get<double>("D_mu_hill_max") << '\n';;
+        MJRFD_INFO("D_mu is hill with a = {}, n = {}, min = {}, max = {}",
+                  cf.get<double>("D_mu_hill_a"),
+                  cf.get<double>("D_mu_hill_n"),
+                  cf.get<double>("D_mu_hill_min"),
+                  cf.get<double>("D_mu_hill_max"));
 
         problem.p.D_mu =
             std::make_unique<HillFunction>(cf.get<double>("D_mu_hill_a"),
@@ -544,7 +545,7 @@ int main(int argc, char **argv)
     }
     else
     {
-        std::cerr << "unrecognised value of \"D_mu\" parameter:" << D_mu_type << '\n';
+        MJRFD_FATAL("unrecognised value of \"D_mu\" parameter: {}", D_mu_type);
         std::exit(1);
     }
 
@@ -565,7 +566,7 @@ int main(int argc, char **argv)
 
     if(do_time_evolution)
     {
-        std::cout << "\nTime evolution:";
+        MJRFD_INFO("Time evolution:");
 
         problem.enable_exit_on_solve_fail();
 
@@ -591,8 +592,7 @@ int main(int argc, char **argv)
             if(i % output_interval == 0)
             {
                 // output current solution
-                //std::cout << "Outputting solution at time = " << problem.time() << '\n';
-                std::cout << ";\tOutputting";
+                MJRFD_TRACE("Outputting");
                 std::sprintf(filename, "output_%05i.csv", i/output_interval);
                 outfile.open(filename);
                 problem.output(outfile);
@@ -602,12 +602,12 @@ int main(int argc, char **argv)
             ++i;
         }
 
-        std::cout << "\n\nReached t > t_max (" << t_max << ") after performing " << i-1 << " timesteps\n";
+        MJRFD_INFO("Reached t > t_max ({}) after performing {} timesteps", t_max, i-1);
     }
 
     if(do_steady_solve)
     {
-        std::cout << "\nSteady solve:\n";
+        MJRFD_INFO("Steady solve:");
 
         problem.disable_exit_on_solve_fail();
 
@@ -627,8 +627,6 @@ int main(int argc, char **argv)
         outfile.open(filename);
         problem.output(outfile);
         outfile.close();
-
-        std::cout << '\n';
     }
 
     return 0;

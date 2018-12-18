@@ -1,4 +1,5 @@
 #include <config.h>
+#include <log.h>
 
 #include <algorithm>
 #include <iomanip>
@@ -97,9 +98,9 @@ namespace mjrfd
         }
     }
 
-    void Config::print_all(std::ostream &out) const
+    void Config::print_all() const
     {
-        out << "Recognised parameters:\n";
+        MJRFD_CONFIG_INFO("Recognised parameters:");
 
         // find the length of the longest key
         std::size_t max_key_length = 0;
@@ -112,10 +113,10 @@ namespace mjrfd
             }
         }
 
-        // print all the keys and values
+        // print all the keys and values (nested placeholder {} for max_key_length)
         for(const auto& [key, value] : params_)
         {
-            out << std::setw(max_key_length) << std::left << key << " = " << value << '\n';
+            MJRFD_CONFIG_INFO("{:>{}} = {}", key, max_key_length, value);
         }
     }
 

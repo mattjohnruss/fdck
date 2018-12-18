@@ -1,5 +1,6 @@
 #include <advection_diffusion_reaction_problem.h>
 #include <config.h>
+#include <log.h>
 
 #include <fstream>
 
@@ -78,7 +79,9 @@ private:
         }
     }
 
-    void get_d(std::vector<double> &d) const override
+    void get_d(const unsigned t,
+               const unsigned i,
+               std::vector<double> &d) const override
     {
         d[0] = 1.0;
         d[1] = 0.0;
@@ -232,8 +235,7 @@ int main(int argc, char **argv)
         if(i % output_interval == 0)
         {
             // output current solution
-            //std::cout << "Outputting solution at time = " << problem.time() << '\n';
-            std::cout << ";\tOutputting";
+            MJRFD_TRACE("Outputting");
             std::sprintf(filename, "output_%05i.csv", i/output_interval);
             outfile.open(filename);
             problem.output(outfile);
