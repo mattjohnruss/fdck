@@ -134,6 +134,10 @@ namespace mjrfd
         virtual void get_dr_du(const std::vector<double> &u,
                                std::vector<std::vector<double>> &dr_du) const;
 
+        /// Get the ratio of timescales that multiplies the time derivatives (1
+        /// by default)
+        virtual void get_timescale_ratio(double &timescale_ratio) const;
+
         virtual void exact_solution(const double time,
                                     const double x,
                                     std::vector<double> &sol) const;

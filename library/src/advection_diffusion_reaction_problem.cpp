@@ -150,6 +150,12 @@ namespace mjrfd
         std::vector<double> u_at_node(n_var_);
         std::vector<double> u_old_at_node(n_var_);
 
+        // Storage for the timescale ratio
+        double timescale_ratio = 0;
+
+        // Get the timescale ratio
+        get_timescale_ratio(timescale_ratio);
+
         // Loop over the nodes
         for(unsigned i = 0; i < n_node_; ++i)
         {
@@ -193,7 +199,8 @@ namespace mjrfd
                     // Time derivatives
                     if(is_steady() == false)
                     {
-                        residual(index) += dx_*dx_/dt_*(u(0, var, i) - u(1, var, i));
+                        residual(index) +=
+                            timescale_ratio*dx_*dx_/dt_*(u(0, var, i) - u(1, var, i));
                     }
 
                     // Add the spatial terms to the residual for this variable
@@ -350,6 +357,12 @@ namespace mjrfd
         // Storage for u (all vars) at a node
         std::vector<double> u_at_node(n_var_);
 
+        // Storage for the timescale ratio
+        double timescale_ratio = 0;
+
+        // Get the timescale ratio
+        get_timescale_ratio(timescale_ratio);
+
         // Loop over the nodes
         for(unsigned i = 0; i < n_node_; ++i)
         {
@@ -490,7 +503,8 @@ namespace mjrfd
                     // Time derivatives
                     if(is_steady() == false)
                     {
-                        triplet_list.emplace_back(index, index, dx_*dx_/dt_);
+                        triplet_list.emplace_back(
+                            index, index, timescale_ratio*dx_*dx_/dt_);
                     }
 
                     // Add the spatial terms to the residual for this variable
@@ -787,6 +801,11 @@ namespace mjrfd
                 dr_du[var][var2] = 0.0;
             }
         }
+    }
+
+    void AdvectionDiffusionReactionProblem::get_timescale_ratio(double &timescale_ratio) const
+    {
+        timescale_ratio = 1.0;
     }
 
     const std::unordered_map<int, double>&
