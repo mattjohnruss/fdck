@@ -752,53 +752,129 @@ namespace mjrfd
         }
     }
 
-    void AdvectionDiffusionReactionProblem::get_dbc_du(Boundary,
-                    const unsigned,
+    void AdvectionDiffusionReactionProblem::get_dbc_du(Boundary b,
+                    const unsigned i2,
                     std::vector<std::vector<double>> &da1_du,
                     std::vector<std::vector<double>> &da2_du,
                     std::vector<std::vector<double>> &da3_du) const
     {
-        for(unsigned var = 0; var < n_var_; ++var)
+        assert(i2 <= 2 || (i2 >= n_node_-3 && i2 <= n_node_-1));
+
+        std::vector<double> a1_plus(n_var_);
+        std::vector<double> a2_plus(n_var_);
+        std::vector<double> a3_plus(n_var_);
+
+        std::vector<double> a1_minus(n_var_);
+        std::vector<double> a2_minus(n_var_);
+        std::vector<double> a3_minus(n_var_);
+
+        // This is a hack to get around the fact that all of the get_* and
+        // calculate_* methods are const, but these FD ones need to be
+        // non-const as they temporarily make changes to dofs. Could be avoided
+        // with a refactor but for now we will do this
+        AdvectionDiffusionReactionProblem *this_mut =
+            const_cast<AdvectionDiffusionReactionProblem*>(this);
+
+        for(unsigned var2 = 0; var2 < n_var_; ++var2)
         {
-            for(unsigned var2 = 0; var2 < n_var_; ++var2)
+            double u_i2_var2_backup = u(var2, i2);
+
+            this_mut->u(var2, i2) += Jacobian_fd_step;
+            get_bc(b, a1_plus, a2_plus, a3_plus);
+            this_mut->u(var2, i2) = u_i2_var2_backup;
+
+            this_mut->u(var2, i2) -= Jacobian_fd_step;
+            get_bc(b, a1_minus, a2_minus, a3_minus);
+            this_mut->u(var2, i2) = u_i2_var2_backup;
+
+            for(unsigned var = 0; var < n_var_; ++var)
             {
-                da1_du[var][var2] = 0.0;
-                da2_du[var][var2] = 0.0;
-                da3_du[var][var2] = 0.0;
+                da1_du[var][var2] = (a1_plus[var] - a1_minus[var])/(2.0*Jacobian_fd_step);
+                da2_du[var][var2] = (a2_plus[var] - a2_minus[var])/(2.0*Jacobian_fd_step);
+                da3_du[var][var2] = (a3_plus[var] - a3_minus[var])/(2.0*Jacobian_fd_step);
             }
         }
     }
 
-    void AdvectionDiffusionReactionProblem::get_dd_du(const unsigned,
-                                                      const unsigned,
+    void AdvectionDiffusionReactionProblem::get_dd_du(const unsigned t,
+                                                      const unsigned i,
                                                       std::vector<std::vector<double>> &dd_du) const
     {
-        for(unsigned var = 0; var < n_var_; ++var)
+        std::vector<double> d_plus(n_var_);
+        std::vector<double> d_minus(n_var_);
+
+        // Same const hack
+        AdvectionDiffusionReactionProblem *this_mut =
+            const_cast<AdvectionDiffusionReactionProblem*>(this);
+
+        for(unsigned var2 = 0; var2 < n_var_; ++var2)
         {
-            for(unsigned var2 = 0; var2 < n_var_; ++var2)
+            double u_i_var2_backup = u(t, var2, i);
+
+            this_mut->u(t, var2, i) += Jacobian_fd_step;
+            get_d(t, i, d_plus);
+            this_mut->u(t, var2, i) = u_i_var2_backup;
+
+            this_mut->u(t, var2, i) -= Jacobian_fd_step;
+            get_d(t, i, d_minus);
+            this_mut->u(t, var2, i) = u_i_var2_backup;
+
+            for(unsigned var = 0; var < n_var_; ++var)
             {
-                dd_du[var][var2] = 0.0;
+                dd_du[var][var2] = (d_plus[var] - d_minus[var])/(2.0*Jacobian_fd_step);
             }
         }
     }
 
-    void AdvectionDiffusionReactionProblem::get_dv_du(const unsigned,
-                                                      const unsigned,
-                                                      const unsigned,
-                                                      const unsigned,
+    void AdvectionDiffusionReactionProblem::get_dv_du(const unsigned i,
+                                                      const unsigned var,
+                                                      const unsigned i2,
+                                                      const unsigned var2,
                                                       double &dv_du) const
     {
-        dv_du = 0.0;
+        double v_plus;
+        double v_minus;
+
+        // Same const hack
+        AdvectionDiffusionReactionProblem *this_mut =
+            const_cast<AdvectionDiffusionReactionProblem*>(this);
+
+        double u_i2_var2_backup = u(var2, i2);
+
+        this_mut->u(var2, i2) += Jacobian_fd_step;
+        get_v(i, var, v_plus);
+        this_mut->u(var2, i2) = u_i2_var2_backup;
+
+        this_mut->u(var2, i2) -= Jacobian_fd_step;
+        get_v(i, var, v_minus);
+        this_mut->u(var2, i2) = u_i2_var2_backup;
+
+        dv_du = (v_plus - v_minus)/(2.0*Jacobian_fd_step);
     }
 
-    void AdvectionDiffusionReactionProblem::get_dr_du(const std::vector<double> &,
+    void AdvectionDiffusionReactionProblem::get_dr_du(const std::vector<double> &u,
                                                       std::vector<std::vector<double>> &dr_du) const
     {
-        for(unsigned var = 0; var < n_var_; ++var)
+        std::vector<double> r_plus(n_var_);
+        std::vector<double> r_minus(n_var_);
+
+        std::vector<double> u_mut = u;
+
+        for(unsigned var2 = 0; var2 < n_var_; ++var2)
         {
-            for(unsigned var2 = 0; var2 < n_var_; ++var2)
+            double u_var2_backup = u_mut[var2];
+
+            u_mut[var2] += Jacobian_fd_step;
+            get_r(u_mut, r_plus);
+            u_mut[var2] = u_var2_backup;
+
+            u_mut[var2] -= Jacobian_fd_step;
+            get_r(u_mut, r_minus);
+            u_mut[var2] = u_var2_backup;
+
+            for(unsigned var = 0; var < n_var_; ++var)
             {
-                dr_du[var][var2] = 0.0;
+                dr_du[var][var2] = (r_plus[var] - r_minus[var])/(2.0*Jacobian_fd_step);
             }
         }
     }
