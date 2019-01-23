@@ -65,40 +65,32 @@ private:
     unsigned n_node_;
     double dx_;
 
-    void calculate_residual() override
+    void calculate_residual(Eigen::VectorXd &residual) const override
     {
-        // set all entries to zero
-        // not neccessary here since all entries are set explicitly
-        //residual_.setZero();
-
-        residual_(0) = u(c,0)*dx_*dx_;
+        residual(0) = u(c,0)*dx_*dx_;
 
         for(unsigned i = 1; i < n_node_-1; ++i)
         {
             // time derivative
-            residual_(i) = -(u(c,i) - u(1,c,i))*dx_*dx_/dt_;
+            residual(i) = -(u(c,i) - u(1,c,i))*dx_*dx_/dt_;
 
             // diffusion (u_ and u_old_ because of Crank-Nicolson)
-            residual_(i) += 0.5*(u(c,i-1) - 2*u(c,i) + u(c,i+1));
-            residual_(i) += 0.5*(u(1,c,i-1) - 2*u(1,c,i) + u(1,c,i+1));
+            residual(i) += 0.5*(u(c,i-1) - 2*u(c,i) + u(c,i+1));
+            residual(i) += 0.5*(u(1,c,i-1) - 2*u(1,c,i) + u(1,c,i+1));
 
             // advection (u_ and u_old_ because of Crank-Nicolson)
-            residual_(i) -= 0.5*(6.0*(-0.5*u(c,i-1) + 0.5*u(c,i+1)))*dx_;
-            residual_(i) -= 0.5*(6.0*(-0.5*u(1,c,i-1) + 0.5*u(1,c,i+1)))*dx_;
+            residual(i) -= 0.5*(6.0*(-0.5*u(c,i-1) + 0.5*u(c,i+1)))*dx_;
+            residual(i) -= 0.5*(6.0*(-0.5*u(1,c,i-1) + 0.5*u(1,c,i+1)))*dx_;
 
             // forcing
-            residual_(i) += 8.0*dx_*dx_;
+            residual(i) += 8.0*dx_*dx_;
         }
 
-        residual_(n_node_-1) = u(c,n_node_-1)*dx_*dx_;
+        residual(n_node_-1) = u(c,n_node_-1)*dx_*dx_;
     }
 
-    void calculate_jacobian() override
+    void calculate_jacobian(std::vector<Triplet> &triplet_list) const override
     {
-        // set all entries to zero
-        //jacobian_.setZero();
-
-        std::vector<T> triplet_list;
         triplet_list.reserve(3*(n_node_-2) + 2);
 
         triplet_list.push_back( T(0, 0, 1.0*dx_*dx_) );
@@ -111,9 +103,6 @@ private:
         }
 
         triplet_list.push_back( T(n_node_-1, n_node_-1, 1.0*dx_*dx_) );
-        
-        jacobian_.setFromTriplets(triplet_list.begin(), triplet_list.end());
-        jacobian_.makeCompressed();
     }
 };
 
@@ -123,6 +112,8 @@ int main()
     const double dt = 0.001;
 
     DiffusionProblem1D problem(n_node);
+
+    problem.enable_terse_logging();
 
     char filename[200];
     std::ofstream outfile;
