@@ -268,6 +268,14 @@ namespace mjrfd
         return time_;
     }
 
+    void Problem::output(std::ostream &) const
+    {
+    }
+
+    void Problem::output_exact(std::ostream &) const
+    {
+    }
+
     void Problem::dump_res_and_jac(std::ostream &res_stream, std::ostream &jac_stream) const
     {
         // sensible output format for Eigen matrices
