@@ -136,6 +136,13 @@ namespace mjrfd
         return std::atof(params_[key].c_str());
     }
 
+    /// Specialise get_impl for unsigned
+    template<>
+    unsigned Config::get_impl(const std::string &key)
+    {
+        return std::atoi(params_[key].c_str());
+    }
+
     /// Specialise get_impl for bool
     template<>
     bool Config::get_impl(const std::string &key)
