@@ -52,5 +52,12 @@ namespace mjrfd
         // Evaluate a polynomial with coeffs in ascending power order at x using
         // Horner's method
         double evaluate_polynomial(const double x, const std::vector<double> &coeffs);
+
+        double lerp(double s, double v0, double v1);
+
+        void lerp_mesh(const Eigen::VectorXd &x,
+                       const Eigen::VectorXd &v,
+                       const Eigen::VectorXd &x_interp,
+                       Eigen::VectorXd &v_interp);
     }
 }
