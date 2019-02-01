@@ -25,7 +25,8 @@ else {
 }
 
 do for [i = 0:n:n_inc] {
-    set label 1 sprintf("%i",i) at graph 0.05,0.95
+    stats [*:*] [*:*] fn(i) u 1 skip 1 nooutput
+    set label 1 sprintf("t = %.3f", STATS_min) at graph 0.05,0.95
 
     if(exist("steady")) {
         plot for [j = 1:n_var] fn(i)               u 2:2+word(vars,j) w l lc j lw 2 ti columnheader, \
