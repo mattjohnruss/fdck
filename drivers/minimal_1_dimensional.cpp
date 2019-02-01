@@ -32,25 +32,60 @@ struct ChemokinesBuilder
 
 namespace data
 {
+    // version ignoring the time points before t=120
+    //ChemokinesBuilder proposal_builder {
+        //// a
+        //0.0,
+        //// b
+        //0.9100772827,
+        //// inlet_poly_coeffs
+        //{ 0.0920171184030373,
+          //0.281788395976262,
+          //0.899875950593092,
+         //-3.35207139698531,
+          //4.07826456814076,
+         //-1.71607161439073 },
+        //// outlet_poly_coeffs
+        //{ 0.0252628593733173,
+          //0.0702608135830629,
+         //-0.434142866323765,
+          //1.33417142646105,
+         //-0.565008183472908,
+         //-0.268762291710336 },
+        //// ic_poly_coeffs
+        //{ 0.0903660062452174,
+         //-0.232998153044166,
+          //0.382087522035561,
+         //-0.301365627938283,
+          //0.0901094767962003,
+         //-0.00177964573302294 },
+        //// start_time
+        //120.0,
+        //// end_time
+        //2730.0
+    //};
+
+    // version with all time points, for doing simulations starting at t=0 with
+    // made up zero ICs and a linear ramp up to starting concentration
     ChemokinesBuilder proposal_builder {
         // a
         0.0,
         // b
         0.9100772827,
         // inlet_poly_coeffs
-        { 0.0920171184030373,
-          0.281788395976262,
-          0.899875950593092,
-         -3.35207139698531,
-          4.07826456814076,
-         -1.71607161439073 },
+        { 0.079725755309440,
+          0.276550445893222,
+          1.044702075477787,
+         -3.649471430632135,
+          4.314373224651199,
+         -1.781640087070480 },
         // outlet_poly_coeffs
-        { 0.0252628593733173,
-          0.0702608135830629,
-         -0.434142866323765,
-          1.33417142646105,
-         -0.565008183472908,
-         -0.268762291710336 },
+        { 0.024176997335253,
+          0.078142098914668,
+         -0.461436891550468,
+          1.221789288442903,
+         -0.263762150324452,
+         -0.437328330024978 },
         // ic_poly_coeffs
         { 0.0903660062452174,
          -0.232998153044166,
@@ -59,7 +94,7 @@ namespace data
           0.0901094767962003,
          -0.00177964573302294 },
         // start_time
-        120.0,
+        30.0,
         // end_time
         2730.0
     };
@@ -178,19 +213,24 @@ public:
         // Set everything to zero
         clear_solution();
 
-        // Initial time is 30s
-        time() = start_time;
-
         if(p.zero_ics == true)
         {
-            // set the initial conditions to zero
-            for(unsigned i = 0; i < n_node_; ++i)
-            {
-                u(0, c_u, i) = 0.0;
-            }
+            // Initial time is zero
+            time() = 0.0;
+
+            // solution has been cleared above and everything is zero at this point
+
+            //// set the initial conditions to zero
+            //for(unsigned i = 0; i < n_node_; ++i)
+            //{
+                //u(0, c_u, i) = 0.0;
+            //}
         }
         else
         {
+            // Initial time is the "start time" of the experiment
+            time() = start_time;
+
             // set the initial conditions from the polynomial fit
             for(unsigned i = 0; i < n_node_; ++i)
             {
@@ -247,17 +287,46 @@ private:
                 std::vector<double> &a2,
                 std::vector<double> &a3) const override
     {
+        a1[c_u] = 1.0;
+        a2[c_u] = 0.0;
+
         if(b == Boundary::Left)
         {
-            a1[c_u] = 1.0;
-            a2[c_u] = 0.0;
-            a3[c_u] = utilities::evaluate_polynomial(map_time(time()), inlet_poly_coeffs_);
+            // if the flag is set and we haven't reached start_time, do a linear interpolation between (0,0) and (start_time, c(start_time))
+            if(p.zero_ics == true && time() < start_time)
+            {
+                // get the (interpolated) concentration at t = start_time
+                const static double start_c =
+                    utilities::evaluate_polynomial(map_time(start_time), inlet_poly_coeffs_);
+
+                // calculate the slope of the line
+                const static double m = start_c/start_time;
+
+                a3[c_u] = m*time();
+            }
+            else
+            {
+                a3[c_u] = utilities::evaluate_polynomial(map_time(time()), inlet_poly_coeffs_);
+            }
         }
         if(b == Boundary::Right)
         {
-            a1[c_u] = 1.0;
-            a2[c_u] = 0.0;
-            a3[c_u] = utilities::evaluate_polynomial(map_time(time()), outlet_poly_coeffs_);
+            // if the flag is set and we haven't reached start_time, do a linear interpolation between (0,0) and (start_time, c(start_time))
+            if(p.zero_ics == true && time() < start_time)
+            {
+                // get the (interpolated) concentration at t = start_time
+                const static double start_c =
+                    utilities::evaluate_polynomial(map_time(start_time), outlet_poly_coeffs_);
+
+                // calculate the slope of the line
+                const static double m = start_c/start_time;
+
+                a3[c_u] = m*time();
+            }
+            else
+            {
+                a3[c_u] = utilities::evaluate_polynomial(map_time(time()), outlet_poly_coeffs_);
+            }
         }
     }
 
@@ -285,13 +354,13 @@ private:
         d[c_u] = p.D;
     }
 
-    void get_dd_du(const unsigned t,
-                   const unsigned i,
+    void get_dd_du(const unsigned,
+                   const unsigned,
                    std::vector<std::vector<double>> &dd_du) const override
     {
         for(unsigned var = 0; var < n_var_; ++var)
         {
-            for(unsigned var = 0; var < n_var_; ++var)
+            for(unsigned var2 = 0; var2 < n_var_; ++var2)
             {
                 dd_du[var][var2] = 0.0;
             }
