@@ -67,35 +67,36 @@ namespace mjrfd
             for(unsigned i = 0; i < n_interp; ++i)
             {
                 // Binary search:
-                // start the search at the (approx) middle of the original grid
-                // there are n-1 cells, so the index of the last cell is n-2
+                // Start the search at the (approx) middle of the original grid.
+                // There are n-1 cells, so the index of the last cell is n-2
                 unsigned cell = 0;
 
-                unsigned l_cell = 0;
-                unsigned r_cell = n - 2;
-
-                // we assume this can't fail
-                while(l_cell <= r_cell)
                 {
-                    cell = (l_cell + r_cell)/2;
+                    unsigned l_cell = 0;
+                    unsigned r_cell = n - 2;
 
-                    if(x_interp(i) > x(cell+1))
+                    // we assume this can't fail
+                    while(l_cell <= r_cell)
                     {
-                        l_cell = cell + 1;
-                    }
-                    else if(x_interp(i) < x(cell))
-                    {
-                        r_cell = cell - 1;
-                    }
-                    else
-                    {
-                        break;
+                        cell = (l_cell + r_cell)/2;
+
+                        if(x_interp(i) > x(cell+1))
+                        {
+                            l_cell = cell + 1;
+                        }
+                        else if(x_interp(i) < x(cell))
+                        {
+                            r_cell = cell - 1;
+                        }
+                        else
+                        {
+                            break;
+                        }
                     }
                 }
 
                 // After the loop, cell is the index of the interval that
-                // contains x_interp(i). I.e. x_interp(i) \in [x(cell),
-                // x(cell+1)].
+                // contains x_interp(i)
                 // Now do the actual lerp:
                 const double s = (x_interp(i) - x(cell))/(x(cell+1) - x(cell));
                 v_interp(i) = lerp(s, v(cell), v(cell+1));
