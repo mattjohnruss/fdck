@@ -187,7 +187,7 @@ int main(int argc, char **argv)
     const double dt = cf.get_or<double>("dt", 0.01);
     const double t_max = cf.get_or<double>("t_max", 10);
     const unsigned output_interval = cf.get_or<unsigned>("output_interval", 1);
-    
+
     log::set_level("trace");
 
     KellerSegelProblem problem(n_node, L);
@@ -209,8 +209,8 @@ int main(int argc, char **argv)
     char filename[200];
     std::ofstream outfile;
 
-    const bool do_time_evolution = cf.get_or<bool>("time_evo", true); 
-    const bool do_steady_solve = cf.get_or<bool>("steady", true); 
+    const bool do_time_evolution = cf.get_or<bool>("time_evo", true);
+    const bool do_steady_solve = cf.get_or<bool>("steady", true);
 
     if(do_time_evolution)
     {
