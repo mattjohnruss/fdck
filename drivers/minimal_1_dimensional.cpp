@@ -11,7 +11,8 @@ struct ChemokinesParams
 {
     double D;
     double u;
-    bool zero_ics;
+    std::string ics; // Allowed values: "zero", "polynomial", and any other is treated as a data file
+    std::string bcs; // Allowed values: "polynomial", and any other is treated as a data file
 };
 
 enum Variable
@@ -213,7 +214,7 @@ public:
         // Set everything to zero
         clear_solution();
 
-        if(p.zero_ics == true)
+        if(p.ics == "zero")
         {
             // Initial time is zero
             time() = 0.0;
@@ -226,7 +227,7 @@ public:
                 //u(0, c_u, i) = 0.0;
             //}
         }
-        else
+        else if(p.ics == "polynomial")
         {
             // Initial time is the "start time" of the experiment
             time() = start_time;
@@ -236,6 +237,37 @@ public:
             {
                 double scaled_x = map_space(x(i));
                 u(0, c_u, i) = utilities::evaluate_polynomial(scaled_x, ic_poly_coeffs_);
+            }
+        }
+        // Assume p.ics is the name of the ics CSV file
+        else
+        {
+            std::ifstream ics_file(p.ics);
+
+            if(ics_file)
+            {
+                auto [m_vec, n_rows, n_cols] =
+                    utilities::read_csv_to_flat_vector(ics_file, ' ');
+
+                typedef Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic> S;
+
+                Eigen::Map<Eigen::MatrixXd, Eigen::Unaligned, S>
+                    m(m_vec.data(), n_rows, n_cols, S(1, n_cols));
+
+                Eigen::VectorXd x_interp = Eigen::VectorXd::LinSpaced(n_node_, a_, b_);
+                Eigen::VectorXd c_u_interp(n_node_);
+
+                utilities::lerp_mesh(m.col(0), m.col(1), x_interp, c_u_interp);
+
+                for(unsigned i = 0; i < n_node_; ++i)
+                {
+                    u(c_u, i) = c_u_interp(i);
+                }
+            }
+            else
+            {
+                MJRFD_FATAL("Error opening ICs file \"{}\"! Exiting", p.ics);
+                std::exit(1);
             }
         }
     }
@@ -293,7 +325,7 @@ private:
         if(b == Boundary::Left)
         {
             // if the flag is set and we haven't reached start_time, do a linear interpolation between (0,0) and (start_time, c(start_time))
-            if(p.zero_ics == true && time() < start_time)
+            if(p.ics == "zero" && time() < start_time)
             {
                 // get the (interpolated) concentration at t = start_time
                 const static double start_c =
@@ -312,7 +344,7 @@ private:
         if(b == Boundary::Right)
         {
             // if the flag is set and we haven't reached start_time, do a linear interpolation between (0,0) and (start_time, c(start_time))
-            if(p.zero_ics == true && time() < start_time)
+            if(p.ics == "zero" && time() < start_time)
             {
                 // get the (interpolated) concentration at t = start_time
                 const static double start_c =
@@ -458,7 +490,7 @@ int main(int argc, char **argv)
 
     problem.p.u = cf.get<double>("u");
     problem.p.D = cf.get<double>("D");
-    problem.p.zero_ics = cf.get_or<bool>("zero_ics", false);
+    problem.p.ics = cf.get_or<std::string>("ics", "polynomial");
 
     problem.enable_terse_logging();
 
