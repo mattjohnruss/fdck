@@ -14,8 +14,6 @@ namespace mjrfd
         extern std::shared_ptr<spdlog::logger> config_logger;
         extern std::shared_ptr<spdlog::logger> driver_logger;
 
-        void setup();
-
         void enable_labels();
         void disable_labels();
 
