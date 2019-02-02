@@ -1,5 +1,6 @@
 #include <advection_diffusion_reaction_problem.h>
 #include <utilities.h>
+#include <log.h>
 
 #include <catch2/catch.hpp>
 
@@ -88,6 +89,9 @@ namespace mjrfd
 
         AuxDofProblem problem;
 
+        // reduce log level to remove some noise during tests
+        log::set_level("warn");
+
         problem.enable_terse_logging();
 
         // set initial conditions
@@ -108,7 +112,7 @@ namespace mjrfd
             ++i;
         }
 
-        std::cout << "\n\nReached t > t_max (" << t_max << ") after performing " << i-1 << " timesteps\n";
+        MJRFD_INFO("Reached t > t_max ({}) after performing {} timesteps", t_max, i-1);
 
         REQUIRE( utilities::l2_norm(solution - exact_solution, dt) <= 1.0e-3 );
     }

@@ -1,5 +1,6 @@
 #include <advection_diffusion_reaction_problem.h>
 #include <utilities.h>
+#include <log.h>
 
 #include <catch2/catch.hpp>
 
@@ -153,6 +154,9 @@ namespace mjrfd
 
         AdvectionDiffusionTestProblem problem(n_node, 2.0, 3.0);
         problem.p.Pe = 0.2;
+
+        // reduce log level to remove some noise during tests
+        log::set_level("warn");
 
         problem.steady_solve();
 
