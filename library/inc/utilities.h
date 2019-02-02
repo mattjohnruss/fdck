@@ -55,9 +55,9 @@ namespace mjrfd
 
         double lerp(double s, double v0, double v1);
 
-        void lerp_mesh(const Eigen::VectorXd &x,
-                       const Eigen::VectorXd &v,
-                       const Eigen::VectorXd &x_interp,
-                       Eigen::VectorXd &v_interp);
+        void lerp_mesh(const Eigen::Ref<Eigen::VectorXd> &x,
+                       const Eigen::Ref<Eigen::VectorXd> &v,
+                       const Eigen::Ref<Eigen::VectorXd> &x_interp,
+                       Eigen::Ref<Eigen::VectorXd> v_interp);
     }
 }

@@ -46,10 +46,10 @@ namespace mjrfd
 
         /// Linearly interpolate data v from grid x onto grid x_interp, returning
         /// v_interp
-        void lerp_mesh(const Eigen::VectorXd &x,
-                       const Eigen::VectorXd &v,
-                       const Eigen::VectorXd &x_interp,
-                       Eigen::VectorXd &v_interp)
+        void lerp_mesh(const Eigen::Ref<Eigen::VectorXd> &x,
+                       const Eigen::Ref<Eigen::VectorXd> &v,
+                       const Eigen::Ref<Eigen::VectorXd> &x_interp,
+                       Eigen::Ref<Eigen::VectorXd> v_interp)
         {
             // get the number of points in the original grid
             const unsigned n = x.size();
