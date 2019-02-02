@@ -59,5 +59,8 @@ namespace mjrfd
                        const Eigen::Ref<Eigen::VectorXd> &v,
                        const Eigen::Ref<Eigen::VectorXd> &x_interp,
                        Eigen::Ref<Eigen::VectorXd> v_interp);
+
+        std::tuple<std::vector<double>, unsigned, unsigned>
+            read_csv_to_flat_vector(std::istream &is, char delimiter = ' ');
     }
 }

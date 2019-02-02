@@ -1,5 +1,7 @@
 #include <utilities.h>
 
+#include <sstream>
+
 namespace mjrfd
 {
     namespace utilities
@@ -101,6 +103,40 @@ namespace mjrfd
                 const double s = (x_interp(i) - x(cell))/(x(cell+1) - x(cell));
                 v_interp(i) = lerp(s, v(cell), v(cell+1));
             }
+        }
+
+        std::tuple<std::vector<double>, unsigned, unsigned>
+            read_csv_to_flat_vector(std::istream &is, char delimiter)
+        {
+            std::vector<double> data;
+            std::string line;
+
+            unsigned n_rows = 0;
+            unsigned n_cols = 0;
+
+            // loop over the rows
+            while(std::getline(is, line))
+            {
+                std::istringstream line_stream(line);
+                std::string x;
+
+                // loop over the columns
+                while(std::getline(line_stream, x, delimiter))
+                {
+                    data.emplace_back(std::stod(x));
+                    if(n_rows == 0)
+                    {
+                        n_cols += 1;
+                    }
+                }
+
+                n_rows += 1;
+            }
+
+            // We rely on RVO to avoid copying into the return value. It's
+            // actually eliding the copy of the tuple, but we also std::move
+            // the vector into the tuple, so that is never copied either
+            return { std::move(data), n_rows, n_cols };
         }
     }
 }
