@@ -37,8 +37,12 @@ namespace mjrfd
             return integrate_trapezium(v, dx);
         }
 
+        /// Calculate the L2 norm of a function sampled at intervals dx using
+        /// the trapezium rule
         double l2_norm(const Eigen::VectorXd &v, const double dx);
 
+        /// Calculate the L2 norm of a function on the interval [a, b] using
+        /// the trapezium rule with n points
         template<class F>
         double l2_norm(const F &f,
                        const double a,
@@ -49,10 +53,11 @@ namespace mjrfd
             return std::sqrt(integrate_trapezium(f_sq, a, b, n));
         }
 
-        // Evaluate a polynomial with coeffs in ascending power order at x using
-        // Horner's method
+        /// Evaluate a polynomial with coeffs in ascending power order at x
+        /// using Horner's method
         double evaluate_polynomial(const double x, const std::vector<double> &coeffs);
 
+        /// Simple 1d linear interpolation
         double lerp(double s, double v0, double v1);
 
         /// Resample data v defined at points x at the new set of points
@@ -118,6 +123,7 @@ namespace mjrfd
             }
         }
 
+        /// Read CSV-style data from the stream is into a row-major flat vector
         std::tuple<std::vector<double>, unsigned, unsigned>
             read_csv_to_flat_vector(std::istream &is, char delimiter = ' ');
     }

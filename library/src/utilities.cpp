@@ -40,7 +40,6 @@ namespace mjrfd
             return result;
         }
 
-        /// Simple lerp function
         double lerp(double s, double v0, double v1)
         {
             return (1.0 - s)*v0 + s*v1;
