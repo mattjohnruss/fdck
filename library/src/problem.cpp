@@ -32,8 +32,6 @@ namespace mjrfd
         jac_filename_prefix_("")
     {
         clear_solution();
-
-        log::enable_labels();
     }
 
     Problem::~Problem()
