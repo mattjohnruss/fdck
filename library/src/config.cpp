@@ -1,5 +1,5 @@
-#include <config.h>
-#include <log.h>
+#include "config.h"
+#include "log.h"
 
 #include <algorithm>
 #include <iomanip>

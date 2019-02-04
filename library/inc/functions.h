@@ -23,7 +23,7 @@ namespace mjrfd
     class ConstantFunction : public DifferentiableFunction
     {
     public:
-        ConstantFunction(const double value) :
+        explicit ConstantFunction(const double value) :
             value_(value)
         {
         }

@@ -1,5 +1,5 @@
-#include <finite_difference_problem.h>
-#include <config.h>
+#include "finite_difference_problem.h"
+#include "config.h"
 
 #include <iostream>
 #include <fstream>

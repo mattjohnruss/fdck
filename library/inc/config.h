@@ -25,7 +25,7 @@ namespace mjrfd
         Config(int argc, char **argv);
 
         /// Constructor to immediately parse an istream of the config file
-        Config(std::istream &is);
+        explicit Config(std::istream &is);
 
         /// Delete default copy constructor and assignment operator to prevent copying
         Config(const Config &) = delete;

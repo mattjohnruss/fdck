@@ -1,5 +1,5 @@
-#include <functions.h>
-#include <utilities.h>
+#include "functions.h"
+#include "utilities.h"
 
 #include <catch2/catch.hpp>
 

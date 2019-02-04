@@ -6,8 +6,6 @@
 #include <vector>
 #include <ostream>
 
-#include <residual.h>
-
 namespace mjrfd
 {
     class Problem

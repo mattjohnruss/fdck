@@ -1,6 +1,6 @@
-#include <advection_diffusion_reaction_problem.h>
-#include <utilities.h>
-#include <log.h>
+#include "advection_diffusion_reaction_problem.h"
+#include "utilities.h"
+#include "log.h"
 
 #include <catch2/catch.hpp>
 
@@ -11,7 +11,7 @@ enum AuxVariable
     y = 0,
 };
 
-class AuxDofProblem: public Problem
+class AuxDofProblem : public Problem
 {
 public:
     AuxDofProblem() :
@@ -63,7 +63,7 @@ private:
     {
         return n_var_*n_dof_per_var_ + i;
     }
-    
+
     void calculate_residual(Eigen::VectorXd &residual) const override
     {
         // Add the ode

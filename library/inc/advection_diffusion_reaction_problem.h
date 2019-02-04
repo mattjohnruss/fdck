@@ -1,7 +1,7 @@
 #pragma once
 
-#include <problem.h>
-#include <stencil.h>
+#include "problem.h"
+#include "stencil.h"
 
 #include <iostream>
 

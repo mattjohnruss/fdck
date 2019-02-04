@@ -1,4 +1,4 @@
-#include <utilities.h>
+#include "utilities.h"
 
 #include <catch2/catch.hpp>
 #include <Eigen/Dense>
