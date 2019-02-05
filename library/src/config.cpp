@@ -35,7 +35,7 @@ namespace mjrfd
             if(std::getline(line_stream, key, '='))
             {
                 // remove whitespace from key
-                remove_whitespace(key);
+                trim_whitespace(key);
 
                 // storage for the value assoicated with key
                 std::string value;
@@ -44,7 +44,7 @@ namespace mjrfd
                 if(std::getline(line_stream, value))
                 {
                     // remove whitespace from value
-                    remove_whitespace(value);
+                    trim_whitespace(value);
 
                     // add the (key,value) pair to the params_ map
                     params_[key] = value;
@@ -120,11 +120,24 @@ namespace mjrfd
         }
     }
 
-    void Config::remove_whitespace(std::string &s)
+    void Config::trim_whitespace(std::string &s)
     {
-        s.erase(std::remove_if(s.begin(),
-                               s.end(),
-                               [](unsigned char c) { return std::isspace(c); }),
+        trim_left(s);
+        trim_right(s);
+    }
+
+    void Config::trim_left(std::string &s)
+    {
+        s.erase(s.begin(), std::find_if(s.begin(),
+                                        s.end(),
+                                        [](int c) { return !std::isspace(c); }));
+    }
+
+    void Config::trim_right(std::string &s)
+    {
+        s.erase(std::find_if(s.rbegin(),
+                             s.rend(),
+                             [](int c) { return !std::isspace(c); }).base(),
                 s.end());
     }
 

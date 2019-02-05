@@ -82,7 +82,9 @@ namespace mjrfd
         std::unordered_map<std::string, std::string> params_;
 
         /// Helper function for removing all whitespace characters from a string
-        static void remove_whitespace(std::string &s);
+        static void trim_whitespace(std::string &s);
+        static void trim_left(std::string &s);
+        static void trim_right(std::string &s);
 
         /// Function to perform actual conversion to templated type - must be
         /// specialised for each type required
