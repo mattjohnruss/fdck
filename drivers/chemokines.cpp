@@ -742,7 +742,7 @@ int main(int argc, char **argv)
     problem.set_initial_conditions();
 
     // output initial conditions
-    std::sprintf(filename, "output_%05i.csv", 0);
+    std::sprintf(filename, "output_%05u.csv", 0);
     outfile.open(filename);
     problem.output(outfile);
     outfile.close();
@@ -760,7 +760,7 @@ int main(int argc, char **argv)
             // output current solution
             //std::cout << "Outputting solution at time = " << problem.time() << '\n';
             std::cout << ";\tOutputting";
-            std::sprintf(filename, "output_%05i.csv", i/output_interval);
+            std::sprintf(filename, "output_%05u.csv", i/output_interval);
             outfile.open(filename);
             problem.output(outfile);
             outfile.close();

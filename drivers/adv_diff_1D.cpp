@@ -119,7 +119,7 @@ int main()
     std::ofstream outfile;
 
     // output initial conditions
-    std::sprintf(filename, "output_%05i.csv", 0);
+    std::sprintf(filename, "output_%05u.csv", 0);
     outfile.open(filename);
     problem.output(outfile);
     outfile.close();
@@ -134,7 +134,7 @@ int main()
         if(i % 10 == 0)
         {
             // output current solution
-            std::sprintf(filename, "output_%05i.csv", i/10);
+            std::sprintf(filename, "output_%05u.csv", i/10);
             outfile.open(filename);
             problem.output(outfile);
             outfile.close();

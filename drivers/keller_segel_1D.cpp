@@ -220,7 +220,7 @@ int main(int argc, char **argv)
 
         problem.set_initial_conditions();
 
-        std::sprintf(filename, "output_%05i.csv", 0);
+        std::sprintf(filename, "output_%05u.csv", 0);
         outfile.open(filename);
         problem.output(outfile);
         outfile.close();
@@ -234,7 +234,7 @@ int main(int argc, char **argv)
             if(i % output_interval == 0)
             {
                 MJRFD_TRACE("Outputting");
-                std::sprintf(filename, "output_%05i.csv", i/output_interval);
+                std::sprintf(filename, "output_%05u.csv", i/output_interval);
                 outfile.open(filename);
                 problem.output(outfile);
                 outfile.close();
