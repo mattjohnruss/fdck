@@ -12,7 +12,9 @@ struct ChemokinesParams
     double D;
     double u;
     std::string ics; // Allowed values: "zero", "polynomial", and any other is treated as a data file
-    std::string bcs; // Allowed values: "polynomial", and any other is treated as a data file
+    //std::string bcs; // Allowed values: "polynomial", and any other is treated as a data file
+    char csv_delimiter;
+    unsigned csv_skip_rows;
 };
 
 enum Variable
@@ -242,12 +244,18 @@ public:
         // Assume p.ics is the name of the ics CSV file
         else
         {
+            // Initial time is the "start time" of the experiment
+            time() = start_time;
+
+            // Open the ICs file
             std::ifstream ics_file(p.ics);
 
+            // If the file opens successfully, read the CSV data and set the
+            // ICs by lerping onto the mesh
             if(ics_file)
             {
                 auto [m_vec, n_rows, n_cols] =
-                    utilities::read_csv_to_flat_vector(ics_file, ' ');
+                    utilities::read_csv_to_flat_vector(ics_file, p.csv_delimiter, p.csv_skip_rows);
 
                 typedef Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic> S;
 
@@ -486,11 +494,19 @@ int main(int argc, char **argv)
         std::exit(1);
     }
 
+    // NOTE: a bit unclean. This replaces the start_time of the builder with a
+    // user specified one if provided. Otherwise it uses the already defined
+    // start_time in builder. Consider unifying params handling rather than
+    // having p, builder and some cmdline args (as in keller_segel_1D driver).
+    builder.start_time = cf.get_or<double>("start_time", builder.start_time);
+
     ChemokinesProblem1D problem(n_node, std::move(builder));
 
     problem.p.u = cf.get<double>("u");
     problem.p.D = cf.get<double>("D");
     problem.p.ics = cf.get_or<std::string>("ics", "polynomial");
+    problem.p.csv_delimiter = cf.get_or<char>("csv_delimiter", ',');
+    problem.p.csv_skip_rows = cf.get_or<unsigned>("csv_skip_rows", 0);
 
     problem.enable_terse_logging();
 

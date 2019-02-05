@@ -46,7 +46,9 @@ namespace mjrfd
         }
 
         std::tuple<std::vector<double>, unsigned, unsigned>
-            read_csv_to_flat_vector(std::istream &is, char delimiter)
+        read_csv_to_flat_vector(std::istream &is,
+                                char delimiter,
+                                unsigned skip_rows)
         {
             std::vector<double> data;
             std::string line;
@@ -60,11 +62,17 @@ namespace mjrfd
                 std::istringstream line_stream(line);
                 std::string x;
 
+                if(n_rows < skip_rows)
+                {
+                    n_rows += 1;
+                    continue;
+                }
+
                 // loop over the columns
                 while(std::getline(line_stream, x, delimiter))
                 {
                     data.emplace_back(std::stod(x));
-                    if(n_rows == 0)
+                    if(n_rows == skip_rows)
                     {
                         n_cols += 1;
                     }

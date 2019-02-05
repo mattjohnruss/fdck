@@ -125,6 +125,8 @@ namespace mjrfd
 
         /// Read CSV-style data from the stream is into a row-major flat vector
         std::tuple<std::vector<double>, unsigned, unsigned>
-            read_csv_to_flat_vector(std::istream &is, char delimiter = ' ');
+        read_csv_to_flat_vector(std::istream &is,
+                                char delimiter = ' ',
+                                unsigned skip_rows = 0);
     }
 }
