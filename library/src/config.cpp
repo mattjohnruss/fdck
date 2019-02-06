@@ -171,4 +171,20 @@ namespace mjrfd
         // convert value to a bool and return it
         return params_[key];
     }
+
+    /// Specialise get_impl for char. We require char values to be wrapped in
+    /// single quotes to avoid disappearing spaces etc. when stripping whitespace
+    template<>
+    char Config::get_impl(const std::string &key)
+    {
+        if(params_[key].size() != 3 && params_[key][0] == '\'' && params_[key][2] == '\'')
+        {
+            MJRFD_LIB_WARN("Expected single character wrapped in single quotes"
+                           "for parameter \"{}\"; found \"{}\"",
+                           key, params_[key]);
+        }
+
+        // return the second character, inside the single quotes
+        return params_[key][1];
+    }
 }
