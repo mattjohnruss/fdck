@@ -41,9 +41,9 @@ struct ChemokinesParams
     double J_m_right_abs;
     double J_i_right;
     std::unique_ptr<DifferentiableFunction> chi;
-    double p;
-    double s;
-    double L;
+    double P;
+    double S;
+    double phi_i_max_over_c_0;
 };
 
 enum Variable
@@ -209,10 +209,20 @@ private:
             std::vector<double> d_left(n_var_);
             get_d(0, 0, d_left);
 
-            a1[c_u]   = 1.0;                            a2[c_u]   = 0.0;            a3[c_u]   = u_aux(c_u_0);
-            a1[c_s]   = 1.0;                            a2[c_s]   = 0.0;            a3[c_s]   = 0.0;
-            a1[phi_i] = 0.0;                            a2[phi_i] = 1.0;            a3[phi_i] = 0.0;
-            a1[phi_m] = v_phi_m_left + p.J_m_left_prop; a2[phi_m] = -d_left[phi_m]; a3[phi_m] = -p.J_m_left_abs;
+            a1[c_u]   = 1.0;
+            a1[c_s]   = 1.0;
+            a1[phi_i] = 0.0;
+            a1[phi_m] = v_phi_m_left + p.J_m_left_prop;
+
+            a2[c_u]   = 0.0;
+            a2[c_s]   = 0.0;
+            a2[phi_i] = -d_left[phi_i];
+            a2[phi_m] = -d_left[phi_m];
+
+            a3[c_u]   = u_aux(c_u_0);
+            a3[c_s]   = 0.0;
+            a3[phi_i] = 0.0;
+            a3[phi_m] = -p.J_m_left_abs;
         }
         if(b == Boundary::Right)
         {
@@ -225,10 +235,20 @@ private:
             std::vector<double> d_right(n_var_);
             get_d(0, n_node_-1, d_right);
 
-            a1[c_u]   = 1.0;                              a2[c_u]   = 0.0;             a3[c_u]   = 0.0;
-            a1[c_s]   = 1.0;                              a2[c_s]   = 0.0;             a3[c_s]   = 0.0;
-            a1[phi_i] = 0.0;                              a2[phi_i] = 1.0;             a3[phi_i] = -p.J_i_right*p.M;
-            a1[phi_m] = v_phi_m_right - p.J_m_right_prop; a2[phi_m] = -d_right[phi_m]; a3[phi_m] = p.J_m_right_abs;
+            a1[c_u]   = 1.0;
+            a1[c_s]   = 1.0;
+            a1[phi_i] = 0.0;
+            a1[phi_m] = v_phi_m_right - p.J_m_right_prop;
+
+            a2[c_u]   = 0.0;
+            a2[c_s]   = 0.0;
+            a2[phi_i] = -d_right[phi_i];
+            a2[phi_m] = -d_right[phi_m];
+
+            a3[c_u]   = 0.0;
+            a3[c_s]   = 0.0;
+            a3[phi_i] = p.J_i_right*p.M;
+            a3[phi_m] = p.J_m_right_abs;
         }
     }
 
@@ -291,7 +311,9 @@ private:
             std::fill(dd_du[var].begin(), dd_du[var].end(), 0.0);
         }
 
-        dd_du[phi_m][phi_m] = p.D_mu->deriv(u(t, c_b, i));
+        // TODO how is this possibly right? We've been doing this for ages but surely it should be dd_du[phi_m][c_b]?
+        // Changed it to c_b for now, but double check!
+        dd_du[phi_m][c_b] = p.D_mu->deriv(u(t, c_b, i));
     }
 
     void get_v(const unsigned i,
@@ -411,14 +433,14 @@ private:
     void calculate_residual(Eigen::VectorXd &residual) const override
     {
         AdvectionDiffusionReactionProblem::calculate_residual(residual);
-        residual(aux_dof_index(c_u_0)) += (u_aux(0, c_u_0) - u_aux(1, c_u_0)) - dt_*(p.p*p.L*u(0, phi_m, 0) - p.s*p.L*u_aux(0, c_u_0));
+        residual(aux_dof_index(c_u_0)) += (u_aux(0, c_u_0) - u_aux(1, c_u_0)) - dt_*(p.phi_i_max_over_c_0*p.P*u(0, phi_m, 0) - p.S*u_aux(0, c_u_0));
     }
 
     void calculate_jacobian(std::vector<Triplet> &triplet_list) const override
     {
         AdvectionDiffusionReactionProblem::calculate_jacobian(triplet_list);
-        triplet_list.emplace_back(aux_dof_index(c_u_0), aux_dof_index(c_u_0), 1.0 - dt_*(-p.s*p.L));
-        triplet_list.emplace_back(aux_dof_index(c_u_0), nodal_dof_index(phi_m, 0), -dt_*(p.p*p.L));
+        triplet_list.emplace_back(aux_dof_index(c_u_0), aux_dof_index(c_u_0), 1.0 - dt_*(-p.S));
+        triplet_list.emplace_back(aux_dof_index(c_u_0), nodal_dof_index(phi_m, 0), -dt_*(p.phi_i_max_over_c_0*p.P));
 
         triplet_list.emplace_back(nodal_dof_index(c_u, 0), aux_dof_index(c_u_0), -1.0*dx_*dx_);
     }
@@ -481,9 +503,9 @@ int main(int argc, char **argv)
     problem.p.J_m_left_abs   = cf.get<double>("J_m_left_abs");
     problem.p.J_m_right_abs  = cf.get<double>("J_m_right_abs");
     problem.p.J_i_right      = cf.get<double>("J_i_right");
-    problem.p.p              = cf.get<double>("p");
-    problem.p.s              = cf.get<double>("s");
-    problem.p.L              = cf.get<double>("L");
+    problem.p.P = cf.get<double>("P");
+    problem.p.S = cf.get<double>("S");
+    problem.p.phi_i_max_over_c_0 = cf.get<double>("phi_i_max_over_c_0");
 
     // Construct the type of DifferentiableFunction in the config for chi
     // the std::unique_ptr will destroy the object for us when it goes out of scope
@@ -608,8 +630,6 @@ int main(int argc, char **argv)
     if(do_steady_solve)
     {
         MJRFD_INFO("Steady solve:");
-
-        problem.disable_exit_on_solve_fail();
 
         // set initial conditions again - required since phi_i is sensitive to
         // ICs even at steady state
