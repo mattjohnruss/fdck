@@ -63,7 +63,7 @@ enum AuxVariable
 class ChemokinesProblem1D : public AdvectionDiffusionReactionProblem
 {
 public:
-    ChemokinesProblem1D(const unsigned n_node) :
+    explicit ChemokinesProblem1D(const unsigned n_node) :
         AdvectionDiffusionReactionProblem(5, n_node, 1)
     {
         enable_bc(Boundary::Left,  { c_u, c_s, phi_i, phi_m });
