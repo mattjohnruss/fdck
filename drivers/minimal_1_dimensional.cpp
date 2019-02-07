@@ -7,6 +7,9 @@
 
 using namespace mjrfd;
 
+#define MJRFD_TRACE_FILE
+#define MJRFD_DIST_MODE
+
 struct ChemokinesParams
 {
     double D;
@@ -195,21 +198,23 @@ public:
 
         enable_spatial_terms({ c_u });
 
+#ifdef MJRFD_DIST_MODE
         disable_output_time_column();
+#endif
 
         set_variable_names({ "c_u" });
 
         Max_residual = 1.0e-14;
 
+#ifdef MJRFD_TRACE_FILE
         trace_file_.open("trace.dat");
-        trace_header_ =
-            "t c_u(0) c_u(1)";
+        trace_header_ = "t c_u(0) c_u(1)";
         trace_file_ << trace_header_ << '\n';
+#endif
     }
 
     ~ChemokinesProblem1D()
     {
-        trace_file_.close();
     }
 
     void set_initial_conditions()
@@ -284,6 +289,7 @@ public:
 
     ChemokinesParams p;
 
+#ifdef MJRFD_TRACE_FILE
     void trace()
     {
         trace_file_ << time() << " "
@@ -291,10 +297,13 @@ public:
                     << u(c_u, n_node_-1) << '\n'
                     << std::flush;
     }
+#endif
 
 private:
+#ifdef MJRFD_TRACE_FILE
     std::string trace_header_;
     std::ofstream trace_file_;
+#endif
 
     // Coeffs for the polynomial fits of the inlet/outlet BC functions and ICs
     // The polynomials are fitted to the data after scaling the "x" axis to [0,1]
@@ -326,7 +335,9 @@ private:
 
     void actions_after_timestep() override
     {
+#ifdef MJRFD_TRACE_FILE
         trace();
+#endif
     }
 
     void get_bc(Boundary b,
@@ -471,7 +482,9 @@ int main(int argc, char **argv)
         output_interval = std::atoi(argv[5]);
     }
 
+#ifdef MJRFD_DIST_MODE
     log::disable_labels();
+#endif
 
     std::ifstream config_file(argv[1]);
     Config cf;
@@ -540,7 +553,9 @@ int main(int argc, char **argv)
     problem.output(outfile);
     outfile.close();
 
+#ifdef MJRFD_TRACE_FILE
     problem.trace();
+#endif
 
     unsigned i = 1;
 
