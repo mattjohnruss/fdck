@@ -15,6 +15,7 @@ struct ChemokinesParams
     //std::string bcs; // Allowed values: "polynomial", and any other is treated as a data file
     char csv_delimiter;
     unsigned csv_skip_rows;
+    double start_time;
 };
 
 enum Variable
@@ -29,66 +30,32 @@ struct ChemokinesBuilder
     std::vector<double> inlet_poly_coeffs;
     std::vector<double> outlet_poly_coeffs;
     std::vector<double> ic_poly_coeffs;
-    double start_time;
-    double end_time;
+    double fit_start_time;
+    double fit_end_time;
 };
 
 namespace data
 {
     // version ignoring the time points before t=120
-    //ChemokinesBuilder proposal_builder {
-        //// a
-        //0.0,
-        //// b
-        //0.9100772827,
-        //// inlet_poly_coeffs
-        //{ 0.0920171184030373,
-          //0.281788395976262,
-          //0.899875950593092,
-         //-3.35207139698531,
-          //4.07826456814076,
-         //-1.71607161439073 },
-        //// outlet_poly_coeffs
-        //{ 0.0252628593733173,
-          //0.0702608135830629,
-         //-0.434142866323765,
-          //1.33417142646105,
-         //-0.565008183472908,
-         //-0.268762291710336 },
-        //// ic_poly_coeffs
-        //{ 0.0903660062452174,
-         //-0.232998153044166,
-          //0.382087522035561,
-         //-0.301365627938283,
-          //0.0901094767962003,
-         //-0.00177964573302294 },
-        //// start_time
-        //120.0,
-        //// end_time
-        //2730.0
-    //};
-
-    // version with all time points, for doing simulations starting at t=0 with
-    // made up zero ICs and a linear ramp up to starting concentration
     ChemokinesBuilder proposal_builder {
         // a
         0.0,
         // b
         0.9100772827,
         // inlet_poly_coeffs
-        { 0.079725755309440,
-          0.276550445893222,
-          1.044702075477787,
-         -3.649471430632135,
-          4.314373224651199,
-         -1.781640087070480 },
+        { 0.0920171184030373,
+          0.281788395976262,
+          0.899875950593092,
+         -3.35207139698531,
+          4.07826456814076,
+         -1.71607161439073 },
         // outlet_poly_coeffs
-        { 0.024176997335253,
-          0.078142098914668,
-         -0.461436891550468,
-          1.221789288442903,
-         -0.263762150324452,
-         -0.437328330024978 },
+        { 0.0252628593733173,
+          0.0702608135830629,
+         -0.434142866323765,
+          1.33417142646105,
+         -0.565008183472908,
+         -0.268762291710336 },
         // ic_poly_coeffs
         { 0.0903660062452174,
          -0.232998153044166,
@@ -96,11 +63,45 @@ namespace data
          -0.301365627938283,
           0.0901094767962003,
          -0.00177964573302294 },
-        // start_time
-        30.0,
-        // end_time
+        // fit_start_time
+        120.0,
+        // fit_end_time
         2730.0
     };
+
+    // version with all time points, for doing simulations starting at t=0 with
+    // made up zero ICs and a linear ramp up to starting concentration
+    //ChemokinesBuilder proposal_zero_builder {
+        //// a
+        //0.0,
+        //// b
+        //0.9100772827,
+        //// inlet_poly_coeffs
+        //{ 0.079725755309440,
+          //0.276550445893222,
+          //1.044702075477787,
+         //-3.649471430632135,
+          //4.314373224651199,
+         //-1.781640087070480 },
+        //// outlet_poly_coeffs
+        //{ 0.024176997335253,
+          //0.078142098914668,
+         //-0.461436891550468,
+          //1.221789288442903,
+         //-0.263762150324452,
+         //-0.437328330024978 },
+        //// ic_poly_coeffs
+        //{ 0.0903660062452174,
+         //-0.232998153044166,
+          //0.382087522035561,
+         //-0.301365627938283,
+          //0.0901094767962003,
+         //-0.00177964573302294 },
+        //// fit_start_time
+        //30.0,
+        //// fit_end_time
+        //2730.0
+    //};
 
     ChemokinesBuilder april_2018_builder {
         // a
@@ -132,9 +133,9 @@ namespace data
           1.394193954411455,
          -1.916598633553111,
           0.756766820009559 },
-        // start_time
+        // fit_start_time
         30.0,
-        // end_time
+        // fit_end_time
         2340.0
     };
 
@@ -172,7 +173,7 @@ namespace data
           1.186140204264494e+01 },
         // start time
         210.0,
-        // end_time
+        // fit_end_time
         600.0
     };
 }
@@ -186,8 +187,8 @@ public:
         inlet_poly_coeffs_{builder.inlet_poly_coeffs},
         outlet_poly_coeffs_{builder.outlet_poly_coeffs},
         ic_poly_coeffs_{builder.ic_poly_coeffs},
-        start_time{builder.start_time},
-        end_time{builder.end_time}
+        fit_start_time{builder.fit_start_time},
+        fit_end_time{builder.fit_end_time}
     {
         enable_bc(Boundary::Left,  { c_u });
         enable_bc(Boundary::Right, { c_u });
@@ -218,7 +219,8 @@ public:
 
         if(p.ics == "zero")
         {
-            // Initial time is zero
+            // Initial time is zero. We do a linear interpolation from t = 0
+            // and uniformly zero BCs to the first actual time point/BC values
             time() = 0.0;
 
             // solution has been cleared above and everything is zero at this point
@@ -232,7 +234,7 @@ public:
         else if(p.ics == "polynomial")
         {
             // Initial time is the "start time" of the experiment
-            time() = start_time;
+            time() = p.start_time;
 
             // set the initial conditions from the polynomial fit
             for(unsigned i = 0; i < n_node_; ++i)
@@ -245,7 +247,7 @@ public:
         else
         {
             // Initial time is the "start time" of the experiment
-            time() = start_time;
+            time() = p.start_time;
 
             // Open the ICs file
             std::ifstream ics_file(p.ics);
@@ -301,20 +303,25 @@ private:
     const std::vector<double> ic_poly_coeffs_;
 
 public:
-    double start_time;
-    double end_time;
+    // The lower bound of the BC polynomial fit
+    double fit_start_time;
+
+    // The upper bound of the BC polynomial fit
+    double fit_end_time;
 
 private:
-    // map the spatial variable from its actual range to the interval [0,1]
+    // Map the spatial variable from its actual range to the interval [0,1]
     double map_space(double x) const
     {
         return (x - a_)/(b_ - a_);
     }
 
-    // map the time variable from its actual range to the interval [0,1]
+    // Map the time variable from its actual range to the interval [0,1].
+    // This uses the fit start/end times since these define the actual range of
+    // times that are valid.
     double map_time(double time) const
     {
-        return (time - start_time)/(end_time - start_time);
+        return (time - fit_start_time)/(fit_end_time - fit_start_time);
     }
 
     void actions_after_timestep() override
@@ -332,15 +339,16 @@ private:
 
         if(b == Boundary::Left)
         {
-            // if the flag is set and we haven't reached start_time, do a linear interpolation between (0,0) and (start_time, c(start_time))
-            if(p.ics == "zero" && time() < start_time)
+            // if the flag is set and we haven't reached fit_start_time, do a
+            // linear interpolation between (0,0) and (fit_start_time, c(fit_start_time))
+            if(p.ics == "zero" && time() < fit_start_time)
             {
-                // get the (interpolated) concentration at t = start_time
+                // get the (interpolated) concentration at t = fit_start_time
                 const static double start_c =
-                    utilities::evaluate_polynomial(map_time(start_time), inlet_poly_coeffs_);
+                    utilities::evaluate_polynomial(map_time(fit_start_time), inlet_poly_coeffs_);
 
                 // calculate the slope of the line
-                const static double m = start_c/start_time;
+                const static double m = start_c/fit_start_time;
 
                 a3[c_u] = m*time();
             }
@@ -351,15 +359,16 @@ private:
         }
         if(b == Boundary::Right)
         {
-            // if the flag is set and we haven't reached start_time, do a linear interpolation between (0,0) and (start_time, c(start_time))
-            if(p.ics == "zero" && time() < start_time)
+            // if the flag is set and we haven't reached fit_start_time, do a
+            // linear interpolation between (0,0) and (fit_start_time, c(fit_start_time))
+            if(p.ics == "zero" && time() < fit_start_time)
             {
-                // get the (interpolated) concentration at t = start_time
+                // get the (interpolated) concentration at t = fit_start_time
                 const static double start_c =
-                    utilities::evaluate_polynomial(map_time(start_time), outlet_poly_coeffs_);
+                    utilities::evaluate_polynomial(map_time(fit_start_time), outlet_poly_coeffs_);
 
                 // calculate the slope of the line
-                const static double m = start_c/start_time;
+                const static double m = start_c/fit_start_time;
 
                 a3[c_u] = m*time();
             }
@@ -494,12 +503,6 @@ int main(int argc, char **argv)
         std::exit(1);
     }
 
-    // NOTE: a bit unclean. This replaces the start_time of the builder with a
-    // user specified one if provided. Otherwise it uses the already defined
-    // start_time in builder. Consider unifying params handling rather than
-    // having p, builder and some cmdline args (as in keller_segel_1D driver).
-    builder.start_time = cf.get_or<double>("start_time", builder.start_time);
-
     ChemokinesProblem1D problem(n_node, std::move(builder));
 
     problem.p.u = cf.get<double>("u");
@@ -507,6 +510,14 @@ int main(int argc, char **argv)
     problem.p.ics = cf.get_or<std::string>("ics", "polynomial");
     problem.p.csv_delimiter = cf.get_or<char>("csv_delimiter", ',');
     problem.p.csv_skip_rows = cf.get_or<unsigned>("csv_skip_rows", 0);
+    problem.p.start_time = cf.get_or<double>("start_time", builder.fit_start_time);
+
+    if(problem.p.ics == "zero" && std::abs(problem.p.start_time) > 1.0e-15)
+    {
+        MJRFD_ERROR("ics = {} but start_time = {}; start_time must be 0.0 if zero ICs are used",
+                    problem.p.ics,
+                    problem.p.start_time);
+    }
 
     problem.enable_terse_logging();
 
@@ -538,7 +549,7 @@ int main(int argc, char **argv)
 #endif
 
     // timestepping loop
-    while(problem.time() <= t_max && problem.time() <= problem.end_time)
+    while(problem.time() <= t_max && problem.time() <= problem.fit_end_time)
     {
         // solve for current timestep
         problem.unsteady_solve(dt);
@@ -556,5 +567,5 @@ int main(int argc, char **argv)
         ++i;
     }
 
-    MJRFD_INFO("Reached t > min(t_max = {}, end_time = {}) after performing {} timesteps", t_max, problem.end_time, i-1);
+    MJRFD_INFO("Reached t > min(t_max = {}, fit_end_time = {}) after performing {} timesteps", t_max, problem.fit_end_time, i-1);
 }
