@@ -25,7 +25,7 @@ namespace mjrfd
         Max_residual(1.0e-8),
         Max_newton_iterations(20),
         Jacobian_fd_step(1.0e-8),
-        terse_logging_(false),
+        terse_logging_(true),
         use_fd_jacobian_(false),
         dump_jacobian_(false),
         exit_on_solve_fail_(false),
