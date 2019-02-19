@@ -9,8 +9,9 @@ using namespace mjrfd;
 
 struct ChemokinesParams
 {
+    double D;
     double pe_u;
-    double bc_time_factor;
+    double timescale_ratio;
 };
 
 enum Variable
@@ -58,12 +59,18 @@ public:
         // Set everything to zero
         clear_solution();
 
-        // Set c_u to 1.0 at the left-hand boundary
-        //u(0, c_u, 0) = 1.0;
+        double c_start = utilities::evaluate_polynomial(0.0, inlet_poly_coeffs);
+        double c_end   = utilities::evaluate_polynomial(0.0, outlet_poly_coeffs);
 
-        // Set c_u to the BC functions evalutated at t = 0
-        u(c_u, 0)         = evaluate_polynomial(0.0, inlet_poly_coeffs);
-        u(c_u, n_node_-1) = evaluate_polynomial(0.0, outlet_poly_coeffs);
+        for(unsigned i = 0; i < n_node_; ++i)
+        {
+            double m = (c_end - c_start)/(b_ - a_);
+            double x = this->x(i);
+
+            u(0, c_u, i) = m*x + c_start;
+
+            MJRFD_DEBUG("x = {}, u(x, 0) = {}", x, u(0, c_u, i));
+        }
     }
 
     ChemokinesParams p;
@@ -71,23 +78,6 @@ public:
     // Coeffs for the polynomial fits of the inlet/outlet BC functions
     const std::vector<double> inlet_poly_coeffs;
     const std::vector<double> outlet_poly_coeffs;
-
-    // Evaluate a polynomial with coeffs in ascending power order at x using
-    // Horner's method
-    static double evaluate_polynomial(const double x,
-                                      const std::vector<double> &coeffs)
-    {
-        double result = 0.0;
-        unsigned n = coeffs.size();
-
-        for(int i = n-1; i >= 0; --i)
-        {
-            assert(i <= (n-1) && i >= 0);
-            result = result*x + coeffs[i];
-        }
-
-        return result;
-    }
 
 private:
     void get_bc(Boundary b,
@@ -99,55 +89,45 @@ private:
         {
             a1[c_u] = 1.0;
             a2[c_u] = 0.0;
-            a3[c_u] = evaluate_polynomial(p.bc_time_factor*time(), inlet_poly_coeffs);
+            a3[c_u] = utilities::evaluate_polynomial(time(), inlet_poly_coeffs);
         }
         if(b == Boundary::Right)
         {
             a1[c_u] = 1.0;
             a2[c_u] = 0.0;
-            a3[c_u] = evaluate_polynomial(p.bc_time_factor*time(), outlet_poly_coeffs);
+            a3[c_u] = utilities::evaluate_polynomial(time(), outlet_poly_coeffs);
         }
     }
 
-    void get_d(const unsigned t,
-               const unsigned i,
+    void get_d(const unsigned,
+               const unsigned,
                std::vector<double> &d) const override
     {
         d[c_u] = 1.0;
     }
 
-    void get_v(const unsigned i,
-               const unsigned var,
+    void get_v(const unsigned,
+               const unsigned,
                double &v) const override
     {
         v = p.pe_u;
     }
 
-    void get_dv_du(const unsigned i,
-                   const unsigned var,
-                   const unsigned i2,
-                   const unsigned var2,
-                   double &dv_du) const override
-    {
-        dv_du = 0.0;
-    }
-
-    void get_r(const std::vector<double> &u,
+    void get_r(const std::vector<double> &,
                std::vector<double> &r) const override
     {
         r[c_u] = 0.0;
     }
 
-    void get_dr_du(const std::vector<double> &u,
-                   std::vector<std::vector<double>> &dr_du) const override
+    void get_timescale_ratio(double &timescale_ratio) const override
     {
-        dr_du[c_u][c_u] = 0.0;
+        timescale_ratio = p.timescale_ratio;
     }
 };
 
 int main(int argc, char **argv)
 {
-    if(argc != 5 && argc != 6)
+    if(argc < 5)
     {
         std::cerr << "Usage: " << argv[0]
                   << " config_file n_node dt t_max [ output_interval ]\n";
@@ -160,19 +140,24 @@ int main(int argc, char **argv)
 
     unsigned output_interval = 1;
 
-    if(argc == 6)
+    if(argc >= 6)
     {
         output_interval = std::atoi(argv[5]);
     }
 
-    ChemokinesProblem1D problem(n_node);
-
     std::ifstream config_file(argv[1]);
-    Config cf(config_file);
+    Config cf;
+    cf.parse_config_file(config_file);
+    cf.parse_command_line(argc, argv);
     cf.print_all();
 
-    problem.p.pe_u           = cf.get<double>("pe_u");
-    problem.p.bc_time_factor = cf.get<double>("bc_time_factor");
+    log::set_level(cf.get_or<std::string>("log_level", "info"));
+
+    ChemokinesProblem1D problem(n_node);
+
+    problem.p.D               = cf.get_or<double>("D", 1.0);
+    problem.p.pe_u            = cf.get<double>("pe_u");
+    problem.p.timescale_ratio = cf.get_or<double>("timescale_ratio", 1.0);
 
     problem.enable_terse_logging();
 
@@ -180,11 +165,11 @@ int main(int argc, char **argv)
     std::ofstream outfile;
 
     // perform a steady solve and output it
-    problem.steady_solve();
-    std::sprintf(filename, "output_steady.csv");
-    outfile.open(filename);
-    problem.output(outfile);
-    outfile.close();
+    //problem.steady_solve();
+    //std::sprintf(filename, "output_steady.csv");
+    //outfile.open(filename);
+    //problem.output(outfile);
+    //outfile.close();
 
     // set initial conditions
     problem.set_initial_conditions();
