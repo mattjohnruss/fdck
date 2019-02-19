@@ -8,8 +8,10 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Platform ID (CXX): ${CMAKE_CXX_PLATFORM_ID}")
 
 if(EMSCRIPTEN)
-    set(CMAKE_EXECUTABLE_SUFFIX ".html")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --shell-file shell_minimal.html")
+    #set(CMAKE_EXECUTABLE_SUFFIX ".html")
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s MODULARIZE=1 -s ENVIRONMENT=web --shell-file ${fd_diff++_SOURCE_DIR}/www/index_template.html")
+     #TODO compare with and without EXPORT_ES6
+     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s MODULARIZE=1 -s EXPORT_ES6=1 -s ENVIRONMENT=web -s 'EXPORT_NAME=\"wasm_test\"' --shell-file ${fd_diff++_SOURCE_DIR}/www/index_template.html")
 endif()
 
 if(CMAKE_CROSSCOMPILING)
