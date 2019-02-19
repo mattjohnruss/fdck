@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <cmath>
 #include <random>
+#include <fstream>
 
 #include <fenv.h>
 
@@ -42,6 +43,10 @@ public:
 
         Max_residual = 1.0e-14;
         Max_newton_iterations = 50;
+
+        trace_file_.open("trace.dat");
+        trace_header_ = "t rho_total c_total";
+        trace_file_ << trace_header_ << '\n';
     }
 
     ~KellerSegelProblem()
@@ -66,14 +71,26 @@ public:
             u(rho, i) = p.rho_init + dist(gen);
             u(c, i)   = p.c_init + dist(gen);
         }
+    }
 
-        MJRFD_TRACE("Integral of rho = {}", integrate_solution(rho));
-        MJRFD_TRACE("Integral of c = {}", integrate_solution(c));
+    void trace()
+    {
+        trace_file_ << time() << " "
+                    << integrate_solution(rho) << " "
+                    << integrate_solution(c) << '\n';
     }
 
     KellerSegelParams p;
 
 private:
+    std::string trace_header_;
+    std::ofstream trace_file_;
+
+    void actions_after_timestep() override
+    {
+        trace();
+    }
+
     void get_bc(Boundary b,
                 std::vector<double> &a1,
                 std::vector<double> &a2,
@@ -219,6 +236,8 @@ int main(int argc, char **argv)
         problem.enable_exit_on_solve_fail();
 
         problem.set_initial_conditions();
+
+        problem.trace();
 
         std::sprintf(filename, "output_%05u.csv", 0);
         outfile.open(filename);
