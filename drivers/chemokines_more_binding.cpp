@@ -5,6 +5,7 @@
 
 #include <fstream>
 #include <memory>
+#include <fenv.h>
 
 using namespace mjrfd;
 
@@ -52,6 +53,7 @@ struct ChemokinesParams
     double P;
     double S;
     double phi_i_max_over_c_0;
+    double phi_m_hack;
 };
 
 enum Variable
@@ -73,8 +75,8 @@ enum AuxVariable
 class ChemokinesProblem1D : public AdvectionDiffusionReactionProblem
 {
 public:
-    ChemokinesProblem1D(const unsigned n_node) :
-        AdvectionDiffusionReactionProblem(7, n_node, 1)
+    explicit ChemokinesProblem1D(const unsigned n_node) :
+        AdvectionDiffusionReactionProblem(7, n_node, 1), p{}
     {
         enable_bc(Boundary::Left,  { c_u, c_s, phi_i, phi_m, phi_c_u, phi_c_b });
         enable_bc(Boundary::Right, { c_u, c_s, phi_i, phi_m, phi_c_u, phi_c_b });
@@ -88,7 +90,7 @@ public:
 
         trace_file_.open("trace.dat");
         trace_header_ =
-            "t phi_m|_0 dphi_{m}\\\\_dx|_0 M total\\\\_c_u total\\\\_c_b total\\\\_c_s total\\\\_phi_i total\\\\_phi_m c_u_0";
+            "t c_u_1 c_b_1";
         trace_file_ << trace_header_ << '\n';
     }
 
@@ -141,18 +143,6 @@ public:
 
     void trace()
     {
-        std::vector<double> a1(n_var_);
-        std::vector<double> a2(n_var_);
-        std::vector<double> a3(n_var_);
-
-        get_bc(Boundary::Left, a1, a2, a3);
-
-        double dphi_m_dx = 0.0;
-        for(auto& [j, w] : stencil::forward_1::weights)
-        {
-            dphi_m_dx += w*u(0, phi_m, 0+j)/dx_;
-        }
-
         if(is_steady() == true)
         {
             // if we're doing a steady solve after timestepping, output the
@@ -162,15 +152,8 @@ public:
         }
 
         trace_file_ << time() << " "
-                    << u(0, phi_m, 0) << " "
-                    << dphi_m_dx << " "
-                    << p.M << " "
-                    << integrate_solution(c_u) << " "
-                    << integrate_solution(c_b) << " "
-                    << integrate_solution(c_s) << " "
-                    << integrate_solution(phi_i) << " "
-                    << integrate_solution(phi_m) << " "
-                    << u_aux(c_u_0) << '\n'
+                    << u(c_u, n_node_-1) << ' '
+                    << u(c_b, n_node_-1) << '\n'
                     << std::flush;
     }
 
@@ -223,106 +206,195 @@ private:
             double v_phi_c_b_left = 0;
             get_v(0, phi_c_b, v_phi_c_b_left);
 
+            // XXX temporary hack
+            // get the phi_m advection velocity at the left boundary
+            double v_phi_m_left = 0;
+            get_v(0, phi_m, v_phi_m_left);
+
+            // XXX another temporary hack
+            // get the c_u advection velocity at the left boundary
+            double v_c_u_left = 0;
+            get_v(0, c_u, v_c_u_left);
+
             // get the diffusivities at the left boundary
             std::vector<double> d_left(n_var_);
             get_d(0, 0, d_left);
 
-            a1[c_u]     = 1.0;
+            // XXX another temporary hack
+            // get the c_u advection velocity at the left boundary
+            if(time() < 5.0)
+            {
+                a1[c_u] = 1.0;
+            }
+            else
+            {
+                a1[c_u] = v_c_u_left;
+            }
+
             a1[c_s]     = 1.0;
             a1[phi_i]   = 0.0;
-            a1[phi_m]   = 0.0;
+            //a1[phi_m]   = 0.0;
+            // XXX temporary hack
+            a1[phi_m]   = p.phi_m_hack*(v_phi_m_left + p.J_phi_c_b_left_prop);
             a1[phi_c_u] = 0.0;
             a1[phi_c_b] = v_phi_c_b_left + p.J_phi_c_b_left_prop;
 
-            a2[c_u]     = 0.0;
+            // XXX another temporary hack
+            // get the c_u advection velocity at the left boundary
+            if(time() < 5.0)
+            {
+                a2[c_u] = 0.0;
+            }
+            else
+            {
+                a2[c_u] = -d_left[c_u];
+            }
+
             a2[c_s]     = 0.0;
             a2[phi_i]   = -d_left[phi_i];
             a2[phi_m]   = -d_left[phi_m];
             a2[phi_c_u] = -d_left[phi_c_u];
             a2[phi_c_b] = -d_left[phi_c_b];
 
-            a3[c_u]     = u_aux(c_u_0);
+            if(time() < 5.0)
+            {
+                a3[c_u] = u_aux(c_u_0);
+            }
+            else
+            {
+                a3[c_u] = 0.0;
+            }
+
             a3[c_s]     = 0.0;
             a3[phi_i]   = 0.0;
-            a3[phi_m]   = 0.0;
+            //a3[phi_m]   = 0.0;
+            // XXX temporary hack
+            a3[phi_m] = -p.phi_m_hack*p.J_phi_c_b_left_abs;
             a3[phi_c_u] = 0.0;
             a3[phi_c_b] = -p.J_phi_c_b_left_abs;
         }
         if(b == Boundary::Right)
         {
-            // get the phi_c_b advection velocity at the left boundary
+            // get the phi_c_b advection velocity at the right boundary
             double v_phi_c_b_right = 0;
             get_v(n_node_-1, phi_c_b, v_phi_c_b_right);
+
+            // XXX temporary hack
+            // get the phi_m advection velocity at the right boundary
+            double v_phi_m_right = 0;
+            get_v(n_node_-1, phi_m, v_phi_m_right);
+
+            // XXX another temporary hack
+            // get the c_u advection velocity at the right boundary
+            double v_c_u_right = 0;
+            get_v(n_node_-1, c_u, v_c_u_right);
 
             // get the diffusivities at the right boundary
             std::vector<double> d_right(n_var_);
             get_d(0, n_node_-1, d_right);
 
-            a1[c_u]     = 1.0;
+            // XXX another temporary hack
+            if(time() < 5.0)
+            {
+                a1[c_u] = 1.0;
+            }
+            else
+            {
+                a1[c_u] = v_c_u_right;
+            }
+
             a1[c_s]     = 1.0;
             a1[phi_i]   = 0.0;
-            a1[phi_m]   = 0.0;
+            // a1[phi_m] = 0.0;
+            // XXX temporary hack
+            a1[phi_m]   = p.phi_m_hack*(v_phi_m_right - p.J_phi_c_b_right_prop);
             a1[phi_c_u] = 0.0;
             a1[phi_c_b] = v_phi_c_b_right - p.J_phi_c_b_right_prop;
 
-            a2[c_u]     = 0.0;
+            // XXX another temporary hack
+            if(time() < 5.0)
+            {
+                a2[c_u] = 0.0;
+            }
+            else
+            {
+                a2[c_u] = -d_right[c_u];
+            }
+
             a2[c_s]     = 0.0;
             a2[phi_i]   = -d_right[phi_i];
             a2[phi_m]   = -d_right[phi_m];
             a2[phi_c_u] = -d_right[phi_c_u];
             a2[phi_c_b] = -d_right[phi_c_b];
 
-            a3[c_u]     = 0.0;
+            // XXX another temporary hack
+            if(time() < 5.0)
+            {
+                a3[c_u] = 0.0;
+            }
+            else
+            {
+                a3[c_u] = 0.0;
+            }
+
             a3[c_s]     = 0.0;
             a3[phi_i]   = p.J_i_right*p.M;
-            a3[phi_m]   = 0.0;
+            //a3[phi_m]   = 0.0;
+            // XXX temporary hack
+            a3[phi_m] = p.phi_m_hack*p.J_phi_c_b_right_abs;
             a3[phi_c_u] = 0.0;
             a3[phi_c_b] = p.J_phi_c_b_right_abs;
         }
     }
 
-    void get_dbc_du(Boundary b,
-                    const unsigned i2,
-                    std::vector<std::vector<double>> &da1_du,
-                    std::vector<std::vector<double>> &da2_du,
-                    std::vector<std::vector<double>> &da3_du) const override
-    {
-        // first set all the derivatives to zero since this will the be case
-        // most for most entries
+    //void get_dbc_du(Boundary b,
+                    //const unsigned i2,
+                    //std::vector<std::vector<double>> &da1_du,
+                    //std::vector<std::vector<double>> &da2_du,
+                    //std::vector<std::vector<double>> &da3_du) const override
+    //{
+        //// first set all the derivatives to zero since this will the be case
+        //// most for most entries
 
-        for(unsigned var = 0; var < n_var_; ++var)
-        {
-            std::fill(da1_du[var].begin(), da1_du[var].end(), 0.0);
-            std::fill(da2_du[var].begin(), da2_du[var].end(), 0.0);
-            std::fill(da3_du[var].begin(), da3_du[var].end(), 0.0);
-        }
+        //for(unsigned var = 0; var < n_var_; ++var)
+        //{
+            //std::fill(da1_du[var].begin(), da1_du[var].end(), 0.0);
+            //std::fill(da2_du[var].begin(), da2_du[var].end(), 0.0);
+            //std::fill(da3_du[var].begin(), da3_du[var].end(), 0.0);
+        //}
 
-        unsigned i = 0;
+        //unsigned i = 0;
 
-        if(b == Boundary::Left)
-            i = 0;
-        else if(b == Boundary::Right)
-            i = n_node_-1;
+        //if(b == Boundary::Left)
+            //i = 0;
+        //else if(b == Boundary::Right)
+            //i = n_node_-1;
 
-        std::vector<std::vector<double>> dd_du(n_var_, std::vector<double>(n_var_));
-        get_dd_du(0, i, dd_du);
+        //std::vector<std::vector<double>> dd_du(n_var_, std::vector<double>(n_var_));
+        //get_dd_du(0, i, dd_du);
 
-        // terms from v_phi_c_b (haptotaxis speed) which depend on c_b
-        double dv_phi_c_b_du_c_b = 0.0;
-        get_dv_du(i, phi_c_b, i2, c_b, dv_phi_c_b_du_c_b);
-        da1_du[phi_c_b][c_b] += dv_phi_c_b_du_c_b;
+        //// terms from v_phi_c_b (haptotaxis speed) which depend on c_b
+        //double dv_phi_c_b_du_c_b = 0.0;
+        //get_dv_du(i, phi_c_b, i2, c_b, dv_phi_c_b_du_c_b);
+        //da1_du[phi_c_b][c_b] += dv_phi_c_b_du_c_b;
 
-        // loop over the variables that have diffusivities that can depend on
-        // other variables
-        for(auto var : { phi_m, phi_c_u, phi_c_b })
-        {
-            for(auto var2 : { c_b })
-            {
-                // terms from D_{var}
-                da2_du[var][var2] += -dd_du[var][var2];
-            }
-        }
-    }
+        //// XXX temporary hack
+        //// terms from v_phi_m (haptotaxis speed) which depend on c_b
+        //double dv_phi_m_du_c_b = 0.0;
+        //get_dv_du(i, phi_m, i2, c_b, dv_phi_m_du_c_b);
+        //da1_du[phi_m][c_b] += dv_phi_m_du_c_b;
+
+        //// loop over the variables that have diffusivities that can depend on
+        //// other variables
+        //for(auto var : { phi_m, phi_c_u, phi_c_b })
+        //{
+            //for(auto var2 : { c_b })
+            //{
+                //// terms from D_{var}
+                //da2_du[var][var2] += -dd_du[var][var2];
+            //}
+        //}
+    //}
 
     void get_d(const unsigned t,
                const unsigned i,
@@ -337,20 +409,20 @@ private:
         d[phi_c_b] = p.D_phi_c_b_u;
     }
 
-    void get_dd_du(const unsigned t,
-                   const unsigned i,
-                   std::vector<std::vector<double>> &dd_du) const override
-    {
-        //for(auto var : { c_u, c_b, c_s, phi_i, phi_m })
-        for(unsigned var = 0; var < n_var_; ++var)
-        {
-            std::fill(dd_du[var].begin(), dd_du[var].end(), 0.0);
-        }
+    //void get_dd_du(const unsigned t,
+                   //const unsigned i,
+                   //std::vector<std::vector<double>> &dd_du) const override
+    //{
+        ////for(auto var : { c_u, c_b, c_s, phi_i, phi_m })
+        //for(unsigned var = 0; var < n_var_; ++var)
+        //{
+            //std::fill(dd_du[var].begin(), dd_du[var].end(), 0.0);
+        //}
 
-        // TODO how is this possibly right? We've been doing this for ages but surely it should be dd_du[phi_m][c_b]?
-        // Changed it to c_b for now, but double check!
-        dd_du[phi_m][c_b] = p.D_mu->deriv(u(t, c_b, i));
-    }
+        //// TODO how is this possibly right? We've been doing this for ages but surely it should be dd_du[phi_m][c_b]?
+        //// Changed it to c_b for now, but double check!
+        //dd_du[phi_m][c_b] = p.D_mu->deriv(u(t, c_b, i));
+    //}
 
     void get_v(const unsigned i,
                const unsigned var,
@@ -362,6 +434,8 @@ private:
             v = p.pe_u;
         else if(var == c_s)
             v = p.pe_u;
+        //else if(var == phi_c_b)
+        // XXX temporary hack
         else if(var == phi_c_b)
         {
             double dc_b_dx = 0.0;
@@ -373,41 +447,54 @@ private:
 
             v += p.nu_b*p.chi->value(u(0, c_b, i))*dc_b_dx;
         }
-    }
-
-    void get_dv_du(const unsigned i,
-                   const unsigned var,
-                   const unsigned i2,
-                   const unsigned var2,
-                   double &dv_du) const override
-    {
-        dv_du = 0.0;
-
-        // the only velocity that depends on another variable is the phi_c_b
-        // haptotaxis speed, which depends directly on the gradient of c_b, but
-        // also the value of c_b through chi(c_b)
-        if(var == phi_c_b && var2 == c_b)
+        else if(var == phi_m)
         {
-            //double nu = p.nu_b;
-
-            double dvar2_dx = 0.0;
+            double dc_b_dx = 0.0;
 
             for(const auto& [j, w] : central_1_stencil_weights(i))
             {
-                if(i+j == i2)
-                {
-                    // this condition will be true at most once per loop so we
-                    // could break here, but we need to continue the loop to
-                    // calculate the derivative below
-                    dv_du += w*p.nu_b*p.chi->value(u(0, var2, i))/dx_;
-                }
-
-                dvar2_dx += w*u(0, var2, i+j)/dx_;
+                dc_b_dx += w*u(0, c_b, i+j)/dx_;
             }
 
-            dv_du += p.nu_b*p.chi->deriv(u(0, var2, i))*dvar2_dx;
+            v += p.phi_m_hack*p.nu_b*p.chi->value(u(0, c_b, i))*dc_b_dx;
         }
     }
+
+    //void get_dv_du(const unsigned i,
+                   //const unsigned var,
+                   //const unsigned i2,
+                   //const unsigned var2,
+                   //double &dv_du) const override
+    //{
+        //dv_du = 0.0;
+
+        //// the only velocity that depends on another variable is the phi_c_b
+        //// haptotaxis speed, which depends directly on the gradient of c_b, but
+        //// also the value of c_b through chi(c_b)
+        ////if(var == phi_c_b && var2 == c_b)
+        //// XXX temporary hack
+        //if((var == phi_c_b || var == phi_m) && var2 == c_b)
+        //{
+            ////double nu = p.nu_b;
+
+            //double dvar2_dx = 0.0;
+
+            //for(const auto& [j, w] : central_1_stencil_weights(i))
+            //{
+                //if(i+j == i2)
+                //{
+                    //// this condition will be true at most once per loop so we
+                    //// could break here, but we need to continue the loop to
+                    //// calculate the derivative below
+                    //dv_du += w*p.nu_b*p.chi->value(u(0, var2, i))/dx_;
+                //}
+
+                //dvar2_dx += w*u(0, var2, i+j)/dx_;
+            //}
+
+            //dv_du += p.nu_b*p.chi->deriv(u(0, var2, i))*dvar2_dx;
+        //}
+    //}
 
     void get_r(const std::vector<double> &u,
                std::vector<double> &r) const override
@@ -426,67 +513,67 @@ private:
         r[phi_c_b] = p.alpha_3*u[phi_c_u] - p.beta_3*u[phi_c_b] + c_0_over_phi_i_max*p.alpha_4*u[phi_m]*u[c_b] - p.beta_4*u[phi_c_b];
     }
 
-    void get_dr_du(const std::vector<double> &u,
-                   std::vector<std::vector<double>> &dr_du) const override
-    {
-        const double c_0_over_phi_i_max = 1.0/p.phi_i_max_over_c_0;
+    //void get_dr_du(const std::vector<double> &u,
+                   //std::vector<std::vector<double>> &dr_du) const override
+    //{
+        //const double c_0_over_phi_i_max = 1.0/p.phi_i_max_over_c_0;
 
-        dr_du[c_u][c_u]       = - p.alpha_1 - p.alpha_2*u[phi_m] - p.gamma_ui*u[phi_i] - p.gamma_um*u[phi_m] - p.q_u*u[phi_i];
-        dr_du[c_u][c_b]       = p.beta_1;
-        dr_du[c_u][c_s]       = 0.0;
-        dr_du[c_u][phi_i]     = - p.gamma_ui*u[c_u] - p.q_u*u[c_u];
-        dr_du[c_u][phi_m]     = - p.alpha_2*u[c_u] - p.gamma_um*u[c_u];
-        dr_du[c_u][phi_c_u]   = p.phi_i_max_over_c_0*p.beta_2;
-        dr_du[c_u][phi_c_b]   = 0.0;
+        //dr_du[c_u][c_u]       = - p.alpha_1 - p.alpha_2*u[phi_m] - p.gamma_ui*u[phi_i] - p.gamma_um*u[phi_m] - p.q_u*u[phi_i];
+        //dr_du[c_u][c_b]       = p.beta_1;
+        //dr_du[c_u][c_s]       = 0.0;
+        //dr_du[c_u][phi_i]     = - p.gamma_ui*u[c_u] - p.q_u*u[c_u];
+        //dr_du[c_u][phi_m]     = - p.alpha_2*u[c_u] - p.gamma_um*u[c_u];
+        //dr_du[c_u][phi_c_u]   = p.phi_i_max_over_c_0*p.beta_2;
+        //dr_du[c_u][phi_c_b]   = 0.0;
 
-        dr_du[c_b][c_u]       = p.alpha_1;
-        dr_du[c_b][c_b]       = - p.beta_1 - p.alpha_4*u[phi_m] - p.gamma_bi*u[phi_i] - p.gamma_bm*u[phi_m] - p.q_b*u[phi_i];
-        dr_du[c_b][c_s]       = 0.0;
-        dr_du[c_b][phi_i]     = - p.gamma_bi*u[c_b] - p.q_b*u[c_b];
-        dr_du[c_b][phi_m]     = - p.alpha_4*u[c_b] - p.gamma_bm*u[c_b];
-        dr_du[c_b][phi_c_u]   = 0.0;
-        dr_du[c_b][phi_c_b]   = p.phi_i_max_over_c_0*p.beta_4;
+        //dr_du[c_b][c_u]       = p.alpha_1;
+        //dr_du[c_b][c_b]       = - p.beta_1 - p.alpha_4*u[phi_m] - p.gamma_bi*u[phi_i] - p.gamma_bm*u[phi_m] - p.q_b*u[phi_i];
+        //dr_du[c_b][c_s]       = 0.0;
+        //dr_du[c_b][phi_i]     = - p.gamma_bi*u[c_b] - p.q_b*u[c_b];
+        //dr_du[c_b][phi_m]     = - p.alpha_4*u[c_b] - p.gamma_bm*u[c_b];
+        //dr_du[c_b][phi_c_u]   = 0.0;
+        //dr_du[c_b][phi_c_b]   = p.phi_i_max_over_c_0*p.beta_4;
 
-        dr_du[c_s][c_u]       = p.gamma_ui*u[phi_i] + p.gamma_um*u[phi_m];
-        dr_du[c_s][c_b]       = p.gamma_bi*u[phi_i] + p.gamma_bm*u[phi_m];
-        dr_du[c_s][c_s]       = -p.q_s*u[phi_i];
-        dr_du[c_s][phi_i]     = p.gamma_ui*u[c_u] + p.gamma_bi*u[c_b] - p.q_s*u[c_s];
-        dr_du[c_s][phi_m]     = p.gamma_um*u[c_u] + p.gamma_bm*u[c_b];
-        dr_du[c_s][phi_c_u]   = 0.0;
-        dr_du[c_s][phi_c_b]   = 0.0;
+        //dr_du[c_s][c_u]       = p.gamma_ui*u[phi_i] + p.gamma_um*u[phi_m];
+        //dr_du[c_s][c_b]       = p.gamma_bi*u[phi_i] + p.gamma_bm*u[phi_m];
+        //dr_du[c_s][c_s]       = -p.q_s*u[phi_i];
+        //dr_du[c_s][phi_i]     = p.gamma_ui*u[c_u] + p.gamma_bi*u[c_b] - p.q_s*u[c_s];
+        //dr_du[c_s][phi_m]     = p.gamma_um*u[c_u] + p.gamma_bm*u[c_b];
+        //dr_du[c_s][phi_c_u]   = 0.0;
+        //dr_du[c_s][phi_c_b]   = 0.0;
 
-        dr_du[phi_i][c_u]     = 0.0;
-        dr_du[phi_i][c_b]     = 0.0;
-        dr_du[phi_i][c_s]     = 0.0;
-        dr_du[phi_i][phi_i]   = p.R*(1.0 - 2.0*u[phi_i]) - p.M;
-        dr_du[phi_i][phi_m]   = 0.0;
-        dr_du[phi_i][phi_c_u] = 0.0;
-        dr_du[phi_i][phi_c_b] = 0.0;
+        //dr_du[phi_i][c_u]     = 0.0;
+        //dr_du[phi_i][c_b]     = 0.0;
+        //dr_du[phi_i][c_s]     = 0.0;
+        //dr_du[phi_i][phi_i]   = p.R*(1.0 - 2.0*u[phi_i]) - p.M;
+        //dr_du[phi_i][phi_m]   = 0.0;
+        //dr_du[phi_i][phi_c_u] = 0.0;
+        //dr_du[phi_i][phi_c_b] = 0.0;
 
-        dr_du[phi_m][c_u]     = - c_0_over_phi_i_max*p.alpha_2*u[phi_m];
-        dr_du[phi_m][c_b]     = - c_0_over_phi_i_max*p.alpha_4*u[phi_m];
-        dr_du[phi_m][c_s]     = 0.0;
-        dr_du[phi_m][phi_i]   = p.M;
-        dr_du[phi_m][phi_m]   = - c_0_over_phi_i_max*p.alpha_2*u[c_u] - c_0_over_phi_i_max*p.alpha_4*u[c_b];
-        dr_du[phi_m][phi_c_u] = p.beta_2;
-        dr_du[phi_m][phi_c_b] = p.beta_4;
+        //dr_du[phi_m][c_u]     = - c_0_over_phi_i_max*p.alpha_2*u[phi_m];
+        //dr_du[phi_m][c_b]     = - c_0_over_phi_i_max*p.alpha_4*u[phi_m];
+        //dr_du[phi_m][c_s]     = 0.0;
+        //dr_du[phi_m][phi_i]   = p.M;
+        //dr_du[phi_m][phi_m]   = - c_0_over_phi_i_max*p.alpha_2*u[c_u] - c_0_over_phi_i_max*p.alpha_4*u[c_b];
+        //dr_du[phi_m][phi_c_u] = p.beta_2;
+        //dr_du[phi_m][phi_c_b] = p.beta_4;
 
-        dr_du[phi_c_u][c_u]     = c_0_over_phi_i_max*p.alpha_2*u[phi_m];
-        dr_du[phi_c_u][c_b]     = 0.0;
-        dr_du[phi_c_u][c_s]     = 0.0;
-        dr_du[phi_c_u][phi_i]   = 0.0;
-        dr_du[phi_c_u][phi_m]   = c_0_over_phi_i_max*p.alpha_2*u[c_u];
-        dr_du[phi_c_u][phi_c_u] = - p.beta_2 - p.alpha_3;
-        dr_du[phi_c_u][phi_c_b] = p.beta_3;
+        //dr_du[phi_c_u][c_u]     = c_0_over_phi_i_max*p.alpha_2*u[phi_m];
+        //dr_du[phi_c_u][c_b]     = 0.0;
+        //dr_du[phi_c_u][c_s]     = 0.0;
+        //dr_du[phi_c_u][phi_i]   = 0.0;
+        //dr_du[phi_c_u][phi_m]   = c_0_over_phi_i_max*p.alpha_2*u[c_u];
+        //dr_du[phi_c_u][phi_c_u] = - p.beta_2 - p.alpha_3;
+        //dr_du[phi_c_u][phi_c_b] = p.beta_3;
 
-        dr_du[phi_c_b][c_u]     = 0.0;
-        dr_du[phi_c_b][c_b]     = c_0_over_phi_i_max*p.alpha_4*u[phi_m];
-        dr_du[phi_c_b][c_s]     = 0.0;
-        dr_du[phi_c_b][phi_i]   = 0.0;
-        dr_du[phi_c_b][phi_m]   = c_0_over_phi_i_max*p.alpha_4*u[c_b];
-        dr_du[phi_c_b][phi_c_u] = p.alpha_3;
-        dr_du[phi_c_b][phi_c_b] = - p.beta_3 - p.beta_4;
-    }
+        //dr_du[phi_c_b][c_u]     = 0.0;
+        //dr_du[phi_c_b][c_b]     = c_0_over_phi_i_max*p.alpha_4*u[phi_m];
+        //dr_du[phi_c_b][c_s]     = 0.0;
+        //dr_du[phi_c_b][phi_i]   = 0.0;
+        //dr_du[phi_c_b][phi_m]   = c_0_over_phi_i_max*p.alpha_4*u[c_b];
+        //dr_du[phi_c_b][phi_c_u] = p.alpha_3;
+        //dr_du[phi_c_b][phi_c_b] = - p.beta_3 - p.beta_4;
+    //}
 
     void calculate_residual(Eigen::VectorXd &residual) const override
     {
@@ -506,6 +593,8 @@ private:
 
 int main(int argc, char **argv)
 {
+    feenableexcept(FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW | FE_UNDERFLOW);
+
     if(argc < 5)
     {
         std::cerr << "Usage: " << argv[0]
@@ -523,6 +612,8 @@ int main(int argc, char **argv)
     {
         output_interval = std::atoi(argv[5]);
     }
+
+    log::set_level("debug");
 
     ChemokinesProblem1D problem(n_node);
 
@@ -582,6 +673,9 @@ int main(int argc, char **argv)
     problem.p.S = cf.get<double>("S");
 
     problem.p.phi_i_max_over_c_0 = cf.get<double>("phi_i_max_over_c_0");
+
+    // XXX temporary hack
+    problem.p.phi_m_hack = cf.get_or<double>("phi_m_hack", 0.0);
 
     // Construct the type of DifferentiableFunction in the config for chi
     // the std::unique_ptr will destroy the object for us when it goes out of scope
@@ -648,7 +742,7 @@ int main(int argc, char **argv)
 
     const bool fd_jacobian = cf.get<bool>("fd_jacobian");
 
-    //problem.enable_dump_jacobian("fd_");
+    //problem.enable_dump_jacobian("mb_");
 
     problem.enable_terse_logging();
 
@@ -670,7 +764,7 @@ int main(int argc, char **argv)
         problem.set_initial_conditions();
 
         // output initial conditions
-        std::sprintf(filename, "output_%05i.csv", 0);
+        std::sprintf(filename, "output_%05u.csv", 0);
         outfile.open(filename);
         problem.output(outfile);
         outfile.close();
@@ -689,7 +783,7 @@ int main(int argc, char **argv)
             {
                 // output current solution
                 MJRFD_TRACE("Outputting");
-                std::sprintf(filename, "output_%05i.csv", i/output_interval);
+                std::sprintf(filename, "output_%05u.csv", i/output_interval);
                 outfile.open(filename);
                 problem.output(outfile);
                 outfile.close();
@@ -705,8 +799,6 @@ int main(int argc, char **argv)
     {
         MJRFD_INFO("Steady solve:");
 
-        problem.disable_exit_on_solve_fail();
-
         // set initial conditions again - required since phi_i is sensitive to
         // ICs even at steady state
         // Only do this if we haven't timestepped - if we have been
@@ -716,6 +808,8 @@ int main(int argc, char **argv)
         {
             problem.set_initial_conditions();
         }
+
+        //problem.enable_dump_jacobian("mb_");
 
         // perform a steady solve and output it
         problem.steady_solve();
