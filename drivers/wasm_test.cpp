@@ -4,6 +4,10 @@
 #include <fstream>
 #include <iomanip>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 enum Variable
 {
     c = 0,
@@ -144,7 +148,11 @@ private:
     }
 };
 
-int main()
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_KEEPALIVE
+extern "C" {
+#endif
+void run()
 {
     const unsigned n_node = 1001;
 
@@ -156,5 +164,14 @@ int main()
     std::ofstream outfile("output_steady.csv");
 
     problem.output(outfile);
-
 }
+#ifdef __EMSCRIPTEN__
+} // extern "C"
+#endif
+
+#ifndef __EMSCRIPTEN__
+int main()
+{
+    run();
+}
+#endif
