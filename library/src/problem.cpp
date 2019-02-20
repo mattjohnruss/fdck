@@ -25,6 +25,8 @@ namespace mjrfd
         Max_residual(1.0e-8),
         Max_newton_iterations(20),
         Jacobian_fd_step(1.0e-8),
+        Fd_jacobian_reserved_entries(10*n_dof_),
+        Fd_jacobian_threshold(1.0e-14),
         terse_logging_(true),
         use_fd_jacobian_(false),
         dump_jacobian_(false),
@@ -94,18 +96,25 @@ namespace mjrfd
             // always do one Newton iteration regardless of the residuals
             if(max_residual > Max_residual || count == 0)
             {
+                std::vector<Triplet> triplet_list;
+
                 // calculate the jacobian for the current state
                 if(use_fd_jacobian_ == true)
                 {
-                    calculate_jacobian_fd(jacobian_);
+                    // Reserve enough memory for an estimated 10*n_dof entries
+                    // by default. Should be enough for any discretisation that
+                    // creates (block) banded jacobians but can be customised
+                    // in derived classes.
+                    jacobian_.reserve(Fd_jacobian_reserved_entries);
+                    calculate_jacobian_fd(triplet_list);
                 }
                 else
                 {
-                    std::vector<Triplet> triplet_list;
                     calculate_jacobian(triplet_list);
-                    jacobian_.setFromTriplets(triplet_list.begin(), triplet_list.end());
-                    jacobian_.makeCompressed();
                 }
+
+                jacobian_.setFromTriplets(triplet_list.begin(), triplet_list.end());
+                jacobian_.makeCompressed();
 
                 if(terse_logging_ == false)
                 {
@@ -392,10 +401,9 @@ namespace mjrfd
 
     // Default implementation which calculates the jacobian by
     // finite-differencing the residuals
-    void Problem::calculate_jacobian_fd(Eigen::SparseMatrix<double> &jacobian)
+    void Problem::calculate_jacobian_fd(std::vector<Triplet> &triplet_list)
     {
-        // Storage for the dense jacobian matrix
-        Eigen::MatrixXd dense_jacobian(n_dof_, n_dof_);
+        triplet_list.reserve(Fd_jacobian_reserved_entries);
 
         // Storage for the residuals after incrementing/decrementing a dof
         Eigen::VectorXd residual_plus(n_dof_);
@@ -419,15 +427,21 @@ namespace mjrfd
             calculate_residual(residual_minus);
             u_[0](i) = u_i_backup;
 
-            // Set the column of the jacobian matrix
-            dense_jacobian.col(i) =
+            // Calculate the column of the jacobian matrix
+            Eigen::VectorXd residual_column =
                 (residual_plus - residual_minus)/(2.0*Jacobian_fd_step);
-        }
 
-        // Set the sparse jacobian from the dense one
-        // TODO check the tolerance for throwing away terms close to zero
-        jacobian = dense_jacobian.sparseView();
-        jacobian.makeCompressed();
+            // Loop over the rows of the current column
+            for(unsigned j = 0; j < n_dof_; ++j)
+            {
+                // If the current entry is above the threshold, add it to the
+                // triplet list
+                if(std::abs(residual_column(j)) > Fd_jacobian_threshold)
+                {
+                    triplet_list.emplace_back(j, i, residual_column(j));
+                }
+            }
+        }
     }
 
     void Problem::actions_before_timestep()

@@ -122,7 +122,7 @@ namespace mjrfd
         virtual void calculate_residual(Eigen::VectorXd &residual) const = 0;
         virtual void calculate_jacobian(std::vector<Triplet> &triplet_list) const;
 
-        void calculate_jacobian_fd(Eigen::SparseMatrix<double> &jacobian);
+        void calculate_jacobian_fd(std::vector<Triplet> &triplet_list);
 
         virtual void actions_before_timestep();
         virtual void actions_after_timestep();
@@ -133,6 +133,8 @@ namespace mjrfd
         double Max_residual;
         unsigned Max_newton_iterations;
         double Jacobian_fd_step;
+        unsigned Fd_jacobian_reserved_entries;
+        double Fd_jacobian_threshold;
 
     private:
         void linear_solve();
