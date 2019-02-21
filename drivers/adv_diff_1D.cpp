@@ -93,16 +93,16 @@ private:
     {
         triplet_list.reserve(3*(n_node_-2) + 2);
 
-        triplet_list.push_back( T(0, 0, 1.0*dx_*dx_) );
+        triplet_list.emplace_back(0, 0, 1.0*dx_*dx_);
 
         for(unsigned i = 1; i < n_node_-1; ++i)
         {
-            triplet_list.push_back( T(i, i-1,  0.5 + 0.5*6.0*0.5*dx_) );
-            triplet_list.push_back( T(i, i,   -1.0 - dx_*dx_/dt_) );
-            triplet_list.push_back( T(i, i+1,  0.5 - 0.5*6.0*0.5*dx_) );
+            triplet_list.emplace_back(i, i-1,  0.5 + 0.5*6.0*0.5*dx_);
+            triplet_list.emplace_back(i, i,   -1.0 - dx_*dx_/dt_);
+            triplet_list.emplace_back(i, i+1,  0.5 - 0.5*6.0*0.5*dx_);
         }
 
-        triplet_list.push_back( T(n_node_-1, n_node_-1, 1.0*dx_*dx_) );
+        triplet_list.emplace_back(n_node_-1, n_node_-1, 1.0*dx_*dx_);
     }
 };
 
