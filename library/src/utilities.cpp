@@ -81,6 +81,9 @@ namespace mjrfd
                 n_rows += 1;
             }
 
+            // Subtract the number of skipped rows to get the number of rows returned
+            n_rows -= skip_rows;
+
             // We rely on RVO to avoid copying into the return value. It's
             // actually eliding the copy of the tuple, but we also std::move
             // the vector into the tuple, so that is never copied either
