@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <vector>
+#include <limits>
 
 namespace mjrfd
 {
@@ -129,5 +130,92 @@ namespace mjrfd
         read_csv_to_flat_vector(std::istream &is,
                                 char delimiter = ' ',
                                 unsigned skip_rows = 0);
+
+        /// Returns the maximum element in the nonempty vector v. T must be a
+        /// numeric type.
+        template<class T>
+        T max(const std::vector<T> &v)
+        {
+            assert(v.size() != 0);
+            T current_max = std::numeric_limits<T>::lowest();
+            for(auto e : v)
+            {
+                if(e > current_max)
+                {
+                    current_max = e;
+                }
+            }
+            return current_max;
+        }
+
+        /// Returns the minimum element in the nonempty vector v. T must be a
+        /// numeric type.
+        template<class T>
+        T min(const std::vector<T> &v)
+        {
+            assert(v.size() != 0);
+            T current_min = std::numeric_limits<T>::max();
+            for(auto e : v)
+            {
+                if(e < current_min)
+                {
+                    current_min = e;
+                }
+            }
+            return current_min;
+        }
+
+        /// Returns true if all elements of v are positive. T must implement
+        /// operator<= compatible with double 0.0
+        template<class T>
+        bool all_positive(const std::vector<T> &v)
+        {
+            bool result = true;
+            for(auto e : v)
+            {
+                if(e <= 0.0)
+                {
+                    result = false;
+                    break;
+                }
+            }
+            return result;
+        }
+
+        /// Returns true if all elements of v are negative. T must implement
+        /// operator<= compatible with double 0.0
+        template<class T>
+        bool all_negative(const std::vector<T> &v)
+        {
+            bool result = true;
+            for(auto e : v)
+            {
+                if(e >= 0.0)
+                {
+                    result = false;
+                    break;
+                }
+            }
+            return result;
+        }
+
+        /// Flux limiter used in finite volume schemes
+        /// TODO give this a more specific name
+        template<class T>
+        T minmod(const std::vector<T> &v)
+        {
+            if(all_positive<T>(v))
+            {
+                return utilities::min<T>(v);
+            }
+            else if(all_negative<T>(v))
+            {
+                return utilities::max(v);
+            }
+            else
+            {
+                return 0.0;
+            }
+        }
     }
 }
