@@ -64,11 +64,6 @@ public:
         return static_cast<double>(j)/static_cast<double>(n_node_1d_-1);
     }
 
-    std::tuple<double, double> coords(unsigned i, unsigned j) const
-    {
-        return { x(i), y(j) };
-    }
-
     void set_initial_conditions()
     {
         clear_solution();
