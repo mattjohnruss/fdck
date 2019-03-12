@@ -587,9 +587,64 @@ private:
         }
     }
 
-    void calculate_jacobian(std::vector<Triplet> &) const override
+    void calculate_jacobian(std::vector<Triplet> &triplet_list) const override
     {
-        // TODO implement exact jacobian
+        // Jacobian entries for the ghost cells are all ones down the diagonal
+        for(unsigned b = 1; b <= n_interior_cell_1d_; ++b)
+        {
+            // Top boundary
+            unsigned j = n_interior_cell_1d_+1;
+
+            // rho_bar
+            unsigned index = rho_bar*n_dof_per_var_ + index_2d(b, j);
+            triplet_list.emplace_back(index, index, 1.0);
+
+            // c
+            index = c*n_dof_per_var_ + index_2d(b, j);
+            triplet_list.emplace_back(index, index, 1.0);
+
+            // Right boundary
+            unsigned i = n_interior_cell_1d_+1;
+
+            index = rho_bar*n_dof_per_var_ + index_2d(i, b);
+            triplet_list.emplace_back(index, index, 1.0);
+
+            index = c*n_dof_per_var_ + index_2d(i, b);
+            triplet_list.emplace_back(index, index, 1.0);
+
+            // Bottom boundary
+            j = 0;
+
+            index = rho_bar*n_dof_per_var_ + index_2d(b, j);
+            triplet_list.emplace_back(index, index, 1.0);
+
+            index = c*n_dof_per_var_ + index_2d(b, j);
+            triplet_list.emplace_back(index, index, 1.0);
+
+            // Left boundary
+            i = 0;
+
+            index = rho_bar*n_dof_per_var_ + index_2d(i, b);
+            triplet_list.emplace_back(index, index, 1.0);
+
+            index = c*n_dof_per_var_ + index_2d(i, b);
+            triplet_list.emplace_back(index, index, 1.0);
+        }
+
+        // Loop over the interior cells
+        for(unsigned i = 1; i <= n_interior_cell_1d_; ++i)
+        {
+            for(unsigned j = 1; j <= n_interior_cell_1d_; ++j)
+            {
+                // rho_bar
+                unsigned index = rho_bar*n_dof_per_var_ + index_2d(i, j);
+                triplet_list.emplace_back(index, index, 1.0/dt_);
+
+                // c
+                index = c*n_dof_per_var_ + index_2d(i, j);
+                triplet_list.emplace_back(index, index, 1.0/dt_);
+            }
+        }
     }
 };
 
@@ -605,9 +660,6 @@ int main(int argc, char **argv)
     double t_max = cf.get_or("t_max", 1.0);
 
     KellerSegelProblem2D problem(n_interior_cell_1d);
-    
-    problem.enable_fd_jacobian();
-    //problem.enable_dump_jacobian("fd_");
     
     problem.set_initial_conditions();
     problem.disable_terse_logging();
