@@ -568,7 +568,7 @@ int main(int argc, char **argv)
     KellerSegelProblem2D problem(n_interior_cell_1d);
     
     problem.enable_fd_jacobian();
-    problem.enable_dump_jacobian("fd_");
+    //problem.enable_dump_jacobian("fd_");
     
     problem.set_initial_conditions();
 
