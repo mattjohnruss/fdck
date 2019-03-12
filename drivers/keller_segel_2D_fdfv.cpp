@@ -188,7 +188,13 @@ private:
     double f_m(unsigned i, unsigned j) const
     {
         MJRFD_TRACE("f_m(i = {}, j = {})", i, j);
-        return f_p(i - 1, j);
+        // for the next two, we can call the plus (_p) functions with args i-1,
+        // j-1 as it gives the same result as a manual impl of the minus functions
+        double u_m = u_p_at_midpoint(i-1, j-1);
+        double drho_dx_m = drho_dx_p_at_midpoint(i-1, j-1);
+        // rho_point_value_i_m must be written explicitly because the upwinding
+        // should be in the opposite direction than the plus case
+        return p.chi*rho_point_value_i_m(i, j)*u_m - drho_dx_m;
     }
 
     // Equation (2.3)(b)
@@ -203,7 +209,10 @@ private:
     double g_m(unsigned i, unsigned j) const
     {
         MJRFD_TRACE("g_m(i = {}, j = {})", i, j);
-        return g_p(i, j - 1);
+        // the comments in f_m apply equally to g_m
+        double v_m = v_p_at_midpoint(i-1, j-1);
+        double drho_dy_m = drho_dy_p_at_midpoint(i-1, j-1);
+        return p.chi*rho_point_value_j_m(i, j)*v_m - drho_dy_m;
     }
 
     // Equation (2.4)(a)
@@ -270,6 +279,21 @@ private:
         }
     }
 
+    double rho_point_value_i_m(unsigned i, unsigned j) const
+    {
+        MJRFD_TRACE("rho_point_value_i_m(i = {}, j = {})", i, j);
+        double u_m = u_p_at_midpoint(i-1, j-1);
+
+        if(u_m < 0.0)
+        {
+            return rho_point_value_p_at_face(i, j, Face::East);
+        }
+        else
+        {
+            return rho_point_value_p_at_face(i-1, j, Face::West);
+        }
+    }
+
     // Equation (2.5)(b)
     double rho_point_value_j_p(unsigned i, unsigned j) const
     {
@@ -283,6 +307,21 @@ private:
         else
         {
             return rho_point_value_p_at_face(i, j+1, Face::South);
+        }
+    }
+
+    double rho_point_value_j_m(unsigned i, unsigned j) const
+    {
+        MJRFD_TRACE("rho_point_value_j_m(i = {}, j = {})", i, j);
+        double v_m = v_p_at_midpoint(i-1, j-1);
+
+        if(v_m < 0.0)
+        {
+            return rho_point_value_p_at_face(i, j, Face::North);
+        }
+        else
+        {
+            return rho_point_value_p_at_face(i, j-1, Face::South);
         }
     }
 
