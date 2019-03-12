@@ -336,12 +336,12 @@ private:
         else
         {
             double drho_bar_forward = 0.0;
-            for(auto [k, w] : stencil::forward_1::weights)
+            for(auto [k, w] : stencil::first_order::forward_1::weights)
             {
                 drho_bar_forward += w*u(1, rho_bar, index_2d(i+k, j));
             }
             double drho_bar_backward = 0.0;
-            for(auto [k, w] : stencil::backward_1::weights)
+            for(auto [k, w] : stencil::first_order::backward_1::weights)
             {
                 drho_bar_backward += w*u(1, rho_bar, index_2d(i+k, j));
             }
@@ -372,12 +372,12 @@ private:
         else
         {
             double drho_bar_forward = 0.0;
-            for(auto [k, w] : stencil::forward_1::weights)
+            for(auto [k, w] : stencil::first_order::forward_1::weights)
             {
                 drho_bar_forward += w*u(1, rho_bar, index_2d(i, j+k));
             }
             double drho_bar_backward = 0.0;
-            for(auto [k, w] : stencil::backward_1::weights)
+            for(auto [k, w] : stencil::first_order::backward_1::weights)
             {
                 drho_bar_backward += w*u(1, rho_bar, index_2d(i, j+k));
             }
