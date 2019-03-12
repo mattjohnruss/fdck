@@ -397,7 +397,7 @@ private:
             // Top boundary
             unsigned j = n_interior_cell_1d_+1;
 
-            std::cout << '\n';
+            MJRFD_TRACE("");
             MJRFD_TRACE("calculate_residual(i = {}, j = {}) [top]", b, j);
 
             // rho_bar
@@ -411,7 +411,7 @@ private:
             // Right boundary
             unsigned i = n_interior_cell_1d_+1;
 
-            std::cout << '\n';
+            MJRFD_TRACE("");
             MJRFD_TRACE("calculate_residual(i = {}, j = {}) [right]", i, b);
 
             index = rho_bar*n_dof_per_var_ + index_2d(i, b);
@@ -423,7 +423,7 @@ private:
             // Bottom boundary
             j = 0;
 
-            std::cout << '\n';
+            MJRFD_TRACE("");
             MJRFD_TRACE("calculate_residual(i = {}, j = {}) [bottom]", b, j);
 
             index = rho_bar*n_dof_per_var_ + index_2d(b, j);
@@ -435,7 +435,7 @@ private:
             // Left boundary
             i = 0;
 
-            std::cout << '\n';
+            MJRFD_TRACE("");
             MJRFD_TRACE("calculate_residual(i = {}, j = {}) [left]", i, b);
 
             index = rho_bar*n_dof_per_var_ + index_2d(i, b);
@@ -450,7 +450,7 @@ private:
         {
             for(unsigned j = 1; j <= n_interior_cell_1d_; ++j)
             {
-                std::cout << std::endl;
+                MJRFD_TRACE("");
                 MJRFD_TRACE("calculate_residual(i = {}, j = {}) [interior]", i, j);
 
                 // rho_bar
@@ -490,9 +490,9 @@ private:
 
                 // Using the cell-centred Laplacian stencil, which is the same
                 // as regular 5-point stencil in the interior. At
-                // boundaries/corners we use the modified stencil from Long
-                // that automatically imposes Neumann BCs (double check the
-                // definitions in Long)
+                // boundaries/corners we use the modified stencil from the
+                // notes by Long that automatically imposes Neumann BCs (double
+                // check the definitions in Long)
 
                 // Laplacian in x-direction
                 if(i != 1 && i != n_interior_cell_1d_)
@@ -559,7 +559,7 @@ int main(int argc, char **argv)
     Config cf;
     cf.parse_command_line(argc, argv);
 
-    log::set_level("trace");
+    log::set_level("info");
 
     unsigned n_interior_cell_1d = cf.get_or("n", 3u);
     double dt = cf.get_or("dt", 0.1);
@@ -571,6 +571,7 @@ int main(int argc, char **argv)
     //problem.enable_dump_jacobian("fd_");
     
     problem.set_initial_conditions();
+    problem.disable_terse_logging();
 
     char filename[200];
     std::ofstream outfile;
