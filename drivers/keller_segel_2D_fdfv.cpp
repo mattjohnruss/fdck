@@ -430,8 +430,8 @@ private:
     {
         for(unsigned b = 1; b <= n_interior_cell_1d_; ++b)
         {
-            // Set the values in the ghost cells to the previous values in the
-            // neighbouring interior cells
+            // Set the values in the ghost cells using quadratic interpolation
+            // of the previous values in the neighbouring interior cells
 
             // Top boundary
             unsigned j = n_interior_cell_1d_+1;
@@ -441,7 +441,8 @@ private:
 
             // rho_bar
             unsigned index = rho_bar*n_dof_per_var_ + index_2d(b, j);
-            residual(index) += u(rho_bar, index_2d(b, j)) - u(1, rho_bar, index_2d(b, j-1));
+            residual(index) +=
+                u(rho_bar, index_2d(b, j)) - (3.0*u(1, rho_bar, index_2d(b, j-1)) - 3.0*u(1, rho_bar, index_2d(b, j-2)) + 1.0*u(1, rho_bar, index_2d(b, j-3)));
 
             // c
             index = c*n_dof_per_var_ + index_2d(b, j);
@@ -454,7 +455,8 @@ private:
             MJRFD_TRACE("calculate_residual(i = {}, j = {}) [right]", i, b);
 
             index = rho_bar*n_dof_per_var_ + index_2d(i, b);
-            residual(index) += u(rho_bar, index_2d(i, b)) - u(1, rho_bar, index_2d(i-1, b));
+            residual(index) +=
+                u(rho_bar, index_2d(i, b)) - (3.0*u(1, rho_bar, index_2d(i-1, b)) - 3.0*u(1, rho_bar, index_2d(i-2, b)) + 1.0*u(1, rho_bar, index_2d(i-3, b)));
 
             index = c*n_dof_per_var_ + index_2d(i, b);
             residual(index) += u(c, index_2d(i, b)) - u(1, c, index_2d(i-1, b));
@@ -466,7 +468,8 @@ private:
             MJRFD_TRACE("calculate_residual(i = {}, j = {}) [bottom]", b, j);
 
             index = rho_bar*n_dof_per_var_ + index_2d(b, j);
-            residual(index) += u(rho_bar, index_2d(b, j)) - u(1, rho_bar, index_2d(b, j+1));
+            residual(index) +=
+                u(rho_bar, index_2d(b, j)) - (3.0*u(1, rho_bar, index_2d(b, j+1)) - 3.0*u(1, rho_bar, index_2d(b, j+2)) + 1.0*u(1, rho_bar, index_2d(b, j+3)));
 
             index = c*n_dof_per_var_ + index_2d(b, j);
             residual(index) += u(c, index_2d(b, j)) - u(1, c, index_2d(b, j+1));
@@ -478,7 +481,8 @@ private:
             MJRFD_TRACE("calculate_residual(i = {}, j = {}) [left]", i, b);
 
             index = rho_bar*n_dof_per_var_ + index_2d(i, b);
-            residual(index) += u(rho_bar, index_2d(i, b)) - u(1, rho_bar, index_2d(i+1, b));
+            residual(index) +=
+                u(rho_bar, index_2d(i, b)) - (3.0*u(1, rho_bar, index_2d(i+1, b)) - 3.0*u(1, rho_bar, index_2d(i+2, b)) + 1.0*u(1, rho_bar, index_2d(i+3, b)));
 
             index = c*n_dof_per_var_ + index_2d(i, b);
             residual(index) += u(c, index_2d(i, b)) - u(1, c, index_2d(i+1, b));
