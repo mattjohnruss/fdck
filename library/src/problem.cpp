@@ -9,13 +9,14 @@ namespace mjrfd
 {
     Problem::Problem(const unsigned n_var,
                      const unsigned n_dof_per_var,
-                     const unsigned n_aux_dof) :
+                     const unsigned n_aux_dof,
+                     const unsigned n_previous_values) :
         n_dof_per_var_(n_dof_per_var),
         n_dof_(n_var*n_dof_per_var + n_aux_dof),
         n_var_(n_var),
         n_aux_dof_(n_aux_dof),
-        n_time_history_(2),
-        u_(n_time_history_, Eigen::VectorXd(n_dof_)),
+        n_previous_values_(n_previous_values),
+        u_(n_previous_values_+1, Eigen::VectorXd(n_dof_)),
         du_(Eigen::VectorXd(n_dof_)),
         residual_(n_dof_),
         jacobian_(n_dof_, n_dof_),
@@ -42,11 +43,13 @@ namespace mjrfd
 
     void Problem::solve()
     {
-        // backup the current solution before solving, unless the problem is steady
+        // shift the time history before solving, unless the problem is steady
         if(steady_ == false)
         {
-            // TODO generalise this for n_time_history_ > 1
-            u_[1] = u_[0];
+            for(unsigned t = 0; t < n_previous_values_; ++t)
+            {
+                u_[t+1] = u_[t];
+            }
         }
 
         // the Newton iteration will continue until stop == true
@@ -314,7 +317,7 @@ namespace mjrfd
 
     double Problem::u_aux(const unsigned t, const unsigned i) const
     {
-        assert(t < n_time_history_);
+        assert(t < n_previous_values_+1);
         assert(i < n_aux_dof_);
 
         unsigned n_nodal_dof = n_var_*n_dof_per_var_;
@@ -331,7 +334,7 @@ namespace mjrfd
 
     double& Problem::u_aux(const unsigned t, const unsigned i)
     {
-        assert(t < n_time_history_);
+        assert(t < n_previous_values_+1);
         assert(i < n_aux_dof_);
 
         unsigned n_nodal_dof = n_var_*n_dof_per_var_;
@@ -389,7 +392,7 @@ namespace mjrfd
 
     void Problem::clear_solution()
     {
-        for(unsigned t = 0; t < n_time_history_; ++t)
+        for(unsigned t = 0; t < n_previous_values_+1; ++t)
         {
             u_[t].setZero();
         }
