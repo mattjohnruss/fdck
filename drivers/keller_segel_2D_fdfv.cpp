@@ -30,14 +30,18 @@ class KellerSegelProblem2D : public Problem
 public:
     // Square grid of cells, with one layer of ghost cells added outside each
     // boundary.
+    // We need no aux dofs but we need 3 history values for SSP R-K timestepping.
     KellerSegelProblem2D(const unsigned n_interior_cell_1d) :
-        Problem(2, n_interior_cell_1d*n_interior_cell_1d + 4*n_interior_cell_1d),
+        Problem(2, n_interior_cell_1d*n_interior_cell_1d + 4*n_interior_cell_1d, 0, 3),
         dx_(1.0/(n_interior_cell_1d-1)),
         dy_(1.0/(n_interior_cell_1d-1)),
         n_interior_cell_1d_(n_interior_cell_1d)
     {
         MJRFD_INFO("Creating grid with {} interior cells in each direction ({} including ghost cells).", n_interior_cell_1d, n_interior_cell_1d_+2);
         Max_residual = 1.0e-14;
+        // TODO investigate why setting this to 1 causes (possibly) no
+        // iterations... at the very least the logging is confusing
+        Max_newton_iterations = 2;
     }
 
     ~KellerSegelProblem2D() override
@@ -79,11 +83,11 @@ public:
         {
             for(unsigned j = 1; j <= n_interior_cell_1d_; ++j)
             {
-                double x = this->x(i);
-                double y = this->y(j);
+                double x_c = this->x(i) - 0.5;
+                double y_c = this->y(j) - 0.5;
 
-                u(rho_bar, index_2d(i, j)) = 1000.0*std::exp(-100.0*((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5)));
-                u(c, index_2d(i, j)) = 500.0*std::exp(-50.0*((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5)));
+                u(rho_bar, index_2d(i, j)) = 1000.0*std::exp(-100.0*(x_c*x_c + y_c*y_c));
+                u(c, index_2d(i, j)) = 500.0*std::exp(-50.0*(x_c*x_c + y_c*y_c));
             }
         }
     }
@@ -96,6 +100,50 @@ public:
     double y(unsigned j) const
     {
         return static_cast<double>(j-1)/static_cast<double>(n_interior_cell_1d_-1);
+    }
+
+    void ssp_rk_3_timestep(double dt)
+    {
+        // backup the current time for working around the time += dt update
+        const double current_time = time();
+
+        // take a forward Euler step to give w^(1)
+        unsteady_solve(dt);
+
+        // reset time before next solve
+        time() = current_time;
+
+        // take another forward Euler step to give the [ ... ] brackets in w^(2)
+        unsteady_solve(dt);
+
+        // calculate w^(2)
+        for(unsigned i = 1; i <= n_interior_cell_1d_; ++i)
+        {
+            for(unsigned j = 1; j <= n_interior_cell_1d_; ++j)
+            {
+                u(rho_bar, index_2d(i, j)) =
+                    0.75*u(2, rho_bar, index_2d(i, j)) + 0.25*u(rho_bar, index_2d(i, j));
+            }
+        }
+
+        // reset time before next solve
+        time() = current_time;
+
+        // take another forward Euler step to give the [ ... ] brackets in w^(3)
+        unsteady_solve(dt);
+
+        // calculate w^(3)
+        for(unsigned i = 1; i <= n_interior_cell_1d_; ++i)
+        {
+            for(unsigned j = 1; j <= n_interior_cell_1d_; ++j)
+            {
+                u(rho_bar, index_2d(i, j)) =
+                    (1.0/3.0)*u(3, rho_bar, index_2d(i, j)) + (2.0/3.0)*u(rho_bar, index_2d(i, j));
+            }
+        }
+
+        // update the time manually
+        time() = current_time + dt;
     }
 
     KellerSegelParameters p;
@@ -188,7 +236,13 @@ private:
     double f_m(unsigned i, unsigned j) const
     {
         MJRFD_TRACE("f_m(i = {}, j = {})", i, j);
-        return f_p(i - 1, j);
+        // for the next two, we can call the plus (_p) functions with args i-1,
+        // j-1 as it gives the same result as a manual impl of the minus functions
+        double u_m = u_p_at_midpoint(i-1, j-1);
+        double drho_dx_m = drho_dx_p_at_midpoint(i-1, j-1);
+        // rho_point_value_i_m must be written explicitly because the upwinding
+        // should be in the opposite direction than the plus case
+        return p.chi*rho_point_value_i_m(i, j)*u_m - drho_dx_m;
     }
 
     // Equation (2.3)(b)
@@ -203,7 +257,10 @@ private:
     double g_m(unsigned i, unsigned j) const
     {
         MJRFD_TRACE("g_m(i = {}, j = {})", i, j);
-        return g_p(i, j - 1);
+        // the comments in f_m apply equally to g_m
+        double v_m = v_p_at_midpoint(i-1, j-1);
+        double drho_dy_m = drho_dy_p_at_midpoint(i-1, j-1);
+        return p.chi*rho_point_value_j_m(i, j)*v_m - drho_dy_m;
     }
 
     // Equation (2.4)(a)
@@ -270,6 +327,21 @@ private:
         }
     }
 
+    double rho_point_value_i_m(unsigned i, unsigned j) const
+    {
+        MJRFD_TRACE("rho_point_value_i_m(i = {}, j = {})", i, j);
+        double u_m = u_p_at_midpoint(i-1, j-1);
+
+        if(u_m < 0.0)
+        {
+            return rho_point_value_p_at_face(i, j, Face::East);
+        }
+        else
+        {
+            return rho_point_value_p_at_face(i-1, j, Face::West);
+        }
+    }
+
     // Equation (2.5)(b)
     double rho_point_value_j_p(unsigned i, unsigned j) const
     {
@@ -283,6 +355,21 @@ private:
         else
         {
             return rho_point_value_p_at_face(i, j+1, Face::South);
+        }
+    }
+
+    double rho_point_value_j_m(unsigned i, unsigned j) const
+    {
+        MJRFD_TRACE("rho_point_value_j_m(i = {}, j = {})", i, j);
+        double v_m = v_p_at_midpoint(i-1, j-1);
+
+        if(v_m < 0.0)
+        {
+            return rho_point_value_p_at_face(i, j, Face::North);
+        }
+        else
+        {
+            return rho_point_value_p_at_face(i, j-1, Face::South);
         }
     }
 
@@ -391,18 +478,19 @@ private:
     {
         for(unsigned b = 1; b <= n_interior_cell_1d_; ++b)
         {
-            // Set the values in the ghost cells to the previous values in the
-            // neighbouring interior cells
+            // Set the values in the ghost cells using quadratic interpolation
+            // of the previous values in the neighbouring interior cells
 
             // Top boundary
             unsigned j = n_interior_cell_1d_+1;
 
-            std::cout << '\n';
+            MJRFD_TRACE("");
             MJRFD_TRACE("calculate_residual(i = {}, j = {}) [top]", b, j);
 
             // rho_bar
             unsigned index = rho_bar*n_dof_per_var_ + index_2d(b, j);
-            residual(index) += u(rho_bar, index_2d(b, j)) - u(1, rho_bar, index_2d(b, j-1));
+            residual(index) +=
+                u(rho_bar, index_2d(b, j)) - (3.0*u(1, rho_bar, index_2d(b, j-1)) - 3.0*u(1, rho_bar, index_2d(b, j-2)) + 1.0*u(1, rho_bar, index_2d(b, j-3)));
 
             // c
             index = c*n_dof_per_var_ + index_2d(b, j);
@@ -411,11 +499,12 @@ private:
             // Right boundary
             unsigned i = n_interior_cell_1d_+1;
 
-            std::cout << '\n';
+            MJRFD_TRACE("");
             MJRFD_TRACE("calculate_residual(i = {}, j = {}) [right]", i, b);
 
             index = rho_bar*n_dof_per_var_ + index_2d(i, b);
-            residual(index) += u(rho_bar, index_2d(i, b)) - u(1, rho_bar, index_2d(i-1, b));
+            residual(index) +=
+                u(rho_bar, index_2d(i, b)) - (3.0*u(1, rho_bar, index_2d(i-1, b)) - 3.0*u(1, rho_bar, index_2d(i-2, b)) + 1.0*u(1, rho_bar, index_2d(i-3, b)));
 
             index = c*n_dof_per_var_ + index_2d(i, b);
             residual(index) += u(c, index_2d(i, b)) - u(1, c, index_2d(i-1, b));
@@ -423,11 +512,12 @@ private:
             // Bottom boundary
             j = 0;
 
-            std::cout << '\n';
+            MJRFD_TRACE("");
             MJRFD_TRACE("calculate_residual(i = {}, j = {}) [bottom]", b, j);
 
             index = rho_bar*n_dof_per_var_ + index_2d(b, j);
-            residual(index) += u(rho_bar, index_2d(b, j)) - u(1, rho_bar, index_2d(b, j+1));
+            residual(index) +=
+                u(rho_bar, index_2d(b, j)) - (3.0*u(1, rho_bar, index_2d(b, j+1)) - 3.0*u(1, rho_bar, index_2d(b, j+2)) + 1.0*u(1, rho_bar, index_2d(b, j+3)));
 
             index = c*n_dof_per_var_ + index_2d(b, j);
             residual(index) += u(c, index_2d(b, j)) - u(1, c, index_2d(b, j+1));
@@ -435,11 +525,12 @@ private:
             // Left boundary
             i = 0;
 
-            std::cout << '\n';
+            MJRFD_TRACE("");
             MJRFD_TRACE("calculate_residual(i = {}, j = {}) [left]", i, b);
 
             index = rho_bar*n_dof_per_var_ + index_2d(i, b);
-            residual(index) += u(rho_bar, index_2d(i, b)) - u(1, rho_bar, index_2d(i+1, b));
+            residual(index) +=
+                u(rho_bar, index_2d(i, b)) - (3.0*u(1, rho_bar, index_2d(i+1, b)) - 3.0*u(1, rho_bar, index_2d(i+2, b)) + 1.0*u(1, rho_bar, index_2d(i+3, b)));
 
             index = c*n_dof_per_var_ + index_2d(i, b);
             residual(index) += u(c, index_2d(i, b)) - u(1, c, index_2d(i+1, b));
@@ -450,7 +541,7 @@ private:
         {
             for(unsigned j = 1; j <= n_interior_cell_1d_; ++j)
             {
-                std::cout << std::endl;
+                MJRFD_TRACE("");
                 MJRFD_TRACE("calculate_residual(i = {}, j = {}) [interior]", i, j);
 
                 // rho_bar
@@ -490,9 +581,9 @@ private:
 
                 // Using the cell-centred Laplacian stencil, which is the same
                 // as regular 5-point stencil in the interior. At
-                // boundaries/corners we use the modified stencil from Long
-                // that automatically imposes Neumann BCs (double check the
-                // definitions in Long)
+                // boundaries/corners we use the modified stencil from the
+                // notes by Long that automatically imposes Neumann BCs (double
+                // check the definitions in Long)
 
                 // Laplacian in x-direction
                 if(i != 1 && i != n_interior_cell_1d_)
@@ -548,9 +639,64 @@ private:
         }
     }
 
-    void calculate_jacobian(std::vector<Triplet> &) const override
+    void calculate_jacobian(std::vector<Triplet> &triplet_list) const override
     {
-        // TODO implement exact jacobian
+        // Jacobian entries for the ghost cells are all ones down the diagonal
+        for(unsigned b = 1; b <= n_interior_cell_1d_; ++b)
+        {
+            // Top boundary
+            unsigned j = n_interior_cell_1d_+1;
+
+            // rho_bar
+            unsigned index = rho_bar*n_dof_per_var_ + index_2d(b, j);
+            triplet_list.emplace_back(index, index, 1.0);
+
+            // c
+            index = c*n_dof_per_var_ + index_2d(b, j);
+            triplet_list.emplace_back(index, index, 1.0);
+
+            // Right boundary
+            unsigned i = n_interior_cell_1d_+1;
+
+            index = rho_bar*n_dof_per_var_ + index_2d(i, b);
+            triplet_list.emplace_back(index, index, 1.0);
+
+            index = c*n_dof_per_var_ + index_2d(i, b);
+            triplet_list.emplace_back(index, index, 1.0);
+
+            // Bottom boundary
+            j = 0;
+
+            index = rho_bar*n_dof_per_var_ + index_2d(b, j);
+            triplet_list.emplace_back(index, index, 1.0);
+
+            index = c*n_dof_per_var_ + index_2d(b, j);
+            triplet_list.emplace_back(index, index, 1.0);
+
+            // Left boundary
+            i = 0;
+
+            index = rho_bar*n_dof_per_var_ + index_2d(i, b);
+            triplet_list.emplace_back(index, index, 1.0);
+
+            index = c*n_dof_per_var_ + index_2d(i, b);
+            triplet_list.emplace_back(index, index, 1.0);
+        }
+
+        // Loop over the interior cells
+        for(unsigned i = 1; i <= n_interior_cell_1d_; ++i)
+        {
+            for(unsigned j = 1; j <= n_interior_cell_1d_; ++j)
+            {
+                // rho_bar
+                unsigned index = rho_bar*n_dof_per_var_ + index_2d(i, j);
+                triplet_list.emplace_back(index, index, 1.0/dt_);
+
+                // c
+                index = c*n_dof_per_var_ + index_2d(i, j);
+                triplet_list.emplace_back(index, index, 1.0/dt_);
+            }
+        }
     }
 };
 
@@ -559,7 +705,7 @@ int main(int argc, char **argv)
     Config cf;
     cf.parse_command_line(argc, argv);
 
-    log::set_level("trace");
+    log::set_level("info");
 
     unsigned n_interior_cell_1d = cf.get_or("n", 3u);
     double dt = cf.get_or("dt", 0.1);
@@ -567,10 +713,8 @@ int main(int argc, char **argv)
 
     KellerSegelProblem2D problem(n_interior_cell_1d);
     
-    problem.enable_fd_jacobian();
-    //problem.enable_dump_jacobian("fd_");
-    
     problem.set_initial_conditions();
+    problem.disable_terse_logging();
 
     char filename[200];
     std::ofstream outfile;
@@ -584,7 +728,7 @@ int main(int argc, char **argv)
 
     while(problem.time() < t_max)
     {
-        problem.unsteady_solve(dt);
+        problem.ssp_rk_3_timestep(dt);
 
         std::sprintf(filename, "output_%05u.csv", i);
         outfile.open(filename);
