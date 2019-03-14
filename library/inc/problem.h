@@ -13,9 +13,12 @@ namespace mjrfd
     public:
         typedef Eigen::Triplet<double> Triplet;
 
+        // TODO tidy up these default values. Consider making a builder class
+        // for Problem.
         Problem(const unsigned n_var,
                 const unsigned n_dof_per_var,
-                const unsigned n_aux_dof = 0);
+                const unsigned n_aux_dof = 0,
+                const unsigned n_previous_values = 1);
 
         virtual ~Problem();
 
@@ -49,7 +52,7 @@ namespace mjrfd
         double u(const unsigned t, const T variable, const unsigned i) const
         {
             unsigned v = static_cast<unsigned>(variable);
-            assert(t >= 0 && t < n_time_history_);
+            assert(t >= 0 && t < n_previous_values_+1);
             assert(v >= 0 && v < n_var_);
             assert(i >= 0 && i < n_dof_per_var_);
 
@@ -70,7 +73,7 @@ namespace mjrfd
         double& u(const unsigned t, const T variable, const unsigned i)
         {
             unsigned v = static_cast<unsigned>(variable);
-            assert(t >= 0 && t < n_time_history_);
+            assert(t >= 0 && t < n_previous_values_+1);
             assert(v >= 0 && v < n_var_);
             assert(i >= 0 && i < n_dof_per_var_);
 
@@ -103,7 +106,7 @@ namespace mjrfd
         const unsigned n_var_;
         const unsigned n_aux_dof_;
 
-        const unsigned n_time_history_;
+        const unsigned n_previous_values_;
 
         std::vector<Eigen::VectorXd> u_;
 
