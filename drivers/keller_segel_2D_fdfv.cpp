@@ -39,6 +39,9 @@ public:
     {
         MJRFD_INFO("Creating grid with {} interior cells in each direction ({} including ghost cells).", n_interior_cell_1d, n_interior_cell_1d_+2);
         Max_residual = 1.0e-14;
+        // TODO investigate why setting this to 1 causes (possibly) no
+        // iterations... at the very least the logging is confusing
+        Max_newton_iterations = 2;
     }
 
     ~KellerSegelProblem2D() override
