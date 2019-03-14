@@ -30,8 +30,9 @@ class KellerSegelProblem2D : public Problem
 public:
     // Square grid of cells, with one layer of ghost cells added outside each
     // boundary.
+    // We need no aux dofs but we need 3 history values for SSP R-K timestepping.
     KellerSegelProblem2D(const unsigned n_interior_cell_1d) :
-        Problem(2, n_interior_cell_1d*n_interior_cell_1d + 4*n_interior_cell_1d),
+        Problem(2, n_interior_cell_1d*n_interior_cell_1d + 4*n_interior_cell_1d, 0, 3),
         dx_(1.0/(n_interior_cell_1d-1)),
         dy_(1.0/(n_interior_cell_1d-1)),
         n_interior_cell_1d_(n_interior_cell_1d)
@@ -96,6 +97,50 @@ public:
     double y(unsigned j) const
     {
         return static_cast<double>(j-1)/static_cast<double>(n_interior_cell_1d_-1);
+    }
+
+    void ssp_rk_3_timestep(double dt)
+    {
+        // backup the current time for working around the time += dt update
+        const double current_time = time();
+
+        // take a forward Euler step to give w^(1)
+        unsteady_solve(dt);
+
+        // reset time before next solve
+        time() = current_time;
+
+        // take another forward Euler step to give the [ ... ] brackets in w^(2)
+        unsteady_solve(dt);
+
+        // calculate w^(2)
+        for(unsigned i = 1; i <= n_interior_cell_1d_; ++i)
+        {
+            for(unsigned j = 1; j <= n_interior_cell_1d_; ++j)
+            {
+                u(rho_bar, index_2d(i, j)) =
+                    0.75*u(2, rho_bar, index_2d(i, j)) + 0.25*u(rho_bar, index_2d(i, j));
+            }
+        }
+
+        // reset time before next solve
+        time() = current_time;
+
+        // take another forward Euler step to give the [ ... ] brackets in w^(3)
+        unsteady_solve(dt);
+
+        // calculate w^(3)
+        for(unsigned i = 1; i <= n_interior_cell_1d_; ++i)
+        {
+            for(unsigned j = 1; j <= n_interior_cell_1d_; ++j)
+            {
+                u(rho_bar, index_2d(i, j)) =
+                    (1.0/3.0)*u(3, rho_bar, index_2d(i, j)) + (2.0/3.0)*u(rho_bar, index_2d(i, j));
+            }
+        }
+
+        // update the time manually
+        time() = current_time + dt;
     }
 
     KellerSegelParameters p;
@@ -680,7 +725,7 @@ int main(int argc, char **argv)
 
     while(problem.time() < t_max)
     {
-        problem.unsteady_solve(dt);
+        problem.ssp_rk_3_timestep(dt);
 
         std::sprintf(filename, "output_%05u.csv", i);
         outfile.open(filename);
