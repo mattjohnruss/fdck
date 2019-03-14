@@ -83,11 +83,11 @@ public:
         {
             for(unsigned j = 1; j <= n_interior_cell_1d_; ++j)
             {
-                double x = this->x(i);
-                double y = this->y(j);
+                double x_c = this->x(i) - 0.5;
+                double y_c = this->y(j) - 0.5;
 
-                u(rho_bar, index_2d(i, j)) = 1000.0*std::exp(-100.0*((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5)));
-                u(c, index_2d(i, j)) = 500.0*std::exp(-50.0*((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5)));
+                u(rho_bar, index_2d(i, j)) = 1000.0*std::exp(-100.0*(x_c*x_c + y_c*y_c));
+                u(c, index_2d(i, j)) = 500.0*std::exp(-50.0*(x_c*x_c + y_c*y_c));
             }
         }
     }
