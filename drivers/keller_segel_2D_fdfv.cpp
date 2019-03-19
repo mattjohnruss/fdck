@@ -712,6 +712,10 @@ int main(int argc, char **argv)
     double t_max = cf.get_or("t_max", 1.0);
 
     KellerSegelProblem2D problem(n_interior_cell_1d);
+
+    problem.p.chi = cf.get_or("chi", 1.0);
+    problem.p.gamma_rho = cf.get_or("gamma_rho", 1.0);
+    problem.p.gamma_c = cf.get_or("gamma_c", 1.0);
     
     problem.set_initial_conditions();
     problem.disable_terse_logging();
