@@ -6,8 +6,11 @@
 
 #include <tuple>
 #include <fstream>
+#include <random>
 
 using namespace mjrfd;
+
+//#define IMPOSED_C_PROFILE
 
 enum Variable
 {
@@ -17,10 +20,21 @@ enum Variable
 
 struct KellerSegelParameters
 {
-    double chi = 1.0;
+    double rho_bar_init = 1.0;
+    double c_init = 1.0;
+    double D = 1.0;
+    double r = 1.0;
+    double chi = 0.0;
     double gamma_rho = 1.0;
     double gamma_c = 1.0;
 };
+
+#ifdef IMPOSED_C_PROFILE
+double c_value(double x, double y)
+{
+    return y;
+}
+#endif // IMPOSED_C_PROFILE
 
 // Hybrid FVFD method for Keller-Segel based on Chertock et al (2017)
 class KellerSegelProblem2D : public Problem
@@ -31,14 +45,15 @@ public:
     // Square grid of cells, with one layer of ghost cells added outside each
     // boundary.
     // We need no aux dofs but we need 3 history values for SSP R-K timestepping.
-    KellerSegelProblem2D(const unsigned n_interior_cell_1d) :
+    // TODO check if dx, dy are correctly defined
+    KellerSegelProblem2D(const unsigned n_interior_cell_1d, double L) :
         Problem(2, n_interior_cell_1d*n_interior_cell_1d + 4*n_interior_cell_1d, 0, 3),
-        dx_(1.0/(n_interior_cell_1d-1)),
-        dy_(1.0/(n_interior_cell_1d-1)),
+        dx_(L/(n_interior_cell_1d)),
+        dy_(L/(n_interior_cell_1d)),
         n_interior_cell_1d_(n_interior_cell_1d)
     {
         MJRFD_INFO("Creating grid with {} interior cells in each direction ({} including ghost cells).", n_interior_cell_1d, n_interior_cell_1d_+2);
-        Max_residual = 1.0e-14;
+        Max_residual = 1.0e-4;
         // TODO investigate why setting this to 1 causes (possibly) no
         // iterations... at the very least the logging is confusing
         Max_newton_iterations = 2;
@@ -79,6 +94,10 @@ public:
 
         clear_solution();
 
+        //std::random_device rd{};
+        //std::mt19937 gen{rd()};
+        //std::normal_distribution<double> dist{0.0, 0.001};
+
         for(unsigned i = 1; i <= n_interior_cell_1d_; ++i)
         {
             for(unsigned j = 1; j <= n_interior_cell_1d_; ++j)
@@ -87,19 +106,25 @@ public:
                 double y_c = this->y(j) - 0.5;
 
                 u(rho_bar, index_2d(i, j)) = 1000.0*std::exp(-100.0*(x_c*x_c + y_c*y_c));
+                //u(rho_bar, index_2d(i, j)) = p.rho_bar_init + dist(gen);
+#ifdef IMPOSED_C_PROFILE
+                u(c, index_2d(i, j)) = c_value(x(i), y(j));
+#else
                 u(c, index_2d(i, j)) = 500.0*std::exp(-50.0*(x_c*x_c + y_c*y_c));
+                //u(c, index_2d(i, j)) = p.c_init + dist(gen);
+#endif // IMPOSED_C_PROFILE
             }
         }
     }
 
     double x(unsigned i) const
     {
-        return static_cast<double>(i-1)/static_cast<double>(n_interior_cell_1d_-1);
+        return (static_cast<double>(i) - 0.5)*dx_;
     }
 
     double y(unsigned j) const
     {
-        return static_cast<double>(j-1)/static_cast<double>(n_interior_cell_1d_-1);
+        return (static_cast<double>(j) - 0.5)*dy_;
     }
 
     void ssp_rk_3_timestep(double dt)
@@ -225,42 +250,48 @@ private:
     }
 
     // Equation (2.3)(a)
+    // Calculates F_{i+1/2, j}
     double f_p(int i, int j) const
     {
         MJRFD_TRACE("f_p(i = {}, j = {})", i, j);
         double u_p = u_p_at_midpoint(i, j);
         double drho_dx_p = drho_dx_p_at_midpoint(i, j);
-        return p.chi*rho_point_value_i_p(i, j)*u_p - drho_dx_p;
+        return p.chi*rho_point_value_i_p(i, j)*u_p - p.D*drho_dx_p;
     }
 
+    // Calculates F_{i-1/2, j}
     double f_m(unsigned i, unsigned j) const
     {
         MJRFD_TRACE("f_m(i = {}, j = {})", i, j);
         // for the next two, we can call the plus (_p) functions with args i-1,
         // j-1 as it gives the same result as a manual impl of the minus functions
-        double u_m = u_p_at_midpoint(i-1, j-1);
-        double drho_dx_m = drho_dx_p_at_midpoint(i-1, j-1);
+        //return f_p(i - 1, j);
+        double u_m = u_p_at_midpoint(i-1, j);
+        double drho_dx_m = drho_dx_p_at_midpoint(i-1, j);
         // rho_point_value_i_m must be written explicitly because the upwinding
         // should be in the opposite direction than the plus case
-        return p.chi*rho_point_value_i_m(i, j)*u_m - drho_dx_m;
+        return p.chi*rho_point_value_i_m(i, j)*u_m - p.D*drho_dx_m;
     }
 
     // Equation (2.3)(b)
+    // Calculates G_{i, j+1/2}
     double g_p(int i, int j) const
     {
         MJRFD_TRACE("g_p(i = {}, j = {})", i, j);
         double v_p = v_p_at_midpoint(i, j);
         double drho_dy_p = drho_dy_p_at_midpoint(i, j);
-        return p.chi*rho_point_value_j_p(i, j)*v_p - drho_dy_p;
+        return p.chi*rho_point_value_j_p(i, j)*v_p - p.D*drho_dy_p;
     }
 
+    // Calculates G_{i, j-1/2}
     double g_m(unsigned i, unsigned j) const
     {
         MJRFD_TRACE("g_m(i = {}, j = {})", i, j);
+        //return g_p(i, j - 1);
         // the comments in f_m apply equally to g_m
-        double v_m = v_p_at_midpoint(i-1, j-1);
-        double drho_dy_m = drho_dy_p_at_midpoint(i-1, j-1);
-        return p.chi*rho_point_value_j_m(i, j)*v_m - drho_dy_m;
+        double v_m = v_p_at_midpoint(i, j-1);
+        double drho_dy_m = drho_dy_p_at_midpoint(i, j-1);
+        return p.chi*rho_point_value_j_m(i, j)*v_m - p.D*drho_dy_m;
     }
 
     // Equation (2.4)(a)
@@ -319,26 +350,26 @@ private:
 
         if(u_p > 0.0)
         {
-            return rho_point_value_p_at_face(i, j, Face::East);
+            return rho_point_value_at_face(i, j, Face::East);
         }
         else
         {
-            return rho_point_value_p_at_face(i+1, j, Face::West);
+            return rho_point_value_at_face(i+1, j, Face::West);
         }
     }
 
     double rho_point_value_i_m(unsigned i, unsigned j) const
     {
         MJRFD_TRACE("rho_point_value_i_m(i = {}, j = {})", i, j);
-        double u_m = u_p_at_midpoint(i-1, j-1);
+        double u_m = u_p_at_midpoint(i-1, j);
 
-        if(u_m < 0.0)
+        if(u_m > 0.0)
         {
-            return rho_point_value_p_at_face(i, j, Face::East);
+            return rho_point_value_at_face(i-1, j, Face::East);
         }
         else
         {
-            return rho_point_value_p_at_face(i-1, j, Face::West);
+            return rho_point_value_at_face(i, j, Face::West);
         }
     }
 
@@ -350,35 +381,35 @@ private:
 
         if(v_p > 0.0)
         {
-            return rho_point_value_p_at_face(i, j, Face::North);
+            return rho_point_value_at_face(i, j, Face::North);
         }
         else
         {
-            return rho_point_value_p_at_face(i, j+1, Face::South);
+            return rho_point_value_at_face(i, j+1, Face::South);
         }
     }
 
     double rho_point_value_j_m(unsigned i, unsigned j) const
     {
         MJRFD_TRACE("rho_point_value_j_m(i = {}, j = {})", i, j);
-        double v_m = v_p_at_midpoint(i-1, j-1);
+        double v_m = v_p_at_midpoint(i, j-1);
 
-        if(v_m < 0.0)
+        if(v_m > 0.0)
         {
-            return rho_point_value_p_at_face(i, j, Face::North);
+            return rho_point_value_at_face(i, j-1, Face::North);
         }
         else
         {
-            return rho_point_value_p_at_face(i, j-1, Face::South);
+            return rho_point_value_at_face(i, j, Face::South);
         }
     }
 
     // Equation (2.7)
     // We have shifted some of the indices here but it should be equivalent to
     // the paper 
-    double rho_point_value_p_at_face(unsigned i, unsigned j, Face f) const
+    double rho_point_value_at_face(unsigned i, unsigned j, Face f) const
     {
-        MJRFD_TRACE("rho_point_value_p_at_face(i = {}, j = {})", i, j);
+        MJRFD_TRACE("rho_point_value_at_face(i = {}, j = {})", i, j);
         double result = u(1, rho_bar, index_2d(i, j));
 
         switch(f)
@@ -386,11 +417,11 @@ private:
             case Face::North:
                 result += 0.5*dy_*drho_dy(i, j);
                 break;
-            case Face::South:
-                result -= 0.5*dy_*drho_dy(i, j);
-                break;
             case Face::East:
                 result += 0.5*dx_*drho_dx(i, j);
+                break;
+            case Face::South:
+                result -= 0.5*dy_*drho_dy(i, j);
                 break;
             case Face::West:
                 result -= 0.5*dx_*drho_dx(i, j);
@@ -413,15 +444,19 @@ private:
             drho_bar_central += w*u(1, rho_bar, index_2d(i+k, j));
         }
 
+        // Central stencil has weights +-0.5, so here we only need another
+        // +-0.5 factor to give the +-0.25 required - see paper
         const double test_p = u(1, rho_bar, index_2d(i, j)) + 0.5*drho_bar_central;
         const double test_m = u(1, rho_bar, index_2d(i, j)) - 0.5*drho_bar_central;
 
         if(test_p >= 0.0 && test_m >= 0.0)
         {
+            //MJRFD_DEBUG("Both tests positive - using central difference");
             return drho_bar_central/dx_;
         }
         else
         {
+            //MJRFD_DEBUG("One or more test failed - using minmod");
             double drho_bar_forward = 0.0;
             for(auto [k, w] : stencil::first_order::forward_1::weights)
             {
@@ -454,10 +489,12 @@ private:
 
         if(test_p >= 0.0 && test_m >= 0.0)
         {
+            //MJRFD_DEBUG("Both tests positive - using central difference");
             return drho_bar_central/dy_;
         }
         else
         {
+            //MJRFD_DEBUG("One or more test failed - using minmod");
             double drho_bar_forward = 0.0;
             for(auto [k, w] : stencil::first_order::forward_1::weights)
             {
@@ -494,7 +531,8 @@ private:
 
             // c
             index = c*n_dof_per_var_ + index_2d(b, j);
-            residual(index) += u(c, index_2d(b, j)) - u(1, c, index_2d(b, j-1));
+            residual(index) +=
+                u(c, index_2d(b, j)) - (3.0*u(1, c, index_2d(b, j-1)) - 3.0*u(1, c, index_2d(b, j-2)) + 1.0*u(1, c, index_2d(b, j-3)));
 
             // Right boundary
             unsigned i = n_interior_cell_1d_+1;
@@ -507,7 +545,8 @@ private:
                 u(rho_bar, index_2d(i, b)) - (3.0*u(1, rho_bar, index_2d(i-1, b)) - 3.0*u(1, rho_bar, index_2d(i-2, b)) + 1.0*u(1, rho_bar, index_2d(i-3, b)));
 
             index = c*n_dof_per_var_ + index_2d(i, b);
-            residual(index) += u(c, index_2d(i, b)) - u(1, c, index_2d(i-1, b));
+            residual(index) +=
+                u(c, index_2d(i, b)) - (3.0*u(1, c, index_2d(i-1, b)) - 3.0*u(1, c, index_2d(i-2, b)) + 1.0*u(1, c, index_2d(i-3, b)));
 
             // Bottom boundary
             j = 0;
@@ -520,7 +559,8 @@ private:
                 u(rho_bar, index_2d(b, j)) - (3.0*u(1, rho_bar, index_2d(b, j+1)) - 3.0*u(1, rho_bar, index_2d(b, j+2)) + 1.0*u(1, rho_bar, index_2d(b, j+3)));
 
             index = c*n_dof_per_var_ + index_2d(b, j);
-            residual(index) += u(c, index_2d(b, j)) - u(1, c, index_2d(b, j+1));
+            residual(index) +=
+                u(c, index_2d(b, j)) - (3.0*u(1, c, index_2d(b, j+1)) - 3.0*u(1, c, index_2d(b, j+2)) + 1.0*u(1, c, index_2d(b, j+3)));
 
             // Left boundary
             i = 0;
@@ -533,7 +573,8 @@ private:
                 u(rho_bar, index_2d(i, b)) - (3.0*u(1, rho_bar, index_2d(i+1, b)) - 3.0*u(1, rho_bar, index_2d(i+2, b)) + 1.0*u(1, rho_bar, index_2d(i+3, b)));
 
             index = c*n_dof_per_var_ + index_2d(i, b);
-            residual(index) += u(c, index_2d(i, b)) - u(1, c, index_2d(i+1, b));
+            residual(index) +=
+                u(c, index_2d(i, b)) - (3.0*u(1, c, index_2d(i+1, b)) - 3.0*u(1, c, index_2d(i+2, b)) + 1.0*u(1, c, index_2d(i+3, b)));
         }
 
         // Loop over the interior cells
@@ -569,12 +610,18 @@ private:
                 if(j != n_interior_cell_1d_)
                     local_g_p = g_p(i, j);
 
-                residual(index) += - (local_f_p - local_f_m)/dx_;
-                residual(index) += - (local_g_p - local_g_m)/dy_;
+                residual(index) += (local_f_p - local_f_m)/dx_;
+                residual(index) += (local_g_p - local_g_m)/dy_;
+
+                residual(index) -=
+                    p.r*u(1, rho_bar, index_2d(i, j))*(1.0 - u(1, rho_bar, index_2d(i, j)));
 
                 // c
                 index = c*n_dof_per_var_ + index_2d(i, j);
 
+#ifdef IMPOSED_C_PROFILE
+                residual(index) = u(c, index_2d(i, j)) - c_value(x(i), y(j));
+#else
                 // Time derivative
                 residual(index) +=
                     1.0/dt_*(u(c, index_2d(i, j)) - u(1, c, index_2d(i, j)));
@@ -590,21 +637,21 @@ private:
                 {
                     for(auto [k, w] : stencil::central_2::weights)
                     {
-                        residual(index) += w*u(1, c, index_2d(i+k, j))/(dx_*dx_);
+                        residual(index) -= w*u(1, c, index_2d(i+k, j))/(dx_*dx_);
                     }
                 }
                 else if(i == 1)
                 {
                     for(auto [k, w] : stencil::first_order::forward_1::weights)
                     {
-                        residual(index) += w*u(1, c, index_2d(i+k, j))/(dx_*dx_);
+                        residual(index) -= w*u(1, c, index_2d(i+k, j))/(dx_*dx_);
                     }
                 }
                 else if(i == n_interior_cell_1d_)
                 {
                     for(auto [k, w] : stencil::first_order::backward_1::weights)
                     {
-                        residual(index) += w*u(1, c, index_2d(i+k, j))/(dx_*dx_);
+                        residual(index) -= w*u(1, c, index_2d(i+k, j))/(dx_*dx_);
                     }
                 }
 
@@ -613,28 +660,29 @@ private:
                 {
                     for(auto [k, w] : stencil::central_2::weights)
                     {
-                        residual(index) += w*u(1, c, index_2d(i, j+k))/(dy_*dy_);
+                        residual(index) -= w*u(1, c, index_2d(i, j+k))/(dy_*dy_);
                     }
                 }
                 else if(j == 1)
                 {
                     for(auto [k, w] : stencil::first_order::forward_1::weights)
                     {
-                        residual(index) += w*u(1, c, index_2d(i, j+k))/(dy_*dy_);
+                        residual(index) -= w*u(1, c, index_2d(i, j+k))/(dy_*dy_);
                     }
                 }
                 else if(j == n_interior_cell_1d_)
                 {
                     for(auto [k, w] : stencil::first_order::backward_1::weights)
                     {
-                        residual(index) += w*u(1, c, index_2d(i, j+k))/(dy_*dy_);
+                        residual(index) -= w*u(1, c, index_2d(i, j+k))/(dy_*dy_);
                     }
                 }
 
                 // Reaction terms
-                residual(index) +=
+                residual(index) -=
                     - p.gamma_c*u(1, c, index_2d(i, j))
                     + p.gamma_rho*u(1, rho_bar, index_2d(i, j));
+#endif // IMPOSED_C_PROFILE
             }
         }
     }
@@ -694,7 +742,11 @@ private:
 
                 // c
                 index = c*n_dof_per_var_ + index_2d(i, j);
+#ifdef IMPOSED_C_PROFILE
+                triplet_list.emplace_back(index, index, 1.0);
+#else
                 triplet_list.emplace_back(index, index, 1.0/dt_);
+#endif // IMPOSED_C_PROFILE
             }
         }
     }
@@ -705,18 +757,25 @@ int main(int argc, char **argv)
     Config cf;
     cf.parse_command_line(argc, argv);
 
-    log::set_level("info");
+    log::set_level("debug");
 
-    unsigned n_interior_cell_1d = cf.get_or("n", 3u);
-    double dt = cf.get_or("dt", 0.1);
-    double t_max = cf.get_or("t_max", 1.0);
+    const double L = cf.get_or("L", 1.0);
+    const unsigned n_interior_cell_1d = cf.get_or("n", 3u);
+    const double dt = cf.get_or("dt", 0.1);
+    const double t_max = cf.get_or("t_max", 1.0);
 
-    KellerSegelProblem2D problem(n_interior_cell_1d);
+    KellerSegelProblem2D problem(n_interior_cell_1d, L);
 
+    problem.p.rho_bar_init = cf.get_or("rho_bar_init", 1.0);
+    problem.p.c_init = cf.get_or("c_init", 1.0);
+
+    problem.p.D = cf.get_or("D", 1.0);
     problem.p.chi = cf.get_or("chi", 1.0);
     problem.p.gamma_rho = cf.get_or("gamma_rho", 1.0);
     problem.p.gamma_c = cf.get_or("gamma_c", 1.0);
-    
+
+    cf.print_all();
+
     problem.set_initial_conditions();
     problem.disable_terse_logging();
 
