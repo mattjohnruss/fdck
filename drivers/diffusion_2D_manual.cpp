@@ -23,7 +23,7 @@ public:
         dx_(1.0/(n_node_1d-1)),
         n_node_1d_(n_node_1d)
     {
-        Max_residual = 1.0e-14;
+        Max_residual = 1.0e-11;
     }
 
     ~DiffusionProblem2D()
@@ -68,9 +68,16 @@ public:
     {
         clear_solution();
 
-        for(unsigned j = 0; j < n_node_1d_; ++j)
+        for(unsigned i = 0; i < n_node_1d_; ++i)
         {
-            u(c, index_2d(0, j)) = 1.0;
+            for(unsigned j = 0; j < n_node_1d_; ++j)
+            {
+                //u(c, index_2d(0, j)) = 1.0;
+                double x_c = this->x(i) - 0.5;
+                double y_c = this->y(j) - 0.5;
+
+                u(c, index_2d(i, j)) = 1000.0*std::exp(-100.0*(x_c*x_c + y_c*y_c));
+            }
         }
     }
 
@@ -88,7 +95,8 @@ private:
         // Left and right BCs
         for(unsigned j = 0; j < n_node_1d_; ++j)
         {
-            residual(index_2d(0, j)) += (u(c, index_2d(0, j)) - 1.0)*dx_*dx_;
+            //residual(index_2d(0, j)) += (u(c, index_2d(0, j)) - 1.0)*dx_*dx_;
+            residual(index_2d(0, j)) += (u(c, index_2d(0, j)))*dx_*dx_;
             residual(index_2d(n_node_1d_-1, j)) += u(c, index_2d(n_node_1d_-1, j))*dx_*dx_;
         }
 
@@ -169,6 +177,7 @@ int main(int argc, char **argv)
     DiffusionProblem2D problem(n_node_1d);
     
     problem.set_initial_conditions();
+    //problem.disable_terse_logging();
 
     char filename[200];
     std::ofstream outfile;
