@@ -280,8 +280,15 @@ public:
             // set the initial conditions from the polynomial fit
             for(unsigned i = 0; i < n_node_; ++i)
             {
-                double scaled_x = map_space(x(i));
-                u(0, c_u, i) = utilities::evaluate_polynomial(scaled_x, ic_poly_coeffs_);
+                const double scaled_x = map_space(x(i));
+
+                // get the interpolated value
+                const double c_u_interp =
+                    utilities::evaluate_polynomial(scaled_x, ic_poly_coeffs_);
+
+                // set to the interpolated value, avoiding negative
+                // concentrations by taking the max with zero
+                u(0, c_u, i) = std::max(0.0, c_u_interp);
             }
         }
         // Assume p.ics is the name of the ics CSV file
@@ -401,7 +408,13 @@ private:
             }
             else
             {
-                a3[c_u] = utilities::evaluate_polynomial(map_time(time()), inlet_poly_coeffs_);
+                // get the interpolated value
+                const double c_u_interp =
+                    utilities::evaluate_polynomial(map_time(time()), inlet_poly_coeffs_);
+
+                // set to the interpolated value, avoiding negative
+                // concentrations by taking the max with zero
+                a3[c_u] = std::max(0.0, c_u_interp);
             }
         }
         if(b == Boundary::Right)
@@ -421,7 +434,13 @@ private:
             }
             else
             {
-                a3[c_u] = utilities::evaluate_polynomial(map_time(time()), outlet_poly_coeffs_);
+                // get the interpolated value
+                const double c_u_interp =
+                    utilities::evaluate_polynomial(map_time(time()), outlet_poly_coeffs_);
+
+                // set to the interpolated value, avoiding negative
+                // concentrations by taking the max with zero
+                a3[c_u] = std::max(0.0, c_u_interp);
             }
         }
     }
