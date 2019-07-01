@@ -33,7 +33,7 @@ if(NOT CMAKE_CROSSCOMPILING)
 
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+            #set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
         else()
             message(STATUS "Compiling with Clang - disabling LTO!")
         endif()
