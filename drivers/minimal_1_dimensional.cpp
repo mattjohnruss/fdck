@@ -179,6 +179,42 @@ namespace data
         // fit_end_time
         600.0
     };
+
+    ChemokinesBuilder june_2019_builder {
+        // a
+        0.0,
+        // b
+        0.4966,
+        // inlet_poly_coeffs
+        { 1.274860854700616e-01,
+         -2.518604210006898e-01,
+          7.710766377203647e+00,
+         -4.252175480340080e+01,
+          1.418179464387050e+02,
+         -2.375102919110578e+02,
+          1.885378484147790e+02,
+         -5.691021409522835e+01 },
+        // outlet_poly_coeffs
+        { 2.633576534354847e-06,
+         -2.528577356545149e-03,
+          3.101007808239337e-01,
+         -1.641112220170440e+00,
+          4.177919401936037e+00,
+         -5.256685249420444e+00,
+          3.191692523139487e+00,
+         -7.367432289520273e-01 },
+        // ic_poly_coeffs
+        { 1.254966070500784e-01,
+         -5.113492603989770e-01,
+          1.557271081373574e+00,
+         -2.833601879386733e+00,
+          2.497843589400179e+00,
+         -8.359940722753865e-01 },
+        // start time
+        0.0,
+        // fit_end_time
+        240.0
+    };
 }
 
 class ChemokinesProblem1D : public AdvectionDiffusionReactionProblem
@@ -509,6 +545,10 @@ int main(int argc, char **argv)
     else if(dataset == "october2018")
     {
         builder = std::move(data::october_2018_builder);
+    }
+    else if(dataset == "june2019")
+    {
+        builder = std::move(data::june_2019_builder);
     }
     else
     {
