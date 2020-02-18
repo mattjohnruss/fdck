@@ -249,7 +249,7 @@ namespace data
         // start time
         0.0,
         // fit_end_time
-        59.0
+        3540.0
     };
 }
 
