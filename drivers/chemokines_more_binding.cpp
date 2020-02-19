@@ -211,26 +211,11 @@ private:
             double v_phi_m_left = 0;
             get_v(0, phi_m, v_phi_m_left);
 
-            // XXX another temporary hack
-            // get the c_u advection velocity at the left boundary
-            double v_c_u_left = 0;
-            get_v(0, c_u, v_c_u_left);
-
             // get the diffusivities at the left boundary
             std::vector<double> d_left(n_var_);
             get_d(0, 0, d_left);
 
-            // XXX another temporary hack
-            // get the c_u advection velocity at the left boundary
-            if(time() < 5.0)
-            {
-                a1[c_u] = 1.0;
-            }
-            else
-            {
-                a1[c_u] = v_c_u_left;
-            }
-
+            a1[c_u] = 1.0;
             a1[c_s]     = 1.0;
             a1[phi_i]   = 0.0;
             //a1[phi_m]   = 0.0;
@@ -239,32 +224,14 @@ private:
             a1[phi_c_u] = 0.0;
             a1[phi_c_b] = v_phi_c_b_left + p.J_phi_c_b_left_prop;
 
-            // XXX another temporary hack
-            // get the c_u advection velocity at the left boundary
-            if(time() < 5.0)
-            {
-                a2[c_u] = 0.0;
-            }
-            else
-            {
-                a2[c_u] = -d_left[c_u];
-            }
-
+            a2[c_u]     = 0.0;
             a2[c_s]     = 0.0;
             a2[phi_i]   = -d_left[phi_i];
             a2[phi_m]   = -d_left[phi_m];
             a2[phi_c_u] = -d_left[phi_c_u];
             a2[phi_c_b] = -d_left[phi_c_b];
 
-            if(time() < 5.0)
-            {
-                a3[c_u] = u_aux(c_u_0);
-            }
-            else
-            {
-                a3[c_u] = 0.0;
-            }
-
+            a3[c_u]     = u_aux(c_u_0);
             a3[c_s]     = 0.0;
             a3[phi_i]   = 0.0;
             //a3[phi_m]   = 0.0;
@@ -284,25 +251,11 @@ private:
             double v_phi_m_right = 0;
             get_v(n_node_-1, phi_m, v_phi_m_right);
 
-            // XXX another temporary hack
-            // get the c_u advection velocity at the right boundary
-            double v_c_u_right = 0;
-            get_v(n_node_-1, c_u, v_c_u_right);
-
             // get the diffusivities at the right boundary
             std::vector<double> d_right(n_var_);
             get_d(0, n_node_-1, d_right);
 
-            // XXX another temporary hack
-            if(time() < 5.0)
-            {
-                a1[c_u] = 1.0;
-            }
-            else
-            {
-                a1[c_u] = v_c_u_right;
-            }
-
+            a1[c_u]     = 1.0;
             a1[c_s]     = 1.0;
             a1[phi_i]   = 0.0;
             // a1[phi_m] = 0.0;
@@ -311,32 +264,14 @@ private:
             a1[phi_c_u] = 0.0;
             a1[phi_c_b] = v_phi_c_b_right - p.J_phi_c_b_right_prop;
 
-            // XXX another temporary hack
-            if(time() < 5.0)
-            {
-                a2[c_u] = 0.0;
-            }
-            else
-            {
-                a2[c_u] = -d_right[c_u];
-            }
-
+            a2[c_u]     = 0.0;
             a2[c_s]     = 0.0;
             a2[phi_i]   = -d_right[phi_i];
             a2[phi_m]   = -d_right[phi_m];
             a2[phi_c_u] = -d_right[phi_c_u];
             a2[phi_c_b] = -d_right[phi_c_b];
 
-            // XXX another temporary hack
-            if(time() < 5.0)
-            {
-                a3[c_u] = 0.0;
-            }
-            else
-            {
-                a3[c_u] = 0.0;
-            }
-
+            a3[c_u]     = 0.0;
             a3[c_s]     = 0.0;
             a3[phi_i]   = p.J_i_right*p.M;
             //a3[phi_m]   = 0.0;
