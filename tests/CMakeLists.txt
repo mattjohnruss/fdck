@@ -1,9 +1,9 @@
 add_library(tests_main tests_main.cpp)
 
 message(STATUS "Looking for Catch2")
-if(EXISTS ${fd_diff++_SOURCE_DIR}/vendor/catch2)
-    target_include_directories(tests_main PUBLIC ${fd_diff++_SOURCE_DIR}/vendor/catch2/single_include)
-    message("Using bundled Catch2 at ${fd_diff++_SOURCE_DIR}/vendor/catch2")
+if(EXISTS ${fdck_SOURCE_DIR}/vendor/catch2)
+    target_include_directories(tests_main PUBLIC ${fdck_SOURCE_DIR}/vendor/catch2/single_include)
+    message("Using bundled Catch2 at ${fdck_SOURCE_DIR}/vendor/catch2")
 else()
     message(FATAL_ERROR "Catch2 not found in vendor/catch2")
 endif()
