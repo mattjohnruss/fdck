@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <fstream>
 
-namespace mjrfd
+namespace fdck
 {
     Problem::Problem(const unsigned n_var,
                      const unsigned n_dof_per_var,
@@ -90,9 +90,9 @@ namespace mjrfd
 
             if(terse_logging_ == false)
             {
-                MJRFD_LIB_INFO("Maximum residual ({}): {}",
-                               max_residual_index,
-                               max_residual);
+                FDCK_LIB_INFO("Maximum residual ({}): {}",
+                              max_residual_index,
+                              max_residual);
             }
 
             // test if the current max residual is greater than the threshold
@@ -121,8 +121,8 @@ namespace mjrfd
 
                 if(terse_logging_ == false)
                 {
-                    MJRFD_LIB_INFO("Exceeds {}: performing Newton iteration",
-                                   Max_residual);
+                    FDCK_LIB_INFO("Exceeds {}: performing Newton iteration",
+                                  Max_residual);
                 }
 
                 if(dump_jacobian_ == true)
@@ -161,35 +161,35 @@ namespace mjrfd
                 {
                     if(steady_)
                     {
-                        MJRFD_LIB_INFO("Max res = {}\t[{:x<{}}]\tMax res = {}",
-                                       max_residual_before_solve,
-                                       "",
-                                       count,
-                                       max_residual);
+                        FDCK_LIB_INFO("Max res = {}\t[{:x<{}}]\tMax res = {}",
+                                      max_residual_before_solve,
+                                      "",
+                                      count,
+                                      max_residual);
                     }
                     else
                     {
-                        MJRFD_LIB_INFO("Time = {}\tMax res = {}\t[{:x<{}}]\tMax res = {}",
-                                       time_,
-                                       max_residual_before_solve,
-                                       "",
-                                       count,
-                                       max_residual);
+                        FDCK_LIB_INFO("Time = {}\tMax res = {}\t[{:x<{}}]\tMax res = {}",
+                                      time_,
+                                      max_residual_before_solve,
+                                      "",
+                                      count,
+                                      max_residual);
                     }
                 }
                 else
                 {
                     if(count == 1)
                     {
-                        MJRFD_LIB_INFO("Newton method converged "
-                                       "(with maximum residual {}) "
-                                       "in {} iteration", max_residual, count);
+                        FDCK_LIB_INFO("Newton method converged "
+                                      "(with maximum residual {}) "
+                                      "in {} iteration", max_residual, count);
                     }
                     else
                     {
-                        MJRFD_LIB_INFO("Newton method converged "
-                                       "(with maximum residual {}) "
-                                       "in {} iterations", max_residual, count);
+                        FDCK_LIB_INFO("Newton method converged "
+                                      "(with maximum residual {}) "
+                                      "in {} iterations", max_residual, count);
                     }
 
                 }
@@ -199,13 +199,13 @@ namespace mjrfd
             {
                 // the maximum number of newton steps has been exceeded so stop
                 stop = true;
-                MJRFD_LIB_ERROR("The maximum number of Newton iterations "
-                                "({}) has been exceeded", Max_newton_iterations);
+                FDCK_LIB_ERROR("The maximum number of Newton iterations "
+                               "({}) has been exceeded", Max_newton_iterations);
 
                 // Exit if the flag is set
                 if(exit_on_solve_fail_ == true)
                 {
-                    MJRFD_LIB_FATAL("Exiting");
+                    FDCK_LIB_FATAL("Exiting");
                     std::exit(1);
                 }
             }
@@ -245,7 +245,7 @@ namespace mjrfd
         // so it's done in solve()
         if(terse_logging_ == false)
         {
-            MJRFD_LIB_INFO("Solving at time = {}", time_);
+            FDCK_LIB_INFO("Solving at time = {}", time_);
         }
 
         actions_before_timestep();
@@ -308,7 +308,7 @@ namespace mjrfd
         // if there isn't an entry in the bottom right-hand corner, output a zero
         if(jacobian_.rows() != n_dof_ || jacobian_.cols() != n_dof_)
         {
-            MJRFD_LIB_INFO("Problem::dump_res_and_jac - outputting zero");
+            FDCK_LIB_INFO("Problem::dump_res_and_jac - outputting zero");
             jac_stream << n_dof_-1 << " " << n_dof_-1 << " 0.0\n";
         }
 
@@ -469,11 +469,11 @@ namespace mjrfd
 
         if(linear_solver_.info() != Eigen::Success)
         {
-            MJRFD_LIB_ERROR("Problem::linear_solve() - Compute failed!");
+            FDCK_LIB_ERROR("Problem::linear_solve() - Compute failed!");
 
             if(exit_on_solve_fail_ == true)
             {
-                MJRFD_LIB_FATAL("Exiting");
+                FDCK_LIB_FATAL("Exiting");
                 std::exit(1);
             }
         }

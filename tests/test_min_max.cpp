@@ -3,7 +3,7 @@
 #include <catch2/catch.hpp>
 #include <limits>
 
-namespace mjrfd
+namespace fdck
 {
     TEST_CASE( "Minimum and all negative", "[min]" )
     {

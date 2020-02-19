@@ -3,7 +3,7 @@
 #include <catch2/catch.hpp>
 #include <Eigen/Dense>
 
-namespace mjrfd
+namespace fdck
 {
     TEST_CASE( "Linear interpolation" )
     {
@@ -44,7 +44,7 @@ namespace mjrfd
             Eigen::VectorXd v_interp(n_interp);
 
             // perform the interpolation
-            mjrfd::utilities::lerp_mesh(x, v, x_interp, v_interp);
+            fdck::utilities::lerp_mesh(x, v, x_interp, v_interp);
 
             // hardcode the manually checked results
             Eigen::VectorXd x_interp_reference(n_interp);
@@ -96,7 +96,7 @@ namespace mjrfd
             Eigen::Map<Eigen::VectorXd> v_interp_map(v_interp.data(), n_interp);
 
             // perform the interpolation
-            mjrfd::utilities::lerp_mesh(x, v_map, x_interp, v_interp_map);
+            fdck::utilities::lerp_mesh(x, v_map, x_interp, v_interp_map);
 
             // hardcode the manually checked results
             Eigen::VectorXd x_interp_reference(n_interp);

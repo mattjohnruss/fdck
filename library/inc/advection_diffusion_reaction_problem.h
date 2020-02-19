@@ -5,7 +5,7 @@
 
 #include <iostream>
 
-namespace mjrfd
+namespace fdck
 {
     class AdvectionDiffusionReactionProblem : public Problem
     {

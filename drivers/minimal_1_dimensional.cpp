@@ -5,10 +5,10 @@
 
 #include <fstream>
 
-using namespace mjrfd;
+using namespace fdck;
 
-#define MJRFD_TRACE_FILE
-#define MJRFD_DIST_MODE
+#define FDCK_TRACE_FILE
+#define FDCK_DIST_MODE
 
 struct ChemokinesParams
 {
@@ -270,7 +270,7 @@ public:
 
         enable_spatial_terms({ c_u });
 
-#ifdef MJRFD_DIST_MODE
+#ifdef FDCK_DIST_MODE
         disable_output_time_column();
 #endif
 
@@ -278,7 +278,7 @@ public:
 
         Max_residual = 1.0e-14;
 
-#ifdef MJRFD_TRACE_FILE
+#ifdef FDCK_TRACE_FILE
         trace_file_.open("trace.dat");
         trace_header_ = "t c_u(0) c_u(1)";
         trace_file_ << trace_header_ << '\n';
@@ -360,7 +360,7 @@ public:
             }
             else
             {
-                MJRFD_FATAL("Error opening ICs file \"{}\"! Exiting", p.ics);
+                FDCK_FATAL("Error opening ICs file \"{}\"! Exiting", p.ics);
                 std::exit(1);
             }
         }
@@ -368,7 +368,7 @@ public:
 
     ChemokinesParams p;
 
-#ifdef MJRFD_TRACE_FILE
+#ifdef FDCK_TRACE_FILE
     void trace()
     {
         trace_file_ << time() << " "
@@ -379,7 +379,7 @@ public:
 #endif
 
 private:
-#ifdef MJRFD_TRACE_FILE
+#ifdef FDCK_TRACE_FILE
     std::string trace_header_;
     std::ofstream trace_file_;
 #endif
@@ -414,7 +414,7 @@ private:
 
     void actions_after_timestep() override
     {
-#ifdef MJRFD_TRACE_FILE
+#ifdef FDCK_TRACE_FILE
         trace();
 #endif
     }
@@ -573,7 +573,7 @@ int main(int argc, char **argv)
         output_interval = std::atoi(argv[5]);
     }
 
-#ifdef MJRFD_DIST_MODE
+#ifdef FDCK_DIST_MODE
     log::disable_labels();
 #endif
 
@@ -611,7 +611,7 @@ int main(int argc, char **argv)
     }
     else
     {
-        MJRFD_FATAL("Unrecognised dataset `{}` specified! Exiting", dataset);
+        FDCK_FATAL("Unrecognised dataset `{}` specified! Exiting", dataset);
         std::exit(1);
     }
 
@@ -626,7 +626,7 @@ int main(int argc, char **argv)
 
     if(problem.p.ics == "zero" && std::abs(problem.p.start_time) > 1.0e-15)
     {
-        MJRFD_ERROR("ics = {} but start_time = {}; start_time must be 0.0 if zero ICs are used",
+        FDCK_ERROR("ics = {} but start_time = {}; start_time must be 0.0 if zero ICs are used",
                     problem.p.ics,
                     problem.p.start_time);
     }
@@ -652,7 +652,7 @@ int main(int argc, char **argv)
     problem.output(outfile);
     outfile.close();
 
-#ifdef MJRFD_TRACE_FILE
+#ifdef FDCK_TRACE_FILE
     problem.trace();
 #endif
 
@@ -671,7 +671,7 @@ int main(int argc, char **argv)
         if(i % output_interval == 0)
         {
             // output current solution
-            MJRFD_TRACE("Outputting");
+            FDCK_TRACE("Outputting");
             std::sprintf(filename, "output_%05u.csv", i/output_interval);
             outfile.open(filename);
             problem.output(outfile);
@@ -681,5 +681,5 @@ int main(int argc, char **argv)
         ++i;
     }
 
-    MJRFD_INFO("Reached t > min(t_max = {}, fit_end_time = {}) after performing {} timesteps", t_max, problem.fit_end_time, i-1);
+    FDCK_INFO("Reached t > min(t_max = {}, fit_end_time = {}) after performing {} timesteps", t_max, problem.fit_end_time, i-1);
 }

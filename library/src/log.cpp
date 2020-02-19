@@ -2,7 +2,7 @@
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-namespace mjrfd
+namespace fdck
 {
     namespace log
     {
@@ -37,7 +37,7 @@ namespace mjrfd
                 spdlog::set_level(spdlog::level::critical);
             else
             {
-                MJRFD_LIB_ERROR("Log level \"{}\" not recognised!", level);
+                FDCK_LIB_ERROR("Log level \"{}\" not recognised!", level);
             }
         }
     }

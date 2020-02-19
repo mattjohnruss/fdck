@@ -5,7 +5,7 @@
 
 #include <fstream>
 
-namespace mjrfd
+namespace fdck
 {
     TEST_CASE( "Read and parse CSV files", "[csv]" )
     {
@@ -19,7 +19,7 @@ namespace mjrfd
             REQUIRE( csv_file.is_open() == true );
 
             auto [m_vec, n_rows, n_cols] =
-                mjrfd::utilities::read_csv_to_flat_vector(csv_file, ' ');
+                fdck::utilities::read_csv_to_flat_vector(csv_file, ' ');
 
             REQUIRE( n_rows == 7 );
             REQUIRE( n_cols == 2 );
@@ -45,7 +45,7 @@ namespace mjrfd
             unsigned skip_rows = 1;
 
             auto [m_vec, n_rows, n_cols] =
-                mjrfd::utilities::read_csv_to_flat_vector(csv_file, ' ', skip_rows);
+                fdck::utilities::read_csv_to_flat_vector(csv_file, ' ', skip_rows);
 
             REQUIRE( n_rows == 7 );
             REQUIRE( n_cols == 2 );
@@ -69,7 +69,7 @@ namespace mjrfd
             REQUIRE( csv_file.is_open() == true );
 
             auto [m_vec, n_rows, n_cols] =
-                mjrfd::utilities::read_csv_to_flat_vector(csv_file, ',');
+                fdck::utilities::read_csv_to_flat_vector(csv_file, ',');
 
             REQUIRE( n_rows == 7 );
             REQUIRE( n_cols == 2 );

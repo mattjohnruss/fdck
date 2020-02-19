@@ -6,11 +6,11 @@
 #include <sstream>
 #include <string>
 
-namespace mjrfd
+namespace fdck
 {
     TEST_CASE( "Configuration file and command line arguments", "[config]" )
     {
-        mjrfd::Config config;
+        fdck::Config config;
 
         SECTION( "Configuration from file" )
         {

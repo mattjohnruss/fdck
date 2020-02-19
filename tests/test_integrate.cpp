@@ -3,7 +3,7 @@
 
 #include <catch2/catch.hpp>
 
-namespace mjrfd
+namespace fdck
 {
     TEST_CASE( "Numerical integration using trapezium rule", "[integration]" )
     {

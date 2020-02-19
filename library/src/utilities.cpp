@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-namespace mjrfd
+namespace fdck
 {
     namespace utilities
     {

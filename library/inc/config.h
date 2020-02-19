@@ -6,7 +6,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace mjrfd
+namespace fdck
 {
     /// Simple command-line arguments and configuration file loader and parser.
     /// Items are added to a map in the order they are found. This allows to

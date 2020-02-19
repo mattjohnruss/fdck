@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 
-namespace mjrfd
+namespace fdck
 {
     namespace stencil
     {

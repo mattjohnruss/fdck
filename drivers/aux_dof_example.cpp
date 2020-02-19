@@ -14,7 +14,7 @@ enum AuxVariable
     y = 0,
 };
 
-using namespace mjrfd;
+using namespace fdck;
 
 class TransportWithAuxDofProblem : public AdvectionDiffusionReactionProblem
 {

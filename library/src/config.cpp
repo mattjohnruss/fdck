@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <sstream>
 
-namespace mjrfd
+namespace fdck
 {
     Config::Config(int argc, char **argv)
     {
@@ -100,7 +100,7 @@ namespace mjrfd
 
     void Config::print_all() const
     {
-        MJRFD_CONFIG_INFO("Recognised parameters:");
+        FDCK_CONFIG_INFO("Recognised parameters:");
 
         // find the length of the longest key
         std::size_t max_key_length = 0;
@@ -116,7 +116,7 @@ namespace mjrfd
         // print all the keys and values (nested placeholder {} for max_key_length)
         for(const auto& [key, value] : params_)
         {
-            MJRFD_CONFIG_INFO("{:>{}} = {}", key, max_key_length, value);
+            FDCK_CONFIG_INFO("{:>{}} = {}", key, max_key_length, value);
         }
     }
 
@@ -179,9 +179,9 @@ namespace mjrfd
     {
         if(params_[key].size() != 3 && params_[key][0] == '\'' && params_[key][2] == '\'')
         {
-            MJRFD_LIB_WARN("Expected single character wrapped in single quotes"
-                           "for parameter \"{}\"; found \"{}\"",
-                           key, params_[key]);
+            FDCK_LIB_WARN("Expected single character wrapped in single quotes"
+                          "for parameter \"{}\"; found \"{}\"",
+                          key, params_[key]);
         }
 
         // return the second character, inside the single quotes

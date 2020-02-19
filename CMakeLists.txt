@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.9)
 
-project(fd_diff++ C CXX)
+project(fdck C CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -9,16 +9,16 @@ message(STATUS "Platform ID (CXX): ${CMAKE_CXX_PLATFORM_ID}")
 
 if(EMSCRIPTEN)
     #set(CMAKE_EXECUTABLE_SUFFIX ".html")
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s MODULARIZE=1 -s ENVIRONMENT=web --shell-file ${fd_diff++_SOURCE_DIR}/www/index_template.html")
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s MODULARIZE=1 -s ENVIRONMENT=web --shell-file ${fdck_SOURCE_DIR}/www/index_template.html")
      #TODO compare with and without EXPORT_ES6
-     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s MODULARIZE=1 -s EXPORT_ES6=1 -s ENVIRONMENT=web -s 'EXPORT_NAME=\"wasm_test\"' --shell-file ${fd_diff++_SOURCE_DIR}/www/index_template.html")
+     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s MODULARIZE=1 -s EXPORT_ES6=1 -s ENVIRONMENT=web -s 'EXPORT_NAME=\"wasm_test\"' --shell-file ${fdck_SOURCE_DIR}/www/index_template.html")
 endif()
 
 if(CMAKE_CROSSCOMPILING)
     message(STATUS "Cross compiling!")
 endif()
 
-include_directories(${fd_diff++_SOURCE_DIR}/inc)
+include_directories(${fdck_SOURCE_DIR}/inc)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wextra -Wpedantic")
 

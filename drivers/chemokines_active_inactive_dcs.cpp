@@ -6,7 +6,7 @@
 #include <fstream>
 #include <memory>
 
-using namespace mjrfd;
+using namespace fdck;
 
 struct ChemokinesParams
 {
@@ -365,7 +365,7 @@ private:
             else if(var2 == c_s)
                 nu = p.nu_s;
             else
-                MJRFD_ERROR("var2 is not any of the expected values!");
+                FDCK_ERROR("var2 is not any of the expected values!");
 
             double dvar2_dx = 0.0;
 
@@ -514,7 +514,7 @@ int main(int argc, char **argv)
     if(chi_type == "constant" || chi_type == "const")
     {
         // TODO remove
-        MJRFD_INFO("chi is constant with value {}", cf.get<double>("chi_const_val"));
+        FDCK_INFO("chi is constant with value {}", cf.get<double>("chi_const_val"));
 
         problem.p.chi =
             std::make_unique<ConstantFunction>(cf.get<double>("chi_const_val"));
@@ -522,11 +522,11 @@ int main(int argc, char **argv)
     else if(chi_type == "hill")
     {
         // TODO remove
-        MJRFD_INFO("chi is hill with a = {}, n = {}, min = {}, max = {}",
-                   cf.get<double>("chi_hill_a"),
-                   cf.get<double>("chi_hill_n"),
-                   cf.get<double>("chi_hill_min"),
-                   cf.get<double>("chi_hill_max"));
+        FDCK_INFO("chi is hill with a = {}, n = {}, min = {}, max = {}",
+                  cf.get<double>("chi_hill_a"),
+                  cf.get<double>("chi_hill_n"),
+                  cf.get<double>("chi_hill_min"),
+                  cf.get<double>("chi_hill_max"));
 
         problem.p.chi =
             std::make_unique<HillFunction>(cf.get<double>("chi_hill_a"),
@@ -536,7 +536,7 @@ int main(int argc, char **argv)
     }
     else
     {
-        MJRFD_FATAL("unrecognised value of \"chi\" parameter: {}", chi_type);
+        FDCK_FATAL("unrecognised value of \"chi\" parameter: {}", chi_type);
         std::exit(1);
     }
 
@@ -546,14 +546,14 @@ int main(int argc, char **argv)
     if(D_mu_type == "constant" || D_mu_type == "const")
     {
         // TODO remove
-        MJRFD_INFO("D_mu is constant with value {}", cf.get<double>("D_mu_const_val"));
+        FDCK_INFO("D_mu is constant with value {}", cf.get<double>("D_mu_const_val"));
 
         problem.p.D_mu = std::make_unique<ConstantFunction>(cf.get<double>("D_mu_const_val"));
     }
     else if(D_mu_type == "hill")
     {
         // TODO remove
-        MJRFD_INFO("D_mu is hill with a = {}, n = {}, min = {}, max = {}",
+        FDCK_INFO("D_mu is hill with a = {}, n = {}, min = {}, max = {}",
                   cf.get<double>("D_mu_hill_a"),
                   cf.get<double>("D_mu_hill_n"),
                   cf.get<double>("D_mu_hill_min"),
@@ -567,7 +567,7 @@ int main(int argc, char **argv)
     }
     else
     {
-        MJRFD_FATAL("unrecognised value of \"D_mu\" parameter: {}", D_mu_type);
+        FDCK_FATAL("unrecognised value of \"D_mu\" parameter: {}", D_mu_type);
         std::exit(1);
     }
 
@@ -588,7 +588,7 @@ int main(int argc, char **argv)
 
     if(do_time_evolution)
     {
-        MJRFD_INFO("Time evolution:");
+        FDCK_INFO("Time evolution:");
 
         problem.enable_exit_on_solve_fail();
 
@@ -614,7 +614,7 @@ int main(int argc, char **argv)
             if(i % output_interval == 0)
             {
                 // output current solution
-                MJRFD_TRACE("Outputting");
+                FDCK_TRACE("Outputting");
                 std::sprintf(filename, "output_%05u.csv", i/output_interval);
                 outfile.open(filename);
                 problem.output(outfile);
@@ -624,12 +624,12 @@ int main(int argc, char **argv)
             ++i;
         }
 
-        MJRFD_INFO("Reached t > t_max ({}) after performing {} timesteps", t_max, i-1);
+        FDCK_INFO("Reached t > t_max ({}) after performing {} timesteps", t_max, i-1);
     }
 
     if(do_steady_solve)
     {
-        MJRFD_INFO("Steady solve:");
+        FDCK_INFO("Steady solve:");
 
         // set initial conditions again - required since phi_i is sensitive to
         // ICs even at steady state

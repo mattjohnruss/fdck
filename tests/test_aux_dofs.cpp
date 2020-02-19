@@ -4,7 +4,7 @@
 
 #include <catch2/catch.hpp>
 
-using namespace mjrfd;
+using namespace fdck;
 
 enum AuxVariable
 {
@@ -76,7 +76,7 @@ private:
     }
 };
 
-namespace mjrfd
+namespace fdck
 {
     TEST_CASE( "Solve u' = u with backward Euler using auxiliary dofs", "[aux_dofs]" )
     {
@@ -112,7 +112,7 @@ namespace mjrfd
             ++i;
         }
 
-        MJRFD_INFO("Reached t > t_max ({}) after performing {} timesteps", t_max, i-1);
+        FDCK_INFO("Reached t > t_max ({}) after performing {} timesteps", t_max, i-1);
 
         REQUIRE( utilities::l2_norm(solution - exact_solution, dt) <= 1.0e-3 );
     }

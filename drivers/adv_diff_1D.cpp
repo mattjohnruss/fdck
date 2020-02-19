@@ -3,7 +3,7 @@
 #include <iostream>
 #include <fstream>
 
-using namespace mjrfd;
+using namespace fdck;
 
 enum Variable
 {

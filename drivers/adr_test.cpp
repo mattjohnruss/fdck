@@ -5,7 +5,7 @@
 
 #include <fenv.h>
 
-using namespace mjrfd;
+using namespace fdck;
 
 enum Variable
 {

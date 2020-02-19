@@ -4,7 +4,7 @@
 #include <fstream>
 #include <iomanip>
 
-using namespace mjrfd;
+using namespace fdck;
 
 struct NonlinearDiffusionParams
 {

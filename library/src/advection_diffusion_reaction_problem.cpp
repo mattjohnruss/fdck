@@ -2,7 +2,7 @@
 #include "utilities.h"
 #include "log.h"
 
-namespace mjrfd
+namespace fdck
 {
     /// Constructor
     AdvectionDiffusionReactionProblem::AdvectionDiffusionReactionProblem(

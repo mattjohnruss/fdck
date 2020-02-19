@@ -8,9 +8,9 @@
 #include <fstream>
 #include <random>
 
-using namespace mjrfd;
 
 //#define IMPOSED_C_PROFILE
+using namespace fdck;
 
 enum Variable
 {
@@ -52,7 +52,7 @@ public:
         dy_(L/(n_interior_cell_1d)),
         n_interior_cell_1d_(n_interior_cell_1d)
     {
-        MJRFD_INFO("Creating grid with {} interior cells in each direction ({} including ghost cells).", n_interior_cell_1d, n_interior_cell_1d_+2);
+        FDCK_INFO("Creating grid with {} interior cells in each direction ({} including ghost cells).", n_interior_cell_1d, n_interior_cell_1d_+2);
         Max_residual = 1.0e-4;
         // TODO investigate why setting this to 1 causes (possibly) no
         // iterations... at the very least the logging is confusing
@@ -90,7 +90,7 @@ public:
 
     void set_initial_conditions()
     {
-        MJRFD_TRACE("set_initial_conditions()");
+        FDCK_TRACE("set_initial_conditions()");
 
         clear_solution();
 
@@ -201,7 +201,7 @@ private:
     // the order above.
     unsigned index_2d(unsigned i, unsigned j) const
     {
-        MJRFD_TRACE("index_2d(i = {}, j = {})", i, j);
+        FDCK_TRACE("index_2d(i = {}, j = {})", i, j);
 
         if(i >= 1 && i <= n_interior_cell_1d_ && j >= 1 && j <= n_interior_cell_1d_)
         {
@@ -225,7 +225,7 @@ private:
         }
         else
         {
-            MJRFD_FATAL("Cell index (i = {}, j = {}) invalid; exiting", i, j);
+            FDCK_FATAL("Cell index (i = {}, j = {}) invalid; exiting", i, j);
             std::abort();
         }
     }
@@ -233,7 +233,7 @@ private:
     // Returns the node number for the i-th ghost cell on face f of the grid
     unsigned index_ghost(unsigned i, Face f) const
     {
-        MJRFD_TRACE("index_ghost(i = {}, f = {})", i, static_cast<unsigned>(f));
+        FDCK_TRACE("index_ghost(i = {}, f = {})", i, static_cast<unsigned>(f));
         const unsigned n_interior_cell = n_interior_cell_1d_*n_interior_cell_1d_;
 
         switch(f)
@@ -253,7 +253,7 @@ private:
     // Calculates F_{i+1/2, j}
     double f_p(int i, int j) const
     {
-        MJRFD_TRACE("f_p(i = {}, j = {})", i, j);
+        FDCK_TRACE("f_p(i = {}, j = {})", i, j);
         double u_p = u_p_at_midpoint(i, j);
         double drho_dx_p = drho_dx_p_at_midpoint(i, j);
         return p.chi*rho_point_value_i_p(i, j)*u_p - p.D*drho_dx_p;
@@ -262,7 +262,7 @@ private:
     // Calculates F_{i-1/2, j}
     double f_m(unsigned i, unsigned j) const
     {
-        MJRFD_TRACE("f_m(i = {}, j = {})", i, j);
+        FDCK_TRACE("f_m(i = {}, j = {})", i, j);
         // for the next two, we can call the plus (_p) functions with args i-1,
         // j-1 as it gives the same result as a manual impl of the minus functions
         //return f_p(i - 1, j);
@@ -277,7 +277,7 @@ private:
     // Calculates G_{i, j+1/2}
     double g_p(int i, int j) const
     {
-        MJRFD_TRACE("g_p(i = {}, j = {})", i, j);
+        FDCK_TRACE("g_p(i = {}, j = {})", i, j);
         double v_p = v_p_at_midpoint(i, j);
         double drho_dy_p = drho_dy_p_at_midpoint(i, j);
         return p.chi*rho_point_value_j_p(i, j)*v_p - p.D*drho_dy_p;
@@ -286,7 +286,7 @@ private:
     // Calculates G_{i, j-1/2}
     double g_m(unsigned i, unsigned j) const
     {
-        MJRFD_TRACE("g_m(i = {}, j = {})", i, j);
+        FDCK_TRACE("g_m(i = {}, j = {})", i, j);
         //return g_p(i, j - 1);
         // the comments in f_m apply equally to g_m
         double v_m = v_p_at_midpoint(i, j-1);
@@ -297,7 +297,7 @@ private:
     // Equation (2.4)(a)
     double drho_dx_p_at_midpoint(unsigned i, unsigned j) const
     {
-        MJRFD_TRACE("drho_dy_p_at_midpoint(i = {}, j = {})", i, j);
+        FDCK_TRACE("drho_dx_p_at_midpoint(i = {}, j = {})", i, j);
         double drho_dx_p = 0.0;
         for(auto [k, w] : stencil::first_order::forward_1::weights)
         {
@@ -309,7 +309,7 @@ private:
     // Equation (2.4)(b)
     double drho_dy_p_at_midpoint(unsigned i, unsigned j) const
     {
-        MJRFD_TRACE("drho_dy_p_at_midpoint(i = {}, j = {})", i, j);
+        FDCK_TRACE("drho_dy_p_at_midpoint(i = {}, j = {})", i, j);
         double drho_dy_p = 0.0;
         for(auto [k, w] : stencil::first_order::forward_1::weights)
         {
@@ -321,7 +321,7 @@ private:
     // Equation (2.4)(c)
     double u_p_at_midpoint(unsigned i, unsigned j) const
     {
-        MJRFD_TRACE("u_p_at_midpoint(i = {}, j = {})", i, j);
+        FDCK_TRACE("u_p_at_midpoint(i = {}, j = {})", i, j);
         double u_p = 0.0;
         for(auto [k, w] : stencil::first_order::forward_1::weights)
         {
@@ -333,7 +333,7 @@ private:
     // Equation (2.4)(d)
     double v_p_at_midpoint(unsigned i, unsigned j) const
     {
-        MJRFD_TRACE("v_p_at_midpoint(i = {}, j = {})", i, j);
+        FDCK_TRACE("v_p_at_midpoint(i = {}, j = {})", i, j);
         double v_p = 0.0;
         for(auto [k, w] : stencil::first_order::forward_1::weights)
         {
@@ -345,7 +345,7 @@ private:
     // Equation (2.5)(a)
     double rho_point_value_i_p(unsigned i, unsigned j) const
     {
-        MJRFD_TRACE("rho_point_value_i_p(i = {}, j = {})", i, j);
+        FDCK_TRACE("rho_point_value_i_p(i = {}, j = {})", i, j);
         double u_p = u_p_at_midpoint(i, j);
 
         if(u_p > 0.0)
@@ -360,7 +360,7 @@ private:
 
     double rho_point_value_i_m(unsigned i, unsigned j) const
     {
-        MJRFD_TRACE("rho_point_value_i_m(i = {}, j = {})", i, j);
+        FDCK_TRACE("rho_point_value_i_m(i = {}, j = {})", i, j);
         double u_m = u_p_at_midpoint(i-1, j);
 
         if(u_m > 0.0)
@@ -376,7 +376,7 @@ private:
     // Equation (2.5)(b)
     double rho_point_value_j_p(unsigned i, unsigned j) const
     {
-        MJRFD_TRACE("rho_point_value_j_p(i = {}, j = {})", i, j);
+        FDCK_TRACE("rho_point_value_j_p(i = {}, j = {})", i, j);
         double v_p = v_p_at_midpoint(i, j);
 
         if(v_p > 0.0)
@@ -391,7 +391,7 @@ private:
 
     double rho_point_value_j_m(unsigned i, unsigned j) const
     {
-        MJRFD_TRACE("rho_point_value_j_m(i = {}, j = {})", i, j);
+        FDCK_TRACE("rho_point_value_j_m(i = {}, j = {})", i, j);
         double v_m = v_p_at_midpoint(i, j-1);
 
         if(v_m > 0.0)
@@ -409,7 +409,7 @@ private:
     // the paper 
     double rho_point_value_at_face(unsigned i, unsigned j, Face f) const
     {
-        MJRFD_TRACE("rho_point_value_at_face(i = {}, j = {})", i, j);
+        FDCK_TRACE("rho_point_value_at_face(i = {}, j = {})", i, j);
         double result = u(1, rho_bar, index_2d(i, j));
 
         switch(f)
@@ -437,7 +437,7 @@ private:
     // separately
     double drho_dx(unsigned i, unsigned j) const
     {
-        MJRFD_TRACE("drho_dx(i = {}, j = {})", i, j);
+        FDCK_TRACE("drho_dx(i = {}, j = {})", i, j);
         double drho_bar_central = 0.0;
         for(auto [k, w] : stencil::central_1::weights)
         {
@@ -451,12 +451,12 @@ private:
 
         if(test_p >= 0.0 && test_m >= 0.0)
         {
-            //MJRFD_DEBUG("Both tests positive - using central difference");
+            //FDCK_DEBUG("Both tests positive - using central difference");
             return drho_bar_central/dx_;
         }
         else
         {
-            //MJRFD_DEBUG("One or more test failed - using minmod");
+            //FDCK_DEBUG("One or more test failed - using minmod");
             double drho_bar_forward = 0.0;
             for(auto [k, w] : stencil::first_order::forward_1::weights)
             {
@@ -477,7 +477,7 @@ private:
     // TODO Same comment here as for (2.8)(a) regarding +-
     double drho_dy(unsigned i, unsigned j) const
     {
-        MJRFD_TRACE("drho_dy(i = {}, j = {})", i, j);
+        FDCK_TRACE("drho_dy(i = {}, j = {})", i, j);
         double drho_bar_central = 0.0;
         for(auto [k, w] : stencil::central_1::weights)
         {
@@ -489,12 +489,12 @@ private:
 
         if(test_p >= 0.0 && test_m >= 0.0)
         {
-            //MJRFD_DEBUG("Both tests positive - using central difference");
+            //FDCK_DEBUG("Both tests positive - using central difference");
             return drho_bar_central/dy_;
         }
         else
         {
-            //MJRFD_DEBUG("One or more test failed - using minmod");
+            //FDCK_DEBUG("One or more test failed - using minmod");
             double drho_bar_forward = 0.0;
             for(auto [k, w] : stencil::first_order::forward_1::weights)
             {
@@ -521,8 +521,8 @@ private:
             // Top boundary
             unsigned j = n_interior_cell_1d_+1;
 
-            MJRFD_TRACE("");
-            MJRFD_TRACE("calculate_residual(i = {}, j = {}) [top]", b, j);
+            FDCK_TRACE("");
+            FDCK_TRACE("calculate_residual(i = {}, j = {}) [top]", b, j);
 
             // rho_bar
             unsigned index = rho_bar*n_dof_per_var_ + index_2d(b, j);
@@ -537,8 +537,8 @@ private:
             // Right boundary
             unsigned i = n_interior_cell_1d_+1;
 
-            MJRFD_TRACE("");
-            MJRFD_TRACE("calculate_residual(i = {}, j = {}) [right]", i, b);
+            FDCK_TRACE("");
+            FDCK_TRACE("calculate_residual(i = {}, j = {}) [right]", i, b);
 
             index = rho_bar*n_dof_per_var_ + index_2d(i, b);
             residual(index) +=
@@ -551,8 +551,8 @@ private:
             // Bottom boundary
             j = 0;
 
-            MJRFD_TRACE("");
-            MJRFD_TRACE("calculate_residual(i = {}, j = {}) [bottom]", b, j);
+            FDCK_TRACE("");
+            FDCK_TRACE("calculate_residual(i = {}, j = {}) [bottom]", b, j);
 
             index = rho_bar*n_dof_per_var_ + index_2d(b, j);
             residual(index) +=
@@ -565,8 +565,8 @@ private:
             // Left boundary
             i = 0;
 
-            MJRFD_TRACE("");
-            MJRFD_TRACE("calculate_residual(i = {}, j = {}) [left]", i, b);
+            FDCK_TRACE("");
+            FDCK_TRACE("calculate_residual(i = {}, j = {}) [left]", i, b);
 
             index = rho_bar*n_dof_per_var_ + index_2d(i, b);
             residual(index) +=
@@ -582,8 +582,8 @@ private:
         {
             for(unsigned j = 1; j <= n_interior_cell_1d_; ++j)
             {
-                MJRFD_TRACE("");
-                MJRFD_TRACE("calculate_residual(i = {}, j = {}) [interior]", i, j);
+                FDCK_TRACE("");
+                FDCK_TRACE("calculate_residual(i = {}, j = {}) [interior]", i, j);
 
                 // rho_bar
                 unsigned index = rho_bar*n_dof_per_var_ + index_2d(i, j);

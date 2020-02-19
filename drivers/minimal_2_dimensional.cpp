@@ -5,7 +5,7 @@
 
 #include <fstream>
 
-using namespace mjrfd;
+using namespace fdck;
 
 struct ChemokinesParams
 {
@@ -252,7 +252,7 @@ int main(int argc, char **argv)
         if(i % output_interval == 0)
         {
             // output current solution
-            MJRFD_TRACE("Outputting");
+            FDCK_TRACE("Outputting");
             std::sprintf(filename, "output_%05u.csv", i/output_interval);
             outfile.open(filename);
             problem.output(outfile);
@@ -262,6 +262,6 @@ int main(int argc, char **argv)
         ++i;
     }
 
-    MJRFD_INFO("Reached t > t_max ({}) after performing {} timesteps", t_max, i-1);
+    FDCK_INFO("Reached t > t_max ({}) after performing {} timesteps", t_max, i-1);
 }
 

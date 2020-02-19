@@ -11,7 +11,7 @@ enum Variable
     c = 0,
 };
 
-using namespace mjrfd;
+using namespace fdck;
 
 struct AdvectionDiffusionParams
 {
@@ -146,7 +146,7 @@ private:
     }
 };
 
-namespace mjrfd
+namespace fdck
 {
     TEST_CASE( "Simple diffusion with Dirichlet BCs", "[diffusion]" )
     {

@@ -13,7 +13,7 @@ enum Variable
     c = 0,
 };
 
-using namespace mjrfd;
+using namespace fdck;
 
 struct AdvectionDiffusionParams
 {

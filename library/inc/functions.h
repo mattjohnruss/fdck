@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-namespace mjrfd
+namespace fdck
 {
     class DifferentiableFunction
     {

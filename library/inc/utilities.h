@@ -6,7 +6,7 @@
 #include <vector>
 #include <limits>
 
-namespace mjrfd
+namespace fdck
 {
     namespace utilities
     {

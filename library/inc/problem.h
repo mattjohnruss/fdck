@@ -6,7 +6,7 @@
 #include <vector>
 #include <ostream>
 
-namespace mjrfd
+namespace fdck
 {
     class Problem
     {
