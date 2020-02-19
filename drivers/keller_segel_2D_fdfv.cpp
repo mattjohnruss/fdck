@@ -8,8 +8,8 @@
 #include <fstream>
 #include <random>
 
+#include <fenv.h>
 
-//#define IMPOSED_C_PROFILE
 using namespace fdck;
 
 enum Variable
@@ -20,6 +20,7 @@ enum Variable
 
 struct KellerSegelParameters
 {
+    bool imposed_c_profile = false;
     double rho_bar_init = 1.0;
     double c_init = 1.0;
     double D = 1.0;
@@ -28,13 +29,6 @@ struct KellerSegelParameters
     double gamma_rho = 1.0;
     double gamma_c = 1.0;
 };
-
-#ifdef IMPOSED_C_PROFILE
-double c_value(double x, double y)
-{
-    return y;
-}
-#endif // IMPOSED_C_PROFILE
 
 // Hybrid FVFD method for Keller-Segel based on Chertock et al (2017)
 class KellerSegelProblem2D : public Problem
@@ -107,12 +101,15 @@ public:
 
                 u(rho_bar, index_2d(i, j)) = 1000.0*std::exp(-100.0*(x_c*x_c + y_c*y_c));
                 //u(rho_bar, index_2d(i, j)) = p.rho_bar_init + dist(gen);
-#ifdef IMPOSED_C_PROFILE
-                u(c, index_2d(i, j)) = c_value(x(i), y(j));
-#else
-                u(c, index_2d(i, j)) = 500.0*std::exp(-50.0*(x_c*x_c + y_c*y_c));
-                //u(c, index_2d(i, j)) = p.c_init + dist(gen);
-#endif // IMPOSED_C_PROFILE
+                if(p.imposed_c_profile == true)
+                {
+                    u(c, index_2d(i, j)) = c_value(x(i), y(j));
+                }
+                else
+                {
+                    //u(c, index_2d(i, j)) = p.c_init + dist(gen);
+                    u(c, index_2d(i, j)) = 500.0*std::exp(-50.0*(x_c*x_c + y_c*y_c));
+                }
             }
         }
     }
@@ -619,70 +616,83 @@ private:
                 // c
                 index = c*n_dof_per_var_ + index_2d(i, j);
 
-#ifdef IMPOSED_C_PROFILE
-                residual(index) = u(c, index_2d(i, j)) - c_value(x(i), y(j));
-#else
-                // Time derivative
-                residual(index) +=
-                    1.0/dt_*(u(c, index_2d(i, j)) - u(1, c, index_2d(i, j)));
+                if(p.imposed_c_profile == true)
+                {
+                    residual(index) = u(c, index_2d(i, j)) - c_value(x(i), y(j));
+                }
+                else
+                {
+                    // Time derivative
+                    residual(index) +=
+                        1.0/dt_*(u(c, index_2d(i, j)) - u(1, c, index_2d(i, j)));
 
-                // Using the cell-centred Laplacian stencil, which is the same
-                // as regular 5-point stencil in the interior. At
-                // boundaries/corners we use the modified stencil from the
-                // notes by Long that automatically imposes Neumann BCs (double
-                // check the definitions in Long)
+                    // Using the cell-centred Laplacian stencil, which is the same
+                    // as regular 5-point stencil in the interior. At
+                    // boundaries/corners we use the modified stencil from the
+                    // notes by Long that automatically imposes Neumann BCs (double
+                    // check the definitions in Long)
 
-                // Laplacian in x-direction
-                if(i != 1 && i != n_interior_cell_1d_)
-                {
-                    for(auto [k, w] : stencil::central_2::weights)
-                    {
-                        residual(index) -= w*u(1, c, index_2d(i+k, j))/(dx_*dx_);
-                    }
-                }
-                else if(i == 1)
-                {
-                    for(auto [k, w] : stencil::first_order::forward_1::weights)
-                    {
-                        residual(index) -= w*u(1, c, index_2d(i+k, j))/(dx_*dx_);
-                    }
-                }
-                else if(i == n_interior_cell_1d_)
-                {
-                    for(auto [k, w] : stencil::first_order::backward_1::weights)
-                    {
-                        residual(index) -= w*u(1, c, index_2d(i+k, j))/(dx_*dx_);
-                    }
-                }
+                    // Laplacian in x-direction
+                    //for(auto [k, w] : stencil::central_2::weights)
+                    //{
+                    //residual(index) -= w*u(1, c, index_2d(i+k, j))/(dx_*dx_);
+                    //}
 
-                // Laplacian in y-direction
-                if(j != 1 && j != n_interior_cell_1d_)
-                {
-                    for(auto [k, w] : stencil::central_2::weights)
+                    if(i != 1 && i != n_interior_cell_1d_)
                     {
-                        residual(index) -= w*u(1, c, index_2d(i, j+k))/(dy_*dy_);
+                        for(auto [k, w] : stencil::central_2::weights)
+                        {
+                            residual(index) -= w*u(1, c, index_2d(i+k, j))/(dx_*dx_);
+                        }
                     }
-                }
-                else if(j == 1)
-                {
-                    for(auto [k, w] : stencil::first_order::forward_1::weights)
+                    else if(i == 1)
                     {
-                        residual(index) -= w*u(1, c, index_2d(i, j+k))/(dy_*dy_);
+                        for(auto [k, w] : stencil::first_order::forward_1::weights)
+                        {
+                            residual(index) -= w*u(1, c, index_2d(i+k, j))/(dx_*dx_);
+                        }
                     }
-                }
-                else if(j == n_interior_cell_1d_)
-                {
-                    for(auto [k, w] : stencil::first_order::backward_1::weights)
+                    else if(i == n_interior_cell_1d_)
                     {
-                        residual(index) -= w*u(1, c, index_2d(i, j+k))/(dy_*dy_);
+                        for(auto [k, w] : stencil::first_order::backward_1::weights)
+                        {
+                            residual(index) -= w*u(1, c, index_2d(i+k, j))/(dx_*dx_);
+                        }
                     }
-                }
 
-                // Reaction terms
-                residual(index) -=
-                    - p.gamma_c*u(1, c, index_2d(i, j))
-                    + p.gamma_rho*u(1, rho_bar, index_2d(i, j));
-#endif // IMPOSED_C_PROFILE
+                    // Laplacian in y-direction
+                    //for(auto [k, w] : stencil::central_2::weights)
+                    //{
+                    //residual(index) -= w*u(1, c, index_2d(i, j+k))/(dy_*dy_);
+                    //}
+
+                    if(j != 1 && j != n_interior_cell_1d_)
+                    {
+                        for(auto [k, w] : stencil::central_2::weights)
+                        {
+                            residual(index) -= w*u(1, c, index_2d(i, j+k))/(dy_*dy_);
+                        }
+                    }
+                    else if(j == 1)
+                    {
+                        for(auto [k, w] : stencil::first_order::forward_1::weights)
+                        {
+                            residual(index) -= w*u(1, c, index_2d(i, j+k))/(dy_*dy_);
+                        }
+                    }
+                    else if(j == n_interior_cell_1d_)
+                    {
+                        for(auto [k, w] : stencil::first_order::backward_1::weights)
+                        {
+                            residual(index) -= w*u(1, c, index_2d(i, j+k))/(dy_*dy_);
+                        }
+                    }
+
+                    // Reaction terms
+                    residual(index) -=
+                        - p.gamma_c*u(1, c, index_2d(i, j))
+                        + p.gamma_rho*u(1, rho_bar, index_2d(i, j));
+                }
             }
         }
     }
@@ -742,18 +752,29 @@ private:
 
                 // c
                 index = c*n_dof_per_var_ + index_2d(i, j);
-#ifdef IMPOSED_C_PROFILE
-                triplet_list.emplace_back(index, index, 1.0);
-#else
-                triplet_list.emplace_back(index, index, 1.0/dt_);
-#endif // IMPOSED_C_PROFILE
+                if(p.imposed_c_profile == true)
+                {
+                    triplet_list.emplace_back(index, index, 1.0);
+                }
+                else
+                {
+                    triplet_list.emplace_back(index, index, 1.0/dt_);
+                }
             }
         }
     }
+
+    double c_value(double x, double y) const
+    {
+        return y;
+    }
+
 };
 
 int main(int argc, char **argv)
 {
+    feenableexcept(FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW | FE_UNDERFLOW);
+
     Config cf;
     cf.parse_command_line(argc, argv);
 
@@ -770,6 +791,7 @@ int main(int argc, char **argv)
     problem.p.c_init = cf.get_or("c_init", 1.0);
 
     problem.p.D = cf.get_or("D", 1.0);
+    problem.p.r = cf.get_or("r", 0.0);
     problem.p.chi = cf.get_or("chi", 1.0);
     problem.p.gamma_rho = cf.get_or("gamma_rho", 1.0);
     problem.p.gamma_c = cf.get_or("gamma_c", 1.0);
@@ -792,6 +814,7 @@ int main(int argc, char **argv)
     while(problem.time() < t_max)
     {
         problem.ssp_rk_3_timestep(dt);
+        //problem.unsteady_solve(dt);
 
         std::sprintf(filename, "output_%05u.csv", i);
         outfile.open(filename);
