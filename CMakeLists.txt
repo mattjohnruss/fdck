@@ -44,4 +44,5 @@ set(CMAKE_EXE_LINKER_FLAGS "-static")
 
 add_subdirectory(library)
 add_subdirectory(drivers)
+add_subdirectory(drivers_experimental)
 add_subdirectory(tests)
