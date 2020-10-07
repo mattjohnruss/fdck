@@ -1,7 +1,7 @@
 If using git, clone the git repo, making sure to get the dependencies with it
 (they are git submodules in vendor/), and enter the directory:
 ```
-git clone https://github.com/rumajo/fdck.git --recurse-submodules
+git clone https://github.com/mattjohnruss/fdck.git --recurse-submodules
 cd fdck
 ```
 
